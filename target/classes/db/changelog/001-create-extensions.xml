@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="001-create-pgvector-extension" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'
+            </sqlCheck>
+        </preConditions>
+        <sql>CREATE EXTENSION IF NOT EXISTS vector;</sql>
+        <rollback>DROP EXTENSION IF EXISTS vector;</rollback>
+    </changeSet>
+
+    <changeSet id="001-create-pg-trgm-extension" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM pg_extension WHERE extname = 'pg_trgm'
+            </sqlCheck>
+        </preConditions>
+        <sql>CREATE EXTENSION IF NOT EXISTS pg_trgm;</sql>
+        <rollback>DROP EXTENSION IF EXISTS pg_trgm;</rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="003-001-create-biblioteca-table" author="jsimplerag">
+        <createTable tableName="biblioteca">
+            <column name="id" type="SERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="area_conhecimento" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="peso_semantico" type="DECIMAL(3,2)" defaultValue="0.60">
+                <constraints nullable="false"/>
+            </column>
+            <column name="peso_textual" type="DECIMAL(3,2)" defaultValue="0.40">
+                <constraints nullable="false"/>
+            </column>
+            <column name="metadados" type="JSONB"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <!-- Check constraints -->
+        <sql>
+            ALTER TABLE biblioteca ADD CONSTRAINT peso_semantico_range_check CHECK (peso_semantico BETWEEN 0 AND 1);
+            ALTER TABLE biblioteca ADD CONSTRAINT peso_textual_range_check CHECK (peso_textual BETWEEN 0 AND 1);
+            ALTER TABLE biblioteca ADD CONSTRAINT peso_total_check CHECK (peso_semantico + peso_textual = 1.0);
+        </sql>
+
+        <rollback>
+            DROP TABLE IF EXISTS biblioteca;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="003-002-create-documento-table" author="jsimplerag">
+        <createTable tableName="documento">
+            <column name="id" type="SERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="biblioteca_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="titulo" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="conteudo_markdown" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="flag_vigente" type="BOOLEAN" defaultValue="true"/>
+            <column name="data_publicacao" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tokens_total" type="INTEGER"/>
+            <column name="metadados" type="JSONB"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <!-- Foreign Key -->
+        <addForeignKeyConstraint
+            baseTableName="documento"
+            baseColumnNames="biblioteca_id"
+            constraintName="fk_documento_biblioteca"
+            referencedTableName="biblioteca"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <rollback>
+            DROP TABLE IF EXISTS documento;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="003-003-create-capitulo-table" author="jsimplerag">
+        <createTable tableName="capitulo">
+            <column name="id" type="SERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="documento_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="titulo" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="conteudo" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ordem_doc" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_inicio" type="INTEGER"/>
+            <column name="token_fim" type="INTEGER"/>
+            <column name="tokens_total" type="INTEGER"/>
+            <column name="metadados" type="JSONB"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <!-- Foreign Key -->
+        <addForeignKeyConstraint
+            baseTableName="capitulo"
+            baseColumnNames="documento_id"
+            constraintName="fk_capitulo_documento"
+            referencedTableName="documento"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Unique constraint -->
+        <addUniqueConstraint
+            tableName="capitulo"
+            columnNames="documento_id, ordem_doc"
+            constraintName="unique_ordem_por_doc"/>
+
+        <rollback>
+            DROP TABLE IF EXISTS capitulo;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="003-004-create-doc-embedding-table" author="jsimplerag">
+        <sql>
+            CREATE TABLE doc_embedding (
+                id SERIAL PRIMARY KEY,
+                biblioteca_id BIGINT NOT NULL,
+                documento_id BIGINT NOT NULL,
+                capitulo_id BIGINT,
+                tipo_embedding tipo_embedding NOT NULL,
+                trecho_texto TEXT,
+                ordem_cap INTEGER,
+                embedding_vector vector(1536),
+                texto_indexado tsvector,
+                metadados JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                -- Foreign Key Constraints
+                CONSTRAINT fk_embedding_biblioteca FOREIGN KEY (biblioteca_id) REFERENCES biblioteca(id) ON DELETE CASCADE,
+                CONSTRAINT fk_embedding_documento FOREIGN KEY (documento_id) REFERENCES documento(id) ON DELETE CASCADE,
+                CONSTRAINT fk_embedding_capitulo FOREIGN KEY (capitulo_id) REFERENCES capitulo(id) ON DELETE CASCADE,
+
+              
+            );
+        </sql>
+
+        <rollback>
+            DROP TABLE IF EXISTS doc_embedding;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

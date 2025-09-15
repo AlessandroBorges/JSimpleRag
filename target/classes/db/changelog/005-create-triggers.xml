@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- Trigger for automatic tsvector generation -->
+    <changeSet id="005-001-create-tsvector-trigger-function" author="jsimplerag">
+        <sql>
+            -- Function to update tsvector automatically
+            CREATE OR REPLACE FUNCTION update_texto_indexado()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                -- Generate tsvector from trecho_texto with Portuguese configuration
+                -- If trecho_texto is NULL, use empty string
+                NEW.texto_indexado = to_tsvector('portuguese', COALESCE(NEW.trecho_texto, ''));
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            DROP FUNCTION IF EXISTS update_texto_indexado();
+        </rollback>
+    </changeSet>
+
+    <changeSet id="005-002-create-tsvector-trigger" author="jsimplerag">
+        <sql>
+            -- Trigger to call the function before INSERT or UPDATE
+            CREATE TRIGGER trigger_update_texto_indexado
+                BEFORE INSERT OR UPDATE OF trecho_texto
+                ON doc_embedding
+                FOR EACH ROW
+                EXECUTE FUNCTION update_texto_indexado();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS trigger_update_texto_indexado ON doc_embedding;
+        </rollback>
+    </changeSet>
+
+    <!-- Trigger for automatic updated_at timestamp -->
+    <changeSet id="005-003-create-updated-at-trigger-function" author="jsimplerag">
+        <sql>
+            -- Function to update updated_at timestamp
+            CREATE OR REPLACE FUNCTION update_updated_at_column()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = CURRENT_TIMESTAMP;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            DROP FUNCTION IF EXISTS update_updated_at_column();
+        </rollback>
+    </changeSet>
+
+    <changeSet id="005-004-create-updated-at-triggers" author="jsimplerag">
+        <sql>
+            -- Trigger for biblioteca table
+            CREATE TRIGGER trigger_biblioteca_updated_at
+                BEFORE UPDATE ON biblioteca
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+
+            -- Trigger for documento table
+            CREATE TRIGGER trigger_documento_updated_at
+                BEFORE UPDATE ON documento
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+
+            -- Trigger for capitulo table
+            CREATE TRIGGER trigger_capitulo_updated_at
+                BEFORE UPDATE ON capitulo
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS trigger_biblioteca_updated_at ON biblioteca;
+            DROP TRIGGER IF EXISTS trigger_documento_updated_at ON documento;
+            DROP TRIGGER IF EXISTS trigger_capitulo_updated_at ON capitulo;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

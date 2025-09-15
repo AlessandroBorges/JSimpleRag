@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with PGVector extension
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: jsimplerag_postgres
+    environment:
+      POSTGRES_DB: rag_db
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_user -d rag_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # JSimpleRag Application (will be built from source)
+  rag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jsimplerag_api
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: rag_db
+      DB_USERNAME: rag_user
+      DB_PASSWORD: rag_pass
+
+      # LLM Configuration (set these in .env file)
+      LLM_PROVIDER_CLASS: ${LLM_PROVIDER_CLASS:-}
+      LLM_MODELS: ${LLM_MODELS:-gpt-3.5-turbo,gpt-4}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-ada-002}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
+
+      # Application
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rag-network
+    volumes:
+      - ./logs:/app/logs
+    profiles:
+      - app # Only start this with --profile app
+
+  # Redis for caching (future use)
+  redis:
+    image: redis:7-alpine
+    container_name: jsimplerag_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rag-network
+    command: redis-server --appendonly yes
+    profiles:
+      - cache
+
+  # Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: jsimplerag_adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - rag-network
+    profiles:
+      - tools
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="002-create-tipo-embedding-enum" author="jsimplerag">
+        <sql>
+            CREATE TYPE tipo_embedding AS ENUM ('documento', 'capitulo', 
+            									'trecho','perguntas_respostas', 
+            									'resumo','outros');
+        </sql>
+        <rollback>
+            DROP TYPE IF EXISTS tipo_embedding;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="002-create-tipo-conteudo-enum" author="jsimplerag">
+        <sql>
+            CREATE TYPE tipo_conteudo AS ENUM ('constituicao', 
+            									'lei', 
+            									'decreto', 
+            									'sumula', 
+            									'acordao', 
+            									'instrucao_normativa', 
+            									'portaria', 
+            									'normativo', 
+            									'tese', 
+            									'artigo', 
+            									'livro', 
+            									'relatorio', 
+            									'nota_tecnica', 
+            									'nota_auditoria', 
+            									'manual', 
+            									'papel_trabalho', 
+            									'resumo', 
+            									'wiki', 
+            									'projeto',
+            									'documento_interno',
+            									'outros');
+        </sql>
+        <rollback>
+            DROP TYPE IF EXISTS tipo_conteudo;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="002-create-tipo-secao-enum" author="jsimplerag">
+        <sql>
+             CREATE TYPE tipo_secao AS ENUM (
+                'cabecalho',
+                'ementa',
+                'sumario',
+                'introducao',
+                'planejamento',
+                'metodologia',
+                'desenvolvimento',
+                'achados',
+                'demonstrativo',
+                'recomendacoes',
+                'ressalvas_divergencias',
+                'conclusao',
+                'relatorio',
+                'voto',
+                'decisao',
+                'referencias_bibliografias',
+                'anexo',
+                'outros'
+            );
+        </sql>
+        <rollback>
+            DROP TYPE IF EXISTS tipo_secao;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

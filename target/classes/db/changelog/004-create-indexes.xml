@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- Biblioteca Indexes -->
+    <changeSet id="004-001-create-biblioteca-indexes" author="jsimplerag">
+        <createIndex tableName="biblioteca" indexName="idx_biblioteca_area">
+            <column name="area_conhecimento"/>
+        </createIndex>
+        <rollback>
+            DROP INDEX IF EXISTS idx_biblioteca_area;
+        </rollback>
+    </changeSet>
+
+    <!-- Documento Indexes -->
+    <changeSet id="004-002-create-documento-indexes" author="jsimplerag">
+        <createIndex tableName="documento" indexName="idx_documento_vigente">
+            <column name="flag_vigente"/>
+            <column name="data_publicacao" descending="true"/>
+        </createIndex>
+
+        <createIndex tableName="documento" indexName="idx_documento_biblioteca">
+            <column name="biblioteca_id"/>
+        </createIndex>
+
+        <!-- Partial index for active documents only -->
+        <sql>
+            CREATE INDEX idx_documento_vigente_only ON documento(biblioteca_id, data_publicacao DESC)
+            WHERE flag_vigente = true;
+        </sql>
+
+        <rollback>
+            DROP INDEX IF EXISTS idx_documento_vigente;
+            DROP INDEX IF EXISTS idx_documento_biblioteca;
+            DROP INDEX IF EXISTS idx_documento_vigente_only;
+        </rollback>
+    </changeSet>
+
+    <!-- Capitulo Indexes -->
+    <changeSet id="004-003-create-capitulo-indexes" author="jsimplerag">
+        <createIndex tableName="capitulo" indexName="idx_capitulo_documento_ordem">
+            <column name="documento_id"/>
+            <column name="ordem_doc"/>
+        </createIndex>
+        <rollback>
+            DROP INDEX IF EXISTS idx_capitulo_documento_ordem;
+        </rollback>
+    </changeSet>
+
+    <!-- DocEmbedding Indexes -->
+    <changeSet id="004-004-create-doc-embedding-indexes" author="jsimplerag">
+        <createIndex tableName="doc_embedding" indexName="idx_embedding_biblioteca">
+            <column name="biblioteca_id"/>
+        </createIndex>
+
+        <createIndex tableName="doc_embedding" indexName="idx_embedding_documento">
+            <column name="documento_id"/>
+        </createIndex>
+
+        <createIndex tableName="doc_embedding" indexName="idx_embedding_capitulo">
+            <column name="capitulo_id"/>
+        </createIndex>
+
+        <createIndex tableName="doc_embedding" indexName="idx_embedding_tipo">
+            <column name="tipo_embedding"/>
+        </createIndex>
+
+        <rollback>
+            DROP INDEX IF EXISTS idx_embedding_biblioteca;
+            DROP INDEX IF EXISTS idx_embedding_documento;
+            DROP INDEX IF EXISTS idx_embedding_capitulo;
+            DROP INDEX IF EXISTS idx_embedding_tipo;
+        </rollback>
+    </changeSet>
+
+    <!-- Vector and Full-Text Search Indexes -->
+    <changeSet id="004-005-create-vector-indexes" author="jsimplerag">
+        <sql>
+            -- Vector similarity index (IVFFlat for approximate nearest neighbor)
+            CREATE INDEX idx_embedding_vector ON doc_embedding
+            USING ivfflat (embedding_vector vector_cosine_ops)
+            WITH (lists = 100);
+
+            -- Full-text search index
+            CREATE INDEX idx_embedding_texto ON doc_embedding
+            USING gin(texto_indexado);
+
+            -- Composite index for hybrid search optimization
+            CREATE INDEX idx_embedding_tipo_biblioteca ON doc_embedding(biblioteca_id, tipo_embedding);
+        </sql>
+
+        <rollback>
+            DROP INDEX IF EXISTS idx_embedding_vector;
+            DROP INDEX IF EXISTS idx_embedding_texto;
+            DROP INDEX IF EXISTS idx_embedding_tipo_biblioteca;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
