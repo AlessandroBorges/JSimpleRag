@@ -8,12 +8,14 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import bor.tools.simplerag.entity.Capitulo;
+import bor.tools.splitter.Metadata;
 
 /**
  * DTO for Documento entity.
@@ -42,7 +44,7 @@ public class DocumentoDTO {
 
     private Integer tokensTotal;
 
-    private Map<String, Object> metadados;
+    private Metadata metadados;
 
     private LocalDateTime createdAt;
 
@@ -52,6 +54,11 @@ public class DocumentoDTO {
      * Parent biblioteca reference for full context
      */
     private BibliotecaDTO biblioteca;
+    
+    /**
+     * Attached documents (e.g. annexes)
+     */
+    private List<DocumentoDTO> anexos = new ArrayList<>();
 
     /**
      * Child chapters with their embeddings
@@ -209,7 +216,7 @@ public class DocumentoDTO {
      */
     public void setMetadataValue(String key, Object value) {
         if (metadados == null) {
-            metadados = new java.util.LinkedHashMap<>();
+            metadados = new Metadata();
         }
         metadados.put(key, value);
     }
@@ -264,13 +271,13 @@ public class DocumentoDTO {
 	return (String) getMetadataValue("url");
     }
     
-    @Deprecated
+
     @JsonIgnore
     public void setTexto(String textoOriginal) {
 	setConteudoMarkdown(textoOriginal);
     }
     
-    @Deprecated
+
     @JsonIgnore
     public String getTexto() {
 	return getConteudoMarkdown();
@@ -279,4 +286,21 @@ public class DocumentoDTO {
     public void addParte(CapituloDTO parte) {
 	this.addCapitulo(parte);	
     }
+
+    
+    @JsonIgnore
+    public void setDataPublicacao(Date dataStr) {
+	this.setDataPublicacao(dataStr.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate());	
+    }
+    
+    public void setDataPublicacao(LocalDate data) {
+	this.dataPublicacao = data;
+    }
+
+    public void addAnexo(DocumentoDTO doc) {
+	if (this.anexos == null) 
+	    this.anexos = new ArrayList<>();
+	this.anexos.add(doc);		
+    }
+    
 }

@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import bor.tools.splitter.Metadata;
+
 /**
  * DTO for Capitulo entity.
  *
@@ -38,7 +40,7 @@ public class CapituloDTO {
 
     private Integer tokensTotal;
 
-    private Map<String, Object> metadados;
+    private Metadata metadados;
 
     private LocalDateTime createdAt;
 
@@ -51,6 +53,24 @@ public class CapituloDTO {
     @Builder.Default
     private List<DocEmbeddingDTO> embeddings = new ArrayList<>();
 
+    /**
+     * Constructor with title and content
+     */
+    public CapituloDTO(String titulo, String conteudo) {
+	this.titulo = titulo;
+	this.conteudo = conteudo;
+    }
+    
+    /**
+     * Constructor with title and content
+     */
+    public CapituloDTO(Integer orderDoc, String titulo, String conteudo) {
+	this.ordemDoc = orderDoc;
+	this.titulo = titulo;
+	this.conteudo = conteudo;
+    }
+    
+    
     /**
      * Calculate tokens total if not set
      */
@@ -154,7 +174,7 @@ public class CapituloDTO {
      */
     public void setMetadataValue(String key, Object value) {
         if (metadados == null) {
-            metadados = new java.util.HashMap<>();
+            metadados = new Metadata();
         }
         metadados.put(key, value);
     }

@@ -1,6 +1,7 @@
 package bor.tools.splitter;
 
-import superag.retriever.model.Documento;
+import bor.tools.simplerag.dto.DocumentoDTO;
+
 
 /**
  * Service interface for translation operations.
@@ -13,5 +14,5 @@ public interface TranslationService {
      * @param target Target language
      * @return Translated document
      */
-    Documento translateDocument(Documento document, Lang source, Lang target);
+    DocumentoDTO translateDocument(DocumentoDTO document, Lang target);
 }

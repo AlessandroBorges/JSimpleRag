@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import bor.tools.simplerag.dto.*;
 import bor.tools.utils.RAGUtil;
-import superag.retriever.model.DocParte;
+
 
 
 /**
@@ -24,7 +25,7 @@ public class ContentSplitter {
      * @return A list of chapters with titles and content
      * @see Chapter
      */
-    public List<DocParte> splitContent(String content) {
+    public List<CapituloDTO> splitContent(String content) {
     	boolean isMarkDown = RAGUtil.isMarkdown(content);
     	return splitContent(content, isMarkDown);
     }
@@ -36,8 +37,8 @@ public class ContentSplitter {
      * @return A list of chapters with titles and content
      * @see Chapter
      */
-    public List<DocParte> splitContent(String content, boolean isMarkdown) {
-        List<DocParte> chapters = new ArrayList<>();
+    public List<CapituloDTO> splitContent(String content, boolean isMarkdown) {
+        List<CapituloDTO> chapters = new ArrayList<>();
 
         if (isMarkdown) {
             // Handle Markdown content
@@ -54,8 +55,8 @@ public class ContentSplitter {
     /**
      * Split Markdown content using headers as primary split points
      */
-    private List<DocParte> splitMarkdown(String content) {
-        List<DocParte> chapters = new ArrayList<>();
+    private List<CapituloDTO> splitMarkdown(String content) {
+        List<CapituloDTO> chapters = new ArrayList<>();
 
         // Regex for Markdown headers (both # and === or --- style)
         Pattern headerPattern = Pattern.compile(
@@ -72,7 +73,7 @@ public class ContentSplitter {
             String sectionContent = content.substring(lastPos, matcher.start()).trim();
 
             if (!sectionContent.isEmpty()) {
-                chapters.add(new DocParte(currentTitle, sectionContent));
+                chapters.add(new CapituloDTO(currentTitle, sectionContent));
             }
 
             // Update for next iteration
@@ -83,7 +84,7 @@ public class ContentSplitter {
         // Add final section
         String finalContent = content.substring(lastPos).trim();
         if (!finalContent.isEmpty()) {
-            chapters.add(new DocParte(currentTitle, finalContent));
+            chapters.add(new CapituloDTO(currentTitle, finalContent));
         }
 
         return chapters;
@@ -92,8 +93,8 @@ public class ContentSplitter {
     /**
      * Split plain text using paragraph breaks and size-based chunking
      */
-    private List<DocParte> splitPlainText(String content) {
-        List<DocParte> chapters = new ArrayList<>();
+    private List<CapituloDTO> splitPlainText(String content) {
+        List<CapituloDTO> chapters = new ArrayList<>();
 
         // Split on double line breaks (paragraphs)
         String[] paragraphs = content.split("\\n\\s*\\n");
@@ -108,7 +109,7 @@ public class ContentSplitter {
             if (currentTokenCount + paragraphTokens > IDEAL_TOKENS &&
                 currentTokenCount >= MIN_TOKENS) {
                 // Create new chapter if we've reached ideal size
-                chapters.add(new DocParte(
+                chapters.add(new CapituloDTO(
                     "Section " + chapterNumber++,
                     currentChapter.toString().trim()
                 ));
@@ -122,7 +123,7 @@ public class ContentSplitter {
 
         // Add final chapter
         if (currentChapter.length() > 0) {
-            chapters.add(new DocParte(
+            chapters.add(new CapituloDTO(
                 "Section " + chapterNumber,
                 currentChapter.toString().trim()
             ));
@@ -134,19 +135,19 @@ public class ContentSplitter {
     /**
      * Optimize chapter sizes by merging or splitting as needed
      */
-    private List<DocParte> optimizeChapterSizes(List<DocParte> chapters) {
-        List<DocParte> optimizedChapters = new ArrayList<>();
+    private List<CapituloDTO> optimizeChapterSizes(List<CapituloDTO> chapters) {
+        List<CapituloDTO> optimizedChapters = new ArrayList<>();
 
         for (int i = 0; i < chapters.size(); i++) {
-        	DocParte current = chapters.get(i);
-            int tokenCount = estimateTokenCount(current.getTexto());
+        	CapituloDTO current = chapters.get(i);
+            int tokenCount = estimateTokenCount(current.getConteudo());
 
             if (tokenCount < MIN_TOKENS && i < chapters.size() - 1) {
                 // Merge with next chapter if too small
-            	DocParte next = chapters.get(i + 1);
-                optimizedChapters.add(new DocParte(
+            	CapituloDTO next = chapters.get(i + 1);
+                optimizedChapters.add(new CapituloDTO(
                     current.getTitulo(),
-                    current.getTexto() + "\n\n" + next.getTexto()
+                    current.getConteudo() + "\n\n" + next.getConteudo()
                 ));
                 i++; // Skip next chapter since we merged it
             } else if (tokenCount > MAX_TOKENS) {
@@ -163,9 +164,9 @@ public class ContentSplitter {
     /**
      * Split a large chapter into smaller ones
      */
-    private List<DocParte> splitLargeChapter(DocParte chapter) {
-        List<DocParte> subChapters = new ArrayList<>();
-        String[] paragraphs = chapter.getTexto().split("\\n\\s*\\n");
+    private List<CapituloDTO> splitLargeChapter(CapituloDTO chapter) {
+        List<CapituloDTO> subChapters = new ArrayList<>();
+        String[] paragraphs = chapter.getConteudo().split("\\n\\s*\\n");
 
         StringBuilder currentContent = new StringBuilder();
         int currentTokens = 0;
@@ -176,7 +177,8 @@ public class ContentSplitter {
 
             if (currentTokens + paragraphTokens > IDEAL_TOKENS &&
                 currentTokens >= MIN_TOKENS) {
-                subChapters.add(new DocParte(
+        	
+                subChapters.add(new CapituloDTO(partNumber,
                     chapter.getTitulo() + " (Part " + partNumber++ + ")",
                     currentContent.toString().trim()
                 ));
@@ -189,7 +191,8 @@ public class ContentSplitter {
         }
 
         if (currentContent.length() > 0) {
-            subChapters.add(new DocParte(
+            subChapters.add(new CapituloDTO(
+        	    partNumber,
                 chapter.getTitulo() + (partNumber > 1 ? " (Part " + partNumber + ")" : ""),
                 currentContent.toString().trim()
             ));

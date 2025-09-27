@@ -12,14 +12,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
+import bor.tools.simplellm.LLMService;
+import bor.tools.simplerag.dto.CapituloDTO;
+import bor.tools.simplerag.dto.DocEmbeddingDTO;
+import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.splitter.normsplitter.Artigo;
 import bor.tools.splitter.normsplitter.Normativo;
 import bor.tools.splitter.normsplitter.NormativosLoader;
-import superag.provedorIA.Provedor;
-import superag.retriever.model.Biblioteca;
-import superag.retriever.model.DocEmbeddings;
-import superag.retriever.model.DocParte;
-import superag.retriever.model.Documento;
 
 /**
  * Classe abstrata para splitting de documentos.
@@ -40,57 +39,48 @@ public class SplitterNorma  extends AbstractSplitter{
 	 */
 	protected NormativosLoader loader;
 
-	protected Provedor provedor;
+	protected LLMService provedor;
 
+	
 	/**
 	 * Construtor
 	 * @param provedorIA - Provedor de  serviços de IA
 	 * @param biblioteca - Biblioteca para gestão de documentos
 	 *
 	 */
-	public SplitterNorma(Biblioteca biblioteca, ExistsArtefato<Documento> validator)  {
-		super(biblioteca, validator);
-		this.loader = new NormativosLoader();
-	}
-
-	/**
-	 * Construtor
-	 * @param provedorIA - Provedor de  serviços de IA
-	 * @param biblioteca - Biblioteca para gestão de documentos
-	 *
-	 */
-	public SplitterNorma(Provedor provedor, Biblioteca biblioteca)  {
-		super(biblioteca, null);
-		this.provedor = provedor;
+	public SplitterNorma(LLMService provedor)  {
+		super(	provedor	);
+		
 		this.loader = new NormativosLoader();
 	}
 
 
 	/**
-	 * Carrega Documento a partir de uma URL.<br>
+	 * Carrega DocumentoDTO a partir de uma URL.<br>
 	 *
-	 * @param urlDocumento - endereço do documento
-	 * @return Documento carregado
+	 * @param urlDocumentoDTO - endereço do documento
+	 * @return DocumentoDTO carregado
 	 *
 	 * @throws Exception
 	 */
-	public Documento carregaNorma(@NonNull URL urlDocumento, Documento docStub) throws Exception {
+	public DocumentoDTO carregaNorma(@NonNull URL urlDocumento, DocumentoDTO docStub) throws Exception {
 		Normativo normativo = loader.load(urlDocumento.toString());
 		int[] nivel  = {0};
 		return carregaNorma(normativo, nivel, docStub);
 	}
 
 	/**
-	 * Carrega Documento a partir de uma URL.<br>
+	 * Carrega DocumentoDTO a partir de uma URL.<br>
 	 *
-	 * @param urlDocumento - endereço do documento
+	 * @param urlDocumentoDTO - endereço do documento
 	 * @param nivel - nivel atual de profundidade de aninhamento
 	 *
-	 * @return null se o nível de aninhamento for maior que o permitido, ou Documento carregado
+	 * @return null se o nível de aninhamento for maior que o permitido, ou DocumentoDTO carregado
 	 *
 	 * @throws Exception
 	 */
-	public Documento carregaNorma(@NonNull URL urlDocumento, int[] nivel, Documento docStub) throws Exception {
+	public DocumentoDTO carregaNorma(@NonNull URL urlDocumento, int[] nivel, 
+		DocumentoDTO docStub) throws Exception {
 		if (nivel[0] >= NIVEL_MAXIMO) {
 			return null;
 		}
@@ -104,11 +94,12 @@ public class SplitterNorma  extends AbstractSplitter{
 	 *
 	 * @param normativo Instancia de Normativo
 	 * @param nivel - nível de aninhamento
-	 * @param docStub - documento base. Opcional. Pode ser nulo.
-	 * @return Documento com o normativo carregado, incluindo partes e embeddings
+	 * @param docStub - DocumentoDTO base. Opcional. Pode ser nulo.
+	 * @return DocumentoDTO com o normativo carregado, incluindo partes e embeddings
 	 * @throws Exception
 	 */
-	public Documento carregaNorma(@NonNull Normativo normativo, int[] nivel, Documento docStub) throws Exception {
+	public DocumentoDTO carregaNorma(@NonNull Normativo normativo, int[] nivel,
+		DocumentoDTO docStub) throws Exception {
 		if (nivel[0] >= NIVEL_MAXIMO) {
 			return null;
 		}
@@ -118,7 +109,7 @@ public class SplitterNorma  extends AbstractSplitter{
 		// incrementa nível de aninhamento
 		nivel[0] = nivel[0] + 1;
 
-		Documento doc = docStub == null? new Documento():docStub;
+		DocumentoDTO doc = docStub == null? new DocumentoDTO():docStub;
 		doc.setUrl(normativo.getUrl());
 		doc.setTitulo(normativo.getAlias());
 		doc.setTexto(normativo.getTexto());
@@ -131,48 +122,48 @@ public class SplitterNorma  extends AbstractSplitter{
 		List<Artigo> listaArtigos =  normativo.getArtigos();
 
 		LinkedList<String> partes = new LinkedList<>();
-		Map<String, DocParte> mapPartes = new LinkedHashMap<>();
+		Map<String, CapituloDTO> mapPartes = new LinkedHashMap<>();
 
 		String identificacao = normativo.getId();
 
 		for (Artigo artigo : listaArtigos) {
 			artigo.smartSplit();
 			String titulo_id = montaTitulo(artigo, identificacao);
-			DocParte parte = mapPartes.get(titulo_id);
+			CapituloDTO parte = mapPartes.get(titulo_id);
 
 			if (parte == null) {
-				parte = new DocParte();
+				parte = new CapituloDTO();
 				doc.addParte(parte);
 
 				parte.setTitulo(titulo_id);
 				parte.getMetadados().setNomeDocumento(identificacao + " " + titulo_id);
 
 				String texto = titulo_id + "\n" +  artigo.getConteudo() ;
-				parte.setTexto(texto);
+				parte.setConteudo(identificacao);
 
 				mapPartes.put(titulo_id, parte);
 				partes.add(titulo_id);
 			}else {
-				String texto = parte.getTexto() + "\n" + artigo.getConteudo();
-				parte.setTexto(texto);
+				String texto = parte.getConteudo() + "\n" + artigo.getConteudo();
+				parte.setConteudo(texto);
 			}
 			criaEmbeddingsBasicos(artigo, parte, titulo_id);
 		}
-		// cria embeddings para as docPartes
-		for (DocParte docParte : doc.getPartes()) {
-			DocEmbeddings emb = new DocEmbeddings();
-			docParte.addEmbeddings(emb);
+		// cria embeddings para as CapituloDTO s
+		for (CapituloDTO capDTO  : doc.getCapitulos()) {
+			DocEmbeddingDTO emb = new DocEmbeddingDTO();
+			capDTO.addEmbedding(emb);
 
-			String texto = docParte.getTexto();
+			String texto = capDTO .getConteudo();
 			texto = texto.trim();
 			int maxLen = MAX_TOKENS * 4;
 			if (texto.length() > maxLen) {
 				texto = texto.substring(0, maxLen);
 			}
-			emb.setTexto(texto);
-			emb.setMetadados(docParte.getMetadados());
+			emb.setTrechoTexto(texto);
+			emb.setMetadados(capDTO .getMetadados());
 			// identificador é o título da parte
-			emb.getMetadados().put("identificador", docParte.getTitulo());
+			emb.getMetadados().put("identificador", capDTO .getTitulo());
 
 		}
 		// carrega normas associadas
@@ -190,12 +181,12 @@ public class SplitterNorma  extends AbstractSplitter{
 	 * <li>Normativos Anexos</li>
 	 *
 	 * @param normativo  - normativo de origem
-	 * @param doc - documento a ser populado
+	 * @param doc - DocumentoDTO a ser populado
 	 * @param nivel - nivel atual de aninhamento
      *
 	 */
 	@SuppressWarnings("deprecation")
-	protected void carregaNormasAssociadas(Normativo normativo, Documento doc, int nivel) {
+	protected void carregaNormasAssociadas(Normativo normativo, DocumentoDTO doc, int nivel) {
 		// carregamento recursivo das normas relacionadas
 		List<Normativo> nAssociados = new ArrayList<>();
 		nAssociados.addAll(normativo.getListRegulamentos());
@@ -206,7 +197,7 @@ public class SplitterNorma  extends AbstractSplitter{
 			try {
 				URL url = new URL(normativoAssociado.getUrl());
 				int[] nivelAssociado = {nivel};
-				Documento docAssociado = carregaNorma(url, nivelAssociado, doc);
+				DocumentoDTO docAssociado = carregaNorma(url, nivelAssociado, doc);
 				if (docAssociado != null) {
 					doc.addAnexo(doc);
 				}
@@ -219,23 +210,23 @@ public class SplitterNorma  extends AbstractSplitter{
 	/**
 	 * Cria embeddings básicos, sem Q&A
 	 * @param artigo - artigo a ser processado
-	 * @param docParte - DocParte a ser populada
+	 * @param CapituloDTO  - CapituloDTO  a ser populada
 	 *
 	 * @param titulo - titulo ou metadados do artigo
 	 */
-	protected void criaEmbeddingsBasicos(Artigo artigo, DocParte docParte, String titulo) {
+	protected void criaEmbeddingsBasicos(Artigo artigo, CapituloDTO  capDTO , String titulo) {
 		String texto = artigo.getConteudo();
-		DocEmbeddings emb = new DocEmbeddings();
+		DocEmbeddingDTO emb = new DocEmbeddingDTO();
 		//emb.set (titulo);
-		emb.setTexto(titulo + "\n" + texto);
-		docParte.addEmbeddings(emb);
+		emb.setTrechoTexto(titulo + "\n" + texto);
+		capDTO.addEmbedding(emb);
 
 		List<String> extras = artigo.getListaSubtexto();
 		if (extras != null) {
 			for (String extra : extras) {
-				DocEmbeddings embExtra = new DocEmbeddings();
-				embExtra.setTexto(titulo + "\n" + extra);
-				docParte.addEmbeddings(embExtra);
+				DocEmbeddingDTO embExtra = new DocEmbeddingDTO();
+				embExtra.setTrechoTexto(titulo + "\n" + extra);
+				capDTO .addEmbedding(embExtra);
 			}
 		}
 	}
@@ -278,17 +269,17 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
     @Override
-    public List<DocParte> splitDocumento(@NonNull Documento documento) {
-        return documento.getPartes();
+    public List<CapituloDTO > splitDocumento(@NonNull DocumentoDTO documento) {
+        return documento.getCapitulos();
     }
 
     /**
-     * Carrega documento por URL
+     * Carrega DocumentoDTO por URL
      *
-     * @param urlDocumento - URL do documento
+     * @param urlDocumentoDTO - URL do documento
      */
     @Override
-    public Documento carregaDocumento(@NonNull URL urlDocumento, Documento docStub) throws Exception {
+    public DocumentoDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoDTO docStub) throws Exception {
        return carregaNorma(urlDocumento, docStub);
     }
 
@@ -310,10 +301,23 @@ public class SplitterNorma  extends AbstractSplitter{
 	}
 
 	@Override
-	public Documento carregaDocumento(String path, Documento docStub) throws Exception {
-        @SuppressWarnings("deprecation")
+	public DocumentoDTO carregaDocumento(String path, DocumentoDTO docStub) throws Exception {      
 		URL url = new URL(path);
 		return carregaNorma(url, docStub);
+	}
+
+
+	@Override
+	protected List<CapituloDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
+	    // TODO Auto-generated method stub
+	    return null;
+	}
+
+
+	@Override
+	protected List<TitleTag> detectTitles(String[] lines) {
+	    // TODO Auto-generated method stub
+	    return null;
 	}
 
 }
