@@ -19,9 +19,8 @@ import org.apache.tika.sax.BodyContentHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
-import org.xml.sax.SAXException;
 
-import bor.tools.splitter.normsplitter.HtmlToMarkdown;
+import bor.tools.utils.*;
 import bor.tools.utils.RAGUtil;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -29,15 +28,16 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import superag.provedorIA.Provedor;
-import superag.retriever.model.Biblioteca;
-import superag.retriever.model.DocParte;
-import superag.retriever.model.Documento;
+import bor.tools.simplellm.*;
+import bor.tools.simplerag.entity.*;
+
+import bor.tools.simplerag.dto.*;
+
 
 /**
  * Splitter genérico para documentos em texto plano e Markdown.
  *
- * Assume que o formato de origem é um documento texto plano simples ou markdown
+ * Assume que o formato de origem é um DocumentoDTO texto plano simples ou markdown
  * eventualmente composta por títulos, subtítulos e parágrafos.
  *
  */
@@ -55,22 +55,22 @@ public class SplitterGenerico extends AbstractSplitter {
 
 	protected boolean removerTachado = true;
 
-	protected Provedor provedor;
+	protected LLMService LLMService;
 
 	/**
 	 * Construtor
 	 * @param biblioteca biblioteca de documentos, para sua
 	 */
-	public SplitterGenerico(Provedor provedor, Biblioteca biblioteca)  {
+	public SplitterGenerico(LLMService LLMService, Biblioteca biblioteca)  {
 		super(biblioteca, null);
-		this.provedor = provedor;
+		this.LLMService = LLMService;
 	}
 
 	/**
 	 * Construtor
 	 * @param biblioteca biblioteca de documentos, para sua
 	 */
-	public SplitterGenerico(Biblioteca biblioteca, ExistsArtefato<Documento> validator)  {
+	public SplitterGenerico(Biblioteca biblioteca, ExistsArtefato<DocumentoDTO> validator)  {
 		super(biblioteca, validator);
 	}
 
@@ -78,36 +78,38 @@ public class SplitterGenerico extends AbstractSplitter {
 	 * @inheritDoc
 	 */
 	@Override
-	public List<DocParte> splitDocumento(@NonNull Documento documento) {
-		String text = documento.getTexto();
+	public List<CapituloDTO> splitDocumento(@NonNull DocumentoDTO DocumentoDTO) {
+		String text = DocumentoDTO.getTexto();
 		String[] lines = text.split("\n");
 		Map<Integer,String> titles = detectTitles(lines);
 		if (titles.isEmpty()) {
 			// Se não houver títulos, dividir o texto em partes de tamanho fixo
-			return splitBySize(documento, this.maxWords);
+			return splitBySize(DocumentoDTO, this.maxWords);
 		} else {
-			return splitByTitles(documento, lines, titles);
+			return splitByTitles(DocumentoDTO, lines, titles);
 		}
 
 	}
 
 	/**
-	 * Divide documento por titulos.
-	 * @param documento - documento a ser dividido
-	 * @param lines - linhas do documento
-	 * @param titles - titulos do documento
-	 * @return lista de partes do documento
+	 * Divide DocumentoDTO por titulos.
+	 * @param DocumentoDTO - DocumentoDTO a ser dividido
+	 * @param lines - linhas do DocumentoDTO
+	 * @param titles - titulos do DocumentoDTO
+	 * @return lista de partes do DocumentoDTO
 	*/
-	public List<DocParte> splitByTitles(Documento documento, String[] lines,  Map<Integer, String> titles) {
+	public List<CapituloDTO> splitByTitles(DocumentoDTO DocumentoDTO, 
+					    String[] lines,  
+					    Map<Integer, String> titles) {
 
 		if (titles.isEmpty()) {
-			return splitBySize(documento, maxWords);
+			return splitBySize(DocumentoDTO, maxWords);
 		}else{
 			int n_titles = titles.size();
 			if (lines == null)
-				lines = documento.getTexto().split("\n");
+				lines = DocumentoDTO.getTexto().split("\n");
 
-			List<DocParte> lista = new ArrayList<>(n_titles + 1);
+			List<CapituloDTO> lista = new ArrayList<>(n_titles + 1);
 			{
 
 				String[] sections = new String[n_titles+1];
@@ -128,9 +130,9 @@ public class SplitterGenerico extends AbstractSplitter {
 				for (String parag : sections) {
 					if (parag == null || parag.isEmpty())
 						continue;
-					DocParte parte = new DocParte();
-					parte.setDocumento(documento);
-					documento.addParte(parte);
+					CapituloDTO parte = new CapituloDTO();
+					parte.setDocumento(DocumentoDTO);
+					DocumentoDTO.addParte(parte);
 					parte.setTexto(parag);
 					lista.add(parte);
 				}
@@ -139,15 +141,15 @@ public class SplitterGenerico extends AbstractSplitter {
 		}
 	}
 
-	public List<DocParte> splitBySize(Documento documento, int maxWords2) {
+	public List<CapituloDTO> splitBySize(DocumentoDTO DocumentoDTO, int maxWords2) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	/**
-	 * Detecta títulos no texto do documento.
+	 * Detecta títulos no texto do DocumentoDTO.
 	 *
-	 * @param text texto do documento
+	 * @param text texto do DocumentoDTO
 	 * @return Map com numero da linha e títulos
 	 **/
 	public static Map<Integer, String> detectTitles(String[] lines) {
@@ -202,8 +204,8 @@ public class SplitterGenerico extends AbstractSplitter {
 	 * @inheritDoc
 	 */
 	@Override
-	public Documento carregaDocumento(@NonNull URL urlDocumento, Documento docStub) throws Exception {
-		Documento doc = docStub==null ? new Documento() : docStub;
+	public DocumentoDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoDTO docStub) throws Exception {
+		DocumentoDTO doc = docStub==null ? new DocumentoDTO() : docStub;
 		doc.setUrl(urlDocumento.toString());
 		OkHttpClient client = RAGUtil.getUnsafeOkHttpClient();
 		Request request = new Request.Builder()
@@ -229,7 +231,7 @@ public class SplitterGenerico extends AbstractSplitter {
 				Metadata metadata = new Metadata();
 				ParseContext context = new ParseContext();
 
-				// Fazendo o parsing do documento
+				// Fazendo o parsing do DocumentoDTO
 				parser.parse(input, handler, metadata, context);
 
 				{
@@ -255,7 +257,7 @@ public class SplitterGenerico extends AbstractSplitter {
 				logger.debug("Metadados: "+res);
 				doc.getMetadados().addMetadados(res);
 			}
-        } catch (IOException | SAXException | TikaException e) {
+        } catch (IOException | TikaException |Exception e) {
             e.printStackTrace();
         }
 		return doc;
@@ -265,15 +267,15 @@ public class SplitterGenerico extends AbstractSplitter {
 
 
     /**
-	 * Carrega documento a partir de um arquivo local ou em rede.
+	 * Carrega DocumentoDTO a partir de um arquivo local ou em rede.
 	 * @param path caminho do arquivo
 	 */
 	@Override
-	public Documento carregaDocumento(String path, Documento docStub) throws Exception {
+	public DocumentoDTO carregaDocumento(String path, DocumentoDTO docStub) throws Exception {
 		if (path.matches("^(http|.*\\.(html|xhtml|htm|xml))$")) {
 			return carregaDocumento(new URI(path).toURL(), docStub);
 		} else {
-			Documento doc =  docStub == null? new Documento() : docStub;
+			DocumentoDTO doc =  docStub == null? new DocumentoDTO() : docStub;
 			doc.setUrl(path);
 			if (doc.getTitulo() == null) {
 				String titulo = AbstractSplitter.detectaNome(path);
@@ -283,8 +285,8 @@ public class SplitterGenerico extends AbstractSplitter {
 			String textoMD = RAGUtil.convertToMarkdown(data);
 			String[] lines = textoMD.split("\n");
 			Map<Integer, String> titles = detectTitles(lines);
-			List<DocParte> partes = splitByTitles(doc, lines, titles);
-			for (DocParte parte : partes) {
+			List<CapituloDTO> partes = splitByTitles(doc, lines, titles);
+			for (CapituloDTO parte : partes) {
 				doc.addParte(parte);
 			}
 			doc.setTexto(textoMD);

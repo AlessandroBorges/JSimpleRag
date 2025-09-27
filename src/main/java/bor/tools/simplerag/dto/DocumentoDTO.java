@@ -11,6 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import bor.tools.simplerag.entity.Capitulo;
+
 /**
  * DTO for Documento entity.
  *
@@ -205,7 +209,7 @@ public class DocumentoDTO {
      */
     public void setMetadataValue(String key, Object value) {
         if (metadados == null) {
-            metadados = new java.util.HashMap<>();
+            metadados = new java.util.LinkedHashMap<>();
         }
         metadados.put(key, value);
     }
@@ -250,5 +254,29 @@ public class DocumentoDTO {
      */
     public Float getBibliotecaTextualWeight() {
         return biblioteca != null ? biblioteca.getPesoTextual() : null;
+    }
+    
+    public void setUrl(String url) {
+	setMetadataValue("url", url);
+    }
+
+    public String getUrl() {
+	return (String) getMetadataValue("url");
+    }
+    
+    @Deprecated
+    @JsonIgnore
+    public void setTexto(String textoOriginal) {
+	setConteudoMarkdown(textoOriginal);
+    }
+    
+    @Deprecated
+    @JsonIgnore
+    public String getTexto() {
+	return getConteudoMarkdown();
+    }
+    
+    public void addParte(CapituloDTO parte) {
+	this.addCapitulo(parte);	
     }
 }
