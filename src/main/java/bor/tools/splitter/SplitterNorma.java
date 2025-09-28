@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -309,15 +310,172 @@ public class SplitterNorma  extends AbstractSplitter{
 
 	@Override
 	protected List<CapituloDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
-	    // TODO Auto-generated method stub
-	    return null;
+	    logger.debug("Splitting legal document by titles. Found {} titles", titles.size());
+
+	    if (titles.isEmpty()) {
+	        // Se não há títulos, criar um único capítulo com todo o conteúdo
+	        CapituloDTO capitulo = new CapituloDTO();
+	        capitulo.setTitulo(doc.getTitulo());
+	        capitulo.setConteudo(doc.getTexto());
+	        capitulo.setOrdemDoc(1);
+	        return List.of(capitulo);
+	    }
+
+	    List<CapituloDTO> capitulos = new ArrayList<>();
+	    String currentSection = null;
+	    StringBuilder currentContent = new StringBuilder();
+	    int currentChapterNumber = 1;
+
+	    // Agrupar por Seções (nível 4) que serão mapeadas para CapituloDTO
+	    for (int i = 0; i < titles.size(); i++) {
+	        TitleTag title = titles.get(i);
+
+	        // Se encontramos uma seção, ela se torna um novo CapituloDTO
+	        if ("secao".equals(title.getTag()) ||
+	            ("capitulo".equals(title.getTag()) && currentSection == null)) {
+
+	            // Finalizar seção anterior
+	            if (currentSection != null && currentContent.length() > 0) {
+	                CapituloDTO capitulo = createCapituloFromSection(currentSection,
+	                                                               currentContent.toString().trim(),
+	                                                               currentChapterNumber++);
+	                capitulos.add(capitulo);
+	            }
+
+	            // Iniciar nova seção
+	            currentSection = title.getTitle();
+	            currentContent = new StringBuilder();
+
+	            // Adicionar conteúdo da linha do título
+	            if (title.getPosition() < lines.length) {
+	                currentContent.append(lines[title.getPosition()]).append("\n");
+	            }
+	        } else {
+	            // Para outros tipos de título (artigo, subseção), adicionar ao conteúdo atual
+	            if (title.getPosition() < lines.length) {
+	                currentContent.append(lines[title.getPosition()]).append("\n");
+	            }
+	        }
+
+	        // Adicionar conteúdo entre títulos
+	        int startPos = title.getPosition() + 1;
+	        int endPos = (i + 1 < titles.size()) ? titles.get(i + 1).getPosition() : lines.length;
+
+	        for (int j = startPos; j < endPos; j++) {
+	            String line = lines[j];
+	            if (!line.trim().isEmpty()) {
+	                currentContent.append(line).append("\n");
+	            }
+	        }
+	    }
+
+	    // Finalizar última seção
+	    if (currentSection != null && currentContent.length() > 0) {
+	        CapituloDTO capitulo = createCapituloFromSection(currentSection,
+	                                                       currentContent.toString().trim(),
+	                                                       currentChapterNumber);
+	        capitulos.add(capitulo);
+	    }
+
+	    // Se não foi possível criar capítulos por seções, criar por conteúdo completo
+	    if (capitulos.isEmpty()) {
+	        CapituloDTO capitulo = new CapituloDTO();
+	        capitulo.setTitulo(doc.getTitulo());
+	        capitulo.setConteudo(doc.getTexto());
+	        capitulo.setOrdemDoc(1);
+	        capitulos.add(capitulo);
+	    }
+
+	    logger.debug("Created {} chapters from legal document", capitulos.size());
+	    return capitulos;
+	}
+
+	/**
+	 * Cria um CapituloDTO a partir de uma seção de normativo
+	 */
+	private CapituloDTO createCapituloFromSection(String sectionTitle, String content, int ordem) {
+	    CapituloDTO capitulo = new CapituloDTO();
+	    capitulo.setTitulo(sectionTitle);
+	    capitulo.setConteudo(content);
+	    capitulo.setOrdemDoc(ordem);
+
+	    // Adicionar metadados específicos de normativos
+	    capitulo.getMetadados().put("tipo_secao", "normativo");
+	    capitulo.getMetadados().put("nivel_hierarquico", "secao");
+
+	    return capitulo;
 	}
 
 
 	@Override
 	protected List<TitleTag> detectTitles(String[] lines) {
-	    // TODO Auto-generated method stub
-	    return null;
+	    logger.debug("Detecting titles in legal document with {} lines", lines.length);
+
+	    List<TitleTag> titles = new ArrayList<>();
+
+	    // Padrões regex para elementos de normativos
+	    Pattern artigoPattern = Pattern.compile("^\\s*Art\\.?\\s+\\d+", Pattern.CASE_INSENSITIVE);
+	    Pattern capituloPattern = Pattern.compile("^\\s*CAP[ÍI]TULO\\s+[IVX\\d]+", Pattern.CASE_INSENSITIVE);
+	    Pattern secaoPattern = Pattern.compile("^\\s*SE[ÇC][ÃA]O\\s+[IVX\\d]+", Pattern.CASE_INSENSITIVE);
+	    Pattern subsecaoPattern = Pattern.compile("^\\s*SUBSE[ÇC][ÃA]O\\s+[IVX\\d]+", Pattern.CASE_INSENSITIVE);
+	    Pattern tituloPattern = Pattern.compile("^\\s*T[ÍI]TULO\\s+[IVX\\d]+", Pattern.CASE_INSENSITIVE);
+	    Pattern livroPattern = Pattern.compile("^\\s*LIVRO\\s+[IVX\\d]+", Pattern.CASE_INSENSITIVE);
+
+	    for (int i = 0; i < lines.length; i++) {
+	        String line = lines[i].trim();
+	        if (line.isEmpty()) {
+	            continue;
+	        }
+
+	        TitleTag titleTag = null;
+
+	        // Verificar diferentes níveis hierárquicos de normativos
+	        if (livroPattern.matcher(line).find()) {
+	            titleTag = new TitleTag();
+	            titleTag.setTag("livro");
+	            titleTag.setLevel(1);
+	            titleTag.setTitle(line);
+	            titleTag.setPosition(i);
+	        } else if (tituloPattern.matcher(line).find()) {
+	            titleTag = new TitleTag();
+	            titleTag.setTag("titulo");
+	            titleTag.setLevel(2);
+	            titleTag.setTitle(line);
+	            titleTag.setPosition(i);
+	        } else if (capituloPattern.matcher(line).find()) {
+	            titleTag = new TitleTag();
+	            titleTag.setTag("capitulo");
+	            titleTag.setLevel(3);
+	            titleTag.setTitle(line);
+	            titleTag.setPosition(i);
+	        } else if (secaoPattern.matcher(line).find()) {
+	            titleTag = new TitleTag();
+	            titleTag.setTag("secao");
+	            titleTag.setLevel(4);
+	            titleTag.setTitle(line);
+	            titleTag.setPosition(i);
+	        } else if (subsecaoPattern.matcher(line).find()) {
+	            titleTag = new TitleTag();
+	            titleTag.setTag("subsecao");
+	            titleTag.setLevel(5);
+	            titleTag.setTitle(line);
+	            titleTag.setPosition(i);
+	        } else if (artigoPattern.matcher(line).find()) {
+	            titleTag = new TitleTag();
+	            titleTag.setTag("artigo");
+	            titleTag.setLevel(6);
+	            titleTag.setTitle(line);
+	            titleTag.setPosition(i);
+	        }
+
+	        if (titleTag != null) {
+	            titles.add(titleTag);
+	            logger.debug("Detected title: {} at line {}", titleTag.getTitle(), i);
+	        }
+	    }
+
+	    logger.debug("Total titles detected: {}", titles.size());
+	    return titles;
 	}
 
 }

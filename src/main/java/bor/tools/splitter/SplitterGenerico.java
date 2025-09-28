@@ -133,9 +133,64 @@ public class SplitterGenerico extends AbstractSplitter {
     }
 
 
-    public List<CapituloDTO> splitBySize(DocumentoDTO DocumentoDTO, int maxWords2) {
-	// TODO Auto-generated method stub
-	return null;
+    public List<CapituloDTO> splitBySize(DocumentoDTO documento, int maxWords) {
+	logger.debug("Splitting document by size with maxWords: {}", maxWords);
+
+	// Use ContentSplitter como base para uma implementação robusta
+	ContentSplitter contentSplitter = new ContentSplitter();
+	List<CapituloDTO> chapters = contentSplitter.splitContent(documento.getTexto(), false);
+
+	// Ajustar os capítulos para o limite de palavras especificado
+	List<CapituloDTO> adjustedChapters = new ArrayList<>();
+	int chapterNumber = 1;
+
+	for (CapituloDTO chapter : chapters) {
+	    String content = chapter.getConteudo();
+	    int wordCount = countWords(content);
+
+	    if (wordCount <= maxWords) {
+		// Capítulo dentro do limite
+		chapter.setOrdemDoc(chapterNumber++);
+		adjustedChapters.add(chapter);
+	    } else {
+		// Dividir capítulo em partes menores
+		String[] paragraphs = splitIntoParagraphs(content);
+		StringBuilder currentChapter = new StringBuilder();
+		int currentWords = 0;
+
+		for (String paragraph : paragraphs) {
+		    int paragraphWords = countWords(paragraph);
+
+		    if (currentWords + paragraphWords > maxWords && currentWords > 0) {
+			// Criar novo capítulo
+			CapituloDTO newChapter = new CapituloDTO();
+			newChapter.setTitulo(chapter.getTitulo() + " (Parte " + chapterNumber + ")");
+			newChapter.setConteudo(currentChapter.toString().trim());
+			newChapter.setOrdemDoc(chapterNumber++);
+			adjustedChapters.add(newChapter);
+
+			// Reiniciar
+			currentChapter = new StringBuilder();
+			currentWords = 0;
+		    }
+
+		    currentChapter.append(paragraph).append("\n\n");
+		    currentWords += paragraphWords;
+		}
+
+		// Adicionar último fragmento
+		if (currentChapter.length() > 0) {
+		    CapituloDTO newChapter = new CapituloDTO();
+		    newChapter.setTitulo(chapter.getTitulo() + " (Parte " + chapterNumber + ")");
+		    newChapter.setConteudo(currentChapter.toString().trim());
+		    newChapter.setOrdemDoc(chapterNumber++);
+		    adjustedChapters.add(newChapter);
+		}
+	    }
+	}
+
+	logger.debug("Split completed. Generated {} chapters", adjustedChapters.size());
+	return adjustedChapters;
     }
 
     /**
@@ -222,8 +277,10 @@ public class SplitterGenerico extends AbstractSplitter {
 
     @Override
     public String removeRepetitions(String text) {
-	// TODO Auto-generated method stub
-	return null;
+	logger.debug("Removing repetitions from text of length: {}", text.length());
+
+	// Delegar para a implementação do AbstractSplitter que já está funcional
+	return super.removeRepetitions(text);
     }
 
     /**

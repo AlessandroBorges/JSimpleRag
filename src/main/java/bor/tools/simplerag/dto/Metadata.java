@@ -1,7 +1,7 @@
 /**
  * 
  */
-package bor.tools.splitter;
+package bor.tools.simplerag.dto;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -6,6 +6,7 @@ import java.util.Objects;
 import lombok.Data;
 
 /**
+ * Wrapper para links web.
  * Conteudo com texto e, opcionalmente, uma URL associada
  */
 @Data
@@ -16,6 +17,16 @@ public class WebLinks implements Serializable {
 	 */
 	private static final long serialVersionUID = -883994976798082258L;
 
+
+	/**
+	 * Texto do link
+	 */
+	private String texto;
+	/**
+	 * URL do link
+	 */
+	private String url;
+	
 	/**
 	 * Construtor padrão
      */
@@ -31,8 +42,6 @@ public class WebLinks implements Serializable {
 		this.url = url;
 	}
 
-	private String texto;
-	private String url;
 
 
 
@@ -55,8 +64,6 @@ public class WebLinks implements Serializable {
 	public int hashCode() {
 		return Objects.hash(texto, url);
 	}
-
-
 
 }
 

@@ -15,7 +15,6 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import bor.tools.simplerag.entity.Capitulo;
-import bor.tools.splitter.Metadata;
 
 /**
  * DTO for Documento entity.

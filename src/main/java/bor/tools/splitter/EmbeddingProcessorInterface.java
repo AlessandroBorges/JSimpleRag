@@ -17,9 +17,9 @@ public interface EmbeddingProcessorInterface {
      *
 	 */
 	public static final int FLAG_FULL_TEXT_METADATA = 1,
-			                FLAG_ONLY_METADATA = 2,
-			                FLAG_ONLY_TEXT = 3,
-			                FLAG_SPLIT_TEXT_METADATA = 4,
+			        FLAG_ONLY_METADATA = 2,
+			        FLAG_ONLY_TEXT = 3,
+			        FLAG_SPLIT_TEXT_METADATA = 4,
 	                        FLAG_AUTO = 5;  // default is full text metadata
 
 
@@ -33,9 +33,11 @@ public interface EmbeddingProcessorInterface {
      * @see DocEmbeddings
      * @see Documento
      */
-    List<DocEmbeddingDTO> createSimpleEmbeddings(CapituloDTO document,
+    List<DocEmbeddingDTO> createChapterEmbeddings(CapituloDTO document,
     		                                 BibliotecaDTO library,
     		                                 int flagGeneration);
+    
+    
 
 
 	/**
@@ -48,18 +50,20 @@ public interface EmbeddingProcessorInterface {
      * @see DocEmbeddings
      * @see Documento
      */
-    List<DocEmbeddingDTO> createSimpleEmbeddings(DocEmbeddingDTO document,
+    List<DocEmbeddingDTO> createChunkEmbeddings(DocEmbeddingDTO document,
     		                                 BibliotecaDTO library,
     		                                 int flagGeneration);
 
     /**
      * Creates embeddings for a question-answer pair.
-     * @param partes
-     * @param config
+     * @param document - the chapter with text data and metadata
+     * @param library - the basic configuration of embeddings, as model name, vector length 
+     * @param k - number of questions to generate. Default is 3.
      * @return
      */
-    List<DocEmbeddingDTO>createQAEmbeddings(CapituloDTO metadataAware,
-	                                    BibliotecaDTO library);
+    List<DocEmbeddingDTO>createQAEmbeddings(CapituloDTO document,
+	                                    BibliotecaDTO library,
+	                                    Integer k);
 
 
     /**
@@ -75,11 +79,30 @@ public interface EmbeddingProcessorInterface {
 	     	    		    BibliotecaDTO library	
                                     );
 
+     /**
+      * Create customized embeddings
+      * @param op
+      * @param pesquisa
+      * @param library
+      * @return
+      */
      float[] createEmbeddings(Embeddings_Op op,
 	     String pesquisa,
-  		    BibliotecaDTO library	
+  	     BibliotecaDTO library	
              );
     
+     /**
+      * Creates embeddings for chapter summaries.
+      * This method generates a summary of the chapter content and then creates embeddings for it.
+      * @param chapter - CapituloDTO to summarize and create embeddings for
+      * @param library - BibliotecaDTO containing embedding configuration (model name, vector length, etc.)
+      * @param maxSummaryLength - Maximum length for the generated summary (optional, can be null for default)
+      * @param summaryInstructions - Custom instructions for summarization (optional, can be null for default)
+      * @return List of DocEmbeddingDTO containing the summary embeddings
+      */
+     List<DocEmbeddingDTO> createSummaryEmbeddings(CapituloDTO chapter,
+                                                   BibliotecaDTO library,
+                                                   Integer maxSummaryLength,
+                                                   String summaryInstructions);
 
 }
-

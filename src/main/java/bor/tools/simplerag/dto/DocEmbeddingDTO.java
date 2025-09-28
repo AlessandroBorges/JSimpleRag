@@ -39,7 +39,7 @@ public class DocEmbeddingDTO {
 
     private String textoIndexado;
 
-    private Map<String, Object> metadados;
+    private Metadata metadados;
 
     private LocalDateTime createdAt;
 
@@ -95,7 +95,7 @@ public class DocEmbeddingDTO {
      */
     public void setMetadataValue(String key, Object value) {
         if (metadados == null) {
-            metadados = new java.util.HashMap<>();
+            metadados = new Metadata();
         }
         metadados.put(key, value);
     }

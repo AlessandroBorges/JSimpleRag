@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import bor.tools.splitter.Metadata;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * DTO for Capitulo entity.
@@ -18,10 +18,12 @@ import bor.tools.splitter.Metadata;
  * Contains chapter data with references to child embeddings.
  * Does NOT contain reference to parent Documento to avoid circular references.
  */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+
 public class CapituloDTO {
 
     private Integer id;
@@ -40,7 +42,8 @@ public class CapituloDTO {
 
     private Integer tokensTotal;
 
-    private Metadata metadados;
+    @Builder.Default
+    private Metadata metadados = new Metadata();
 
     private LocalDateTime createdAt;
 
@@ -179,9 +182,29 @@ public class CapituloDTO {
         metadados.put(key, value);
     }
 
+    public void addMetadata(Map<String, Object> meta) {
+	if (metadados == null) {
+	    metadados = new Metadata();
+	}
+	metadados.putAll(meta);
+    }
+    
+    public void addMetadata(String key, Object value) {
+	if (metadados == null)
+	    metadados = new Metadata();
+	metadados.put(key, value);
+    }
+    
+    public void addMetadata(Metadata meta) {
+	if (metadados == null)
+	    metadados = new Metadata();
+	 metadados.putAll(meta);
+    }
+    
     /**
      * Check if token range is valid
      */
+    @JsonIgnore	
     public boolean isTokenRangeValid() {
         return tokenInicio != null && tokenFim != null && tokenFim > tokenInicio;
     }
@@ -189,6 +212,7 @@ public class CapituloDTO {
     /**
      * Get token range size
      */
+    @JsonIgnore	
     public Integer getTokenRangeSize() {
         return isTokenRangeValid() ? tokenFim - tokenInicio : null;
     }
