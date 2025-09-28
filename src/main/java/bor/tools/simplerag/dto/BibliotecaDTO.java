@@ -1,5 +1,6 @@
 package bor.tools.simplerag.dto;
 
+import bor.tools.simplerag.entity.Biblioteca;
 import bor.tools.simplerag.entity.MetaBiblioteca;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,8 @@ import java.time.LocalDateTime;
 public class BibliotecaDTO {
 
     private Integer id;
+    
+    private String uuid;
 
     private String nome;
 
@@ -38,6 +41,28 @@ public class BibliotecaDTO {
 
     private LocalDateTime updatedAt;
 
+    
+    /**
+     * Create DTO from src
+     * @param src - source
+     * @return
+     */
+    public static BibliotecaDTO from(Biblioteca src) {
+	if (src == null) {
+	    return null;
+	}
+	return BibliotecaDTO.builder()
+		.id(src.getId())
+		.uuid(src.getUuid())
+		.nome(src.getNome())
+		.areaConhecimento(src.getAreaConhecimento())
+		.pesoSemantico(src.getPesoSemantico())
+		.pesoTextual(src.getPesoTextual())
+		.metadados(src.getMetadados())
+		.createdAt(src.getCreatedAt())
+		.updatedAt(src.getUpdatedAt())
+		.build();
+    }
     /**
      * Validates that semantic and textual weights sum to 1.0
      */

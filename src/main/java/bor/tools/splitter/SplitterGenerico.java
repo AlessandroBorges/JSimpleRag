@@ -133,6 +133,9 @@ public class SplitterGenerico extends AbstractSplitter {
     }
 
 
+    /**
+     * Divide DocumentoDTO em partes de tamanho fixo, com base no número máximo de
+     */
     public List<CapituloDTO> splitBySize(DocumentoDTO documento, int maxWords) {
 	logger.debug("Splitting document by size with maxWords: {}", maxWords);
 

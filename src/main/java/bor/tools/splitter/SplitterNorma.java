@@ -478,6 +478,12 @@ public class SplitterNorma  extends AbstractSplitter{
 	    return titles;
 	}
 
+
+	@Override
+	public List<CapituloDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
+	   throw new UnsupportedOperationException("Split by size not supported for legal documents");
+	}
+
 }
 
 

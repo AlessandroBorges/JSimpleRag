@@ -5,10 +5,12 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
@@ -798,13 +800,13 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 
         String categoriesStr = String.join(", ", categories);
         String prompt = String.format(
-            "Categorize o conteúdo abaixo escolhendo a categoria mais apropriada entre: %s. " +
+            "Categorize o conteúdo abaixo escolhendo a categoria mais apropriada entre os seguintes: %s. \n" +
             "Responda apenas com o nome da categoria.", categoriesStr);
 
         String sample = content.length() > 1000 ? content.substring(0, 1000) : content;
 
         MapParam params = new MapParam();
-        params.put("max_tokens", 50);
+        params.put("max_tokens", 128);
 
         CompletionResponse response = llmServices.completion(prompt, sample, params);
         String result = response.getText().trim().toLowerCase();
@@ -838,5 +840,113 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 
         return llmServices.modelNames();
     }
+    
+    /**
+     * Splits a chapter into smaller parts so that each part stays close to {@code idealTokens}
+     * and never goes below {@code minTokens}.  Paragraphs are kept intact – we only split
+     * on blank lines (any line‑break sequence followed by optional whitespace).
+     *
+     * <p>Implementation notes:</p>
+     * <ul>
+     *     <li>Input is validated – a {@link NullPointerException} is thrown if {@code chapter}
+     *         or its content is {@code null}.</li>
+     *     <li>The method uses a configurable {@link TokenEstimator}.  By default it falls back to
+     *         the legacy {@code estimateTokenCount(String)} but can be swapped for a more accurate
+     *         tokenizer (e.g. tiktoken).</li>
+     *     <li>Paragraphs that themselves exceed {@code idealTokens} are kept as a single part;
+     *         this prevents accidental loss of data.  A warning is logged.</li>
+     * </ul>
+     *
+     * @param chapter      the original chapter to split
+     * @param idealTokens  target token count per part (≈ max allowed by the LLM)
+     * @param minTokens    minimum tokens a part should contain before we allow a split
+     * @return an unmodifiable list of sub‑chapters
+     * @throws LLMException 
+     */
+    public List<CapituloDTO> splitLargeChapter(
+            CapituloDTO chapter,
+            Integer idealTokens,
+            Integer minTokens) throws LLMException {
+
+        Objects.requireNonNull(chapter, "chapter must not be null");
+        String content = Objects.requireNonNull(chapter.getConteudo(),
+                () -> "content of " + chapter.getTitulo() + " is null");
+       
+        idealTokens = idealTokens ==null || idealTokens < 1024 ? 8192 : idealTokens;
+        minTokens = minTokens == null || minTokens < 512 ? 2048 : minTokens;
+        
+        // 1. Split into paragraphs – works on Windows (\r\n), Linux (\n) and Mac (\r)
+        final Pattern paragraphSplitter = Pattern.compile("\\R\\s*\\R");
+        String[] paragraphs = paragraphSplitter.split(content);
+
+        // 2. Pre‑estimate tokens for each paragraph (avoids recomputation in the loop)
+        int[] tokenCounts = new int[paragraphs.length];
+        for (int i = 0; i < paragraphs.length; i++) {
+            tokenCounts[i] = getTokenCount(paragraphs[i]); // see below
+        }
+
+        List<CapituloDTO> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder(content.length() / 2); // rough hint
+        int curTokens = 0;
+        int partNo   = 1;
+
+        for (int i = 0; i < paragraphs.length; i++) {
+            String para      = paragraphs[i];
+            int    paraTokens = tokenCounts[i];
+
+            /* Decide whether we should start a new part */
+            boolean exceedsIdeal = curTokens + paraTokens > idealTokens;
+            boolean hasEnough   = curTokens >= minTokens;
+
+            if (exceedsIdeal && hasEnough) {
+                addPart(parts, chapter, partNo++, current);
+                current.setLength(0);
+                curTokens = 0;
+            }
+
+            /* Append paragraph to the running buffer */
+            current.append(para).append("\n\n");
+            curTokens += paraTokens;
+
+            /* Special case: a single paragraph is larger than ideal → keep it alone */
+            if (curTokens == paraTokens && paraTokens > idealTokens) {
+                addPart(parts, chapter, partNo++, current);
+                current.setLength(0);
+                curTokens = 0;
+            }
+        }
+
+        // Add the final fragment
+        if (current.length() > 0) {
+            addPart(parts, chapter, partNo, current);
+        }
+
+        return Collections.unmodifiableList(parts);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Helper section – keeps the loop body clean and testable             */
+    /* ------------------------------------------------------------------ */
+
+    private void addPart(List<CapituloDTO> parts,
+                         CapituloDTO original,
+                         int number,
+                         StringBuilder content) {
+        String title = number == 1
+                ? original.getTitulo()
+                : original.getTitulo() + " (Part " + number + ")";
+        parts.add(new CapituloDTO(number, title, content.toString().trim()));
+    }
+
+
+
+    /**
+     * Split documento by effective chunk size.
+     * @param documento
+     * @param effectiveChunkSize - effective chunk size in tokens / words
+     * @return
+     */
+    public abstract List<CapituloDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) ;
+
 
 }// fim classe

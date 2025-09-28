@@ -304,4 +304,9 @@ public class SplitterWiki extends AbstractSplitter {
         SplitterGenerico genericSplitter = new SplitterGenerico();
         return genericSplitter.splitIntoParagraphs(text);
     }
+    
+    @Override
+    public List<CapituloDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
+	throw new UnsupportedOperationException("Split by size not supported for Wiki documents");
+    }
 }

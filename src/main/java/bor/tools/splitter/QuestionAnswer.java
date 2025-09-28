@@ -1,25 +1,16 @@
-
 package bor.tools.splitter;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 /**
  * Represents a question-answer pair generated from text.
  */
-@Getter
-@Setter
-@ToString
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class QuestionAnswer {
-
-    public QuestionAnswer() {
-    }
-
-    public QuestionAnswer(String question, String answer) {
-	this.question = question;
-	this.answer = answer;
-    }
 
     /**
      * The Question

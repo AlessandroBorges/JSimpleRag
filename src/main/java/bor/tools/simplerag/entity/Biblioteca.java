@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Entity representing a library - a collection of documents organized by knowledge area.
@@ -29,6 +30,12 @@ public class Biblioteca {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Integer id;
+    
+    /**
+     * Identificador único para biblioteca
+     */
+    @Column(name="uuid", nullable=false)
+    private String uuid;
 
     @Column(nullable = false)
     private String nome;
@@ -71,5 +78,15 @@ public class Biblioteca {
             if (Math.abs(sum - 1.0f) > 0.001f)
 				throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
         }
+    }
+    
+    /**
+     * Get or create UUID
+     * @return
+     */
+    public String getUuid() {
+	if(this.uuid==null)
+	    uuid = UUID.randomUUID().toString();
+	return this.uuid;
     }
 }

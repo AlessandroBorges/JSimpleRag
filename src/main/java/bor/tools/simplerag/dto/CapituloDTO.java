@@ -12,6 +12,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import bor.tools.simplerag.entity.Capitulo;
+
 /**
  * DTO for Capitulo entity.
  *
@@ -73,6 +75,36 @@ public class CapituloDTO {
 	this.conteudo = conteudo;
     }
     
+    /**
+     * Convert Capitulo entity to CapituloDTO
+     * @param src
+     * @return
+     */
+    public static CapituloDTO from(Capitulo src) {
+        if (src == null) {
+            return null;
+        }
+        
+        CapituloDTO dto = CapituloDTO.builder()
+                .id(src.getId())
+                .documentoId(src.getDocumentoId())
+                .titulo(src.getTitulo())
+                .conteudo(src.getConteudo())
+                .ordemDoc(src.getOrdemDoc())
+                .tokenInicio(src.getTokenInicio())
+                .tokenFim(src.getTokenFim())
+                .tokensTotal(src.getTokensTotal())
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .build();
+        
+        // Convert metadata Map to Metadata object
+        if (src.getMetadados() != null) {
+            dto.setMetadados(new Metadata(src.getMetadados()));
+        }
+        
+        return dto;
+    }
     
     /**
      * Calculate tokens total if not set
@@ -215,5 +247,12 @@ public class CapituloDTO {
     @JsonIgnore	
     public Integer getTokenRangeSize() {
         return isTokenRangeValid() ? tokenFim - tokenInicio : null;
+    }
+
+    /**
+     * Initialize metadata with default values
+     */
+    public void initializeMetadata() {
+	addMetadata("titulo", titulo);		
     }
 }
