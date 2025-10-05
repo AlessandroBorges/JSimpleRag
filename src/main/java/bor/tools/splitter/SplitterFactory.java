@@ -9,7 +9,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplellm.LLMService;
-import bor.tools.simplerag.dto.BibliotecaDTO;
+import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 
 /**
@@ -52,7 +52,7 @@ public class SplitterFactory {
      * @return instância configurada do splitter
      */
     public AbstractSplitter createSplitter(@NonNull TipoConteudo tipoConteudo,
-                                          @NonNull BibliotecaDTO biblioteca) {
+                                          @NonNull LibraryDTO biblioteca) {
         try {
             AbstractSplitter splitter = documentRouter.routeDocument(tipoConteudo);
             configureSplitter(splitter, biblioteca);
@@ -73,7 +73,7 @@ public class SplitterFactory {
      * @return instância configurada do splitter
      */
     public AbstractSplitter createSplitter(@NonNull String content,
-                                          @NonNull BibliotecaDTO biblioteca,
+                                          @NonNull LibraryDTO biblioteca,
                                           String... hints) {
         try {
             AbstractSplitter splitter = documentRouter.routeDocument(content, hints);
@@ -94,7 +94,7 @@ public class SplitterFactory {
      * @return instância configurada do splitter
      */
     public <T extends AbstractSplitter> T createSplitter(@NonNull Class<T> splitterClass,
-                                                         @NonNull BibliotecaDTO biblioteca) {
+                                                         @NonNull LibraryDTO biblioteca) {
         String cacheKey = splitterClass.getSimpleName();
 
         @SuppressWarnings("unchecked")
@@ -117,7 +117,7 @@ public class SplitterFactory {
     /**
      * Cria splitter genérico configurado
      */
-    public SplitterGenerico createGenericSplitter(@NonNull BibliotecaDTO biblioteca) {
+    public SplitterGenerico createGenericSplitter(@NonNull LibraryDTO biblioteca) {
         SplitterGenerico splitter = new SplitterGenerico(llmService);
         configureSplitter(splitter, biblioteca);
         return splitter;
@@ -126,7 +126,7 @@ public class SplitterFactory {
     /**
      * Cria splitter para normativos
      */
-    public SplitterNorma createNormSplitter(@NonNull BibliotecaDTO biblioteca) {
+    public SplitterNorma createNormSplitter(@NonNull LibraryDTO biblioteca) {
         SplitterNorma splitter = new SplitterNorma(llmService);
         configureSplitter(splitter, biblioteca);
         return splitter;
@@ -135,7 +135,7 @@ public class SplitterFactory {
     /**
      * Cria splitter para conteúdo Wiki
      */
-    public SplitterWiki createWikiSplitter(@NonNull BibliotecaDTO biblioteca) {
+    public SplitterWiki createWikiSplitter(@NonNull LibraryDTO biblioteca) {
         SplitterWiki splitter = new SplitterWiki(llmService);
         configureSplitter(splitter, biblioteca);
         return splitter;
@@ -144,7 +144,7 @@ public class SplitterFactory {
     /**
      * Configura splitter com parâmetros específicos da biblioteca
      */
-    private void configureSplitter(AbstractSplitter splitter, BibliotecaDTO biblioteca) {
+    private void configureSplitter(AbstractSplitter splitter, LibraryDTO biblioteca) {
         if (splitter == null || biblioteca == null) {
             logger.warn("Cannot configure null splitter or biblioteca");
             return;

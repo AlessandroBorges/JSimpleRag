@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMService;
-import bor.tools.simplerag.dto.CapituloDTO;
+import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.utils.RAGUtil;
 import lombok.Data;
@@ -62,7 +62,7 @@ public class SplitterWiki extends AbstractSplitter {
      * Split principal do documento em capítulos
      */
     @Override
-    public List<CapituloDTO> splitDocumento(@NonNull DocumentoDTO documento) {
+    public List<ChapterDTO> splitDocumento(@NonNull DocumentoDTO documento) {
         logger.debug("Splitting Wikipedia-style document: {}", documento.getTitulo());
 
         String content = documento.getTexto();
@@ -152,8 +152,8 @@ public class SplitterWiki extends AbstractSplitter {
      * Split por títulos detectados
      */
     @Override
-    protected List<CapituloDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
-        List<CapituloDTO> capitulos = new ArrayList<>();
+    protected List<ChapterDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
+        List<ChapterDTO> capitulos = new ArrayList<>();
 
         for (int i = 0; i < titles.size(); i++) {
             TitleTag currentTitle = titles.get(i);
@@ -168,7 +168,7 @@ public class SplitterWiki extends AbstractSplitter {
 
             String content = sectionContent.toString().trim();
             if (!content.isEmpty()) {
-                CapituloDTO capitulo = new CapituloDTO();
+                ChapterDTO capitulo = new ChapterDTO();
                 capitulo.setTitulo(currentTitle.getTitle());
                 capitulo.setConteudo(content);
                 capitulo.setOrdemDoc(i + 1);
@@ -194,13 +194,13 @@ public class SplitterWiki extends AbstractSplitter {
     /**
      * Split em capítulos baseado em parágrafos (modo padrão para Wiki)
      */
-    private List<CapituloDTO> splitIntoChaptersByParagraphs(DocumentoDTO doc, String content) {
+    private List<ChapterDTO> splitIntoChaptersByParagraphs(DocumentoDTO doc, String content) {
         logger.debug("Splitting Wiki content by paragraphs with maxWords: {}", maxWordsPerChapter);
 
         // Usar o splitIntoParagraphs() como base para separação
         String[] paragraphs = splitIntoParagraphs(content);
 
-        List<CapituloDTO> capitulos = new ArrayList<>();
+        List<ChapterDTO> capitulos = new ArrayList<>();
         StringBuilder currentChapter = new StringBuilder();
         int currentWords = 0;
         int chapterNumber = 1;
@@ -210,7 +210,7 @@ public class SplitterWiki extends AbstractSplitter {
 
             // Se adicionar este parágrafo exceder o limite, criar novo capítulo
             if (currentWords + paragraphWords > maxWordsPerChapter && currentWords > 0) {
-                CapituloDTO capitulo = new CapituloDTO();
+                ChapterDTO capitulo = new ChapterDTO();
                 capitulo.setTitulo(doc.getTitulo() + " - Parte " + chapterNumber);
                 capitulo.setConteudo(currentChapter.toString().trim());
                 capitulo.setOrdemDoc(chapterNumber);
@@ -233,7 +233,7 @@ public class SplitterWiki extends AbstractSplitter {
 
         // Adicionar último capítulo se houver conteúdo
         if (currentChapter.length() > 0) {
-            CapituloDTO capitulo = new CapituloDTO();
+            ChapterDTO capitulo = new ChapterDTO();
             capitulo.setTitulo(doc.getTitulo() + " - Parte " + chapterNumber);
             capitulo.setConteudo(currentChapter.toString().trim());
             capitulo.setOrdemDoc(chapterNumber);
@@ -306,7 +306,7 @@ public class SplitterWiki extends AbstractSplitter {
     }
     
     @Override
-    public List<CapituloDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
+    public List<ChapterDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
 	throw new UnsupportedOperationException("Split by size not supported for Wiki documents");
     }
 }

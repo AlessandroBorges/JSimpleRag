@@ -1,6 +1,6 @@
 package bor.tools.simplerag.repository;
 
-import bor.tools.simplerag.entity.Capitulo;
+import bor.tools.simplerag.entity.Chapter;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,111 +10,111 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repositório JPA para a entidade Capitulo.
+ * Repositório JPA para a entidade Chapter.
  *
- * Provides standard CRUD operations and custom queries for Capitulo entities.
+ * Provides standard CRUD operations and custom queries for Chapter entities.
  */
 @Repository
-public interface CapituloRepository extends JpaRepository<Capitulo, Integer> {
+public interface CapituloRepository extends JpaRepository<Chapter, Integer> {
 
     /**
      * Busca capítulos por documento, ordenados por ordem
      */
-    List<Capitulo> findByDocumentoIdOrderByOrdemDoc(Integer documentoId);
+    List<Chapter> findByDocumentoIdOrderByOrdemDoc(Integer documentoId);
 
     /**
      * Busca capítulo por documento e ordem
      */
-    Optional<Capitulo> findByDocumentoIdAndOrdemDoc(Integer documentoId, Integer ordemDoc);
+    Optional<Chapter> findByDocumentoIdAndOrdemDoc(Integer documentoId, Integer ordemDoc);
 
     /**
      * Busca capítulos por título contendo texto (case-insensitive)
      */
-    List<Capitulo> findByTituloContainingIgnoreCase(String titulo);
+    List<Chapter> findByTituloContainingIgnoreCase(String titulo);
 
     /**
      * Busca capítulos por título contendo texto em documento específico
      */
-    List<Capitulo> findByTituloContainingIgnoreCaseAndDocumentoId(String titulo, Integer documentoId);
+    List<Chapter> findByTituloContainingIgnoreCaseAndDocumentoId(String titulo, Integer documentoId);
 
     /**
      * Busca capítulos por número mínimo de tokens
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.tokensTotal >= :tokensMinimo ORDER BY c.tokensTotal DESC")
-    List<Capitulo> findByTokensTotalGreaterThanEqual(@Param("tokensMinimo") Integer tokensMinimo);
+    @Query("SELECT c FROM Chapter c WHERE c.tokensTotal >= :tokensMinimo ORDER BY c.tokensTotal DESC")
+    List<Chapter> findByTokensTotalGreaterThanEqual(@Param("tokensMinimo") Integer tokensMinimo);
 
     /**
      * Busca capítulos com tokens entre intervalo
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.tokensTotal BETWEEN :tokensMin AND :tokensMax ORDER BY c.tokensTotal")
-    List<Capitulo> findByTokensTotalBetween(@Param("tokensMin") Integer tokensMin, @Param("tokensMax") Integer tokensMax);
+    @Query("SELECT c FROM Chapter c WHERE c.tokensTotal BETWEEN :tokensMin AND :tokensMax ORDER BY c.tokensTotal")
+    List<Chapter> findByTokensTotalBetween(@Param("tokensMin") Integer tokensMin, @Param("tokensMax") Integer tokensMax);
 
     /**
      * Busca capítulos por posição de tokens (range)
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.tokenInicio <= :posicao AND c.tokenFim > :posicao")
-    List<Capitulo> findByTokenPosition(@Param("posicao") Integer posicao);
+    @Query("SELECT c FROM Chapter c WHERE c.tokenInicio <= :posicao AND c.tokenFim > :posicao")
+    List<Chapter> findByTokenPosition(@Param("posicao") Integer posicao);
 
     /**
      * Busca capítulos que contêm um range de tokens
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.tokenInicio <= :inicio AND c.tokenFim >= :fim")
-    List<Capitulo> findByTokenRange(@Param("inicio") Integer inicio, @Param("fim") Integer fim);
+    @Query("SELECT c FROM Chapter c WHERE c.tokenInicio <= :inicio AND c.tokenFim >= :fim")
+    List<Chapter> findByTokenRange(@Param("inicio") Integer inicio, @Param("fim") Integer fim);
 
     /**
      * Conta capítulos por documento
      */
-    @Query("SELECT COUNT(c) FROM Capitulo c WHERE c.documentoId = :documentoId")
+    @Query("SELECT COUNT(c) FROM Chapter c WHERE c.documentoId = :documentoId")
     Long countByDocumento(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca primeiro capítulo do documento
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.documentoId = :documentoId ORDER BY c.ordemDoc ASC")
-    Optional<Capitulo> findPrimeiroCapitulo(@Param("documentoId") Integer documentoId);
+    @Query("SELECT c FROM Chapter c WHERE c.documentoId = :documentoId ORDER BY c.ordemDoc ASC")
+    Optional<Chapter> findPrimeiroCapitulo(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca último capítulo do documento
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.documentoId = :documentoId ORDER BY c.ordemDoc DESC")
-    Optional<Capitulo> findUltimoCapitulo(@Param("documentoId") Integer documentoId);
+    @Query("SELECT c FROM Chapter c WHERE c.documentoId = :documentoId ORDER BY c.ordemDoc DESC")
+    Optional<Chapter> findUltimoCapitulo(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca próximo capítulo
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.documentoId = :documentoId AND c.ordemDoc > :ordemAtual ORDER BY c.ordemDoc ASC")
-    Optional<Capitulo> findProximoCapitulo(@Param("documentoId") Integer documentoId, @Param("ordemAtual") Integer ordemAtual);
+    @Query("SELECT c FROM Chapter c WHERE c.documentoId = :documentoId AND c.ordemDoc > :ordemAtual ORDER BY c.ordemDoc ASC")
+    Optional<Chapter> findProximoCapitulo(@Param("documentoId") Integer documentoId, @Param("ordemAtual") Integer ordemAtual);
 
     /**
      * Busca capítulo anterior
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.documentoId = :documentoId AND c.ordemDoc < :ordemAtual ORDER BY c.ordemDoc DESC")
-    Optional<Capitulo> findCapituloAnterior(@Param("documentoId") Integer documentoId, @Param("ordemAtual") Integer ordemAtual);
+    @Query("SELECT c FROM Chapter c WHERE c.documentoId = :documentoId AND c.ordemDoc < :ordemAtual ORDER BY c.ordemDoc DESC")
+    Optional<Chapter> findCapituloAnterior(@Param("documentoId") Integer documentoId, @Param("ordemAtual") Integer ordemAtual);
 
     /**
      * Busca capítulos com metadados específicos
      */
     @Query(value = "SELECT * FROM capitulo WHERE metadados @> :metadados::jsonb", nativeQuery = true)
-    List<Capitulo> findByMetadados(@Param("metadados") String metadados);
+    List<Chapter> findByMetadados(@Param("metadados") String metadados);
 
     /**
      * Busca capítulos que contêm uma chave específica nos metadados
      */
     @Query(value = "SELECT * FROM capitulo WHERE metadados ? :chave", nativeQuery = true)
-    List<Capitulo> findByMetadadosContainingKey(@Param("chave") String chave);
+    List<Chapter> findByMetadadosContainingKey(@Param("chave") String chave);
 
     /**
      * Estatísticas de tokens por documento
      */
     @Query("SELECT SUM(c.tokensTotal), AVG(c.tokensTotal), MAX(c.tokensTotal), MIN(c.tokensTotal) " +
-           "FROM Capitulo c WHERE c.documentoId = :documentoId")
+           "FROM Chapter c WHERE c.documentoId = :documentoId")
     Object[] getTokenStatsByDocumento(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca capítulos sem tokens calculados
      */
-    @Query("SELECT c FROM Capitulo c WHERE c.tokensTotal IS NULL")
-    List<Capitulo> findSemTokensCalculados();
+    @Query("SELECT c FROM Chapter c WHERE c.tokensTotal IS NULL")
+    List<Chapter> findSemTokensCalculados();
 
     /**
      * Busca capítulos com problemas de sequência (gaps na ordem)
@@ -130,7 +130,7 @@ public interface CapituloRepository extends JpaRepository<Capitulo, Integer> {
         AND c1.ordem_doc > 1
         ORDER BY c1.ordem_doc
         """, nativeQuery = true)
-    List<Capitulo> findCapitulosComGapsNaOrdem(@Param("documentoId") Integer documentoId);
+    List<Chapter> findCapitulosComGapsNaOrdem(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca capítulos para processamento (sem embeddings gerados)
@@ -143,7 +143,7 @@ public interface CapituloRepository extends JpaRepository<Capitulo, Integer> {
         AND de.id IS NULL
         ORDER BY c.documento_id, c.ordem_doc
         """, nativeQuery = true)
-    List<Capitulo> findCapitulosParaProcessamento();
+    List<Chapter> findCapitulosParaProcessamento();
 
     /**
      * Verifica se existe capítulo com ordem específica no documento
@@ -153,7 +153,7 @@ public interface CapituloRepository extends JpaRepository<Capitulo, Integer> {
     /**
      * Busca máxima ordem do documento (para inserir próximo capítulo)
      */
-    @Query("SELECT COALESCE(MAX(c.ordemDoc), 0) FROM Capitulo c WHERE c.documentoId = :documentoId")
+    @Query("SELECT COALESCE(MAX(c.ordemDoc), 0) FROM Chapter c WHERE c.documentoId = :documentoId")
     Integer findMaxOrdemByDocumento(@Param("documentoId") Integer documentoId);
 
     /**
@@ -166,5 +166,5 @@ public interface CapituloRepository extends JpaRepository<Capitulo, Integer> {
         AND d.flag_vigente = true
         ORDER BY d.id, c.ordem_doc
         """, nativeQuery = true)
-    List<Capitulo> findByBiblioteca(@Param("bibliotecaId") Integer bibliotecaId);
+    List<Chapter> findByBiblioteca(@Param("bibliotecaId") Integer bibliotecaId);
 }

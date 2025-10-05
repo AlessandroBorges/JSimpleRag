@@ -220,7 +220,7 @@ public class RAGUtil {
     }
 
     /**
-     * Retorna uma instância de Biblioteca com os dados da Wiki.<br>
+     * Retorna uma instância de Library com os dados da Wiki.<br>
      * Esta biblioteca usará a configuração de embeddings padrão, dada por
      * {@link #createEmbeddingConfigDefault()} <br>
      *
@@ -231,14 +231,14 @@ public class RAGUtil {
      * </pre>
      *
      *
-     * @return Biblioteca default, configurada para conhecimentos gerais e Wikidata
+     * @return Library default, configurada para conhecimentos gerais e Wikidata
      *
-     * @see Biblioteca
+     * @see Library
      * @see EmbeddingsConfig
      * @see #createEmbeddingConfigDefault()
      */
-    public static Biblioteca createBibliotecaDefault() {
-	Biblioteca biblioteca = new Biblioteca();
+    public static Library createBibliotecaDefault() {
+	Library biblioteca = new Library();
 	biblioteca.setId(1);	
 	biblioteca.setNome("Conhecimentos Gerais e Wikidata");
 	//biblioteca.setDescricao("Base de conhecimentos gerais, Wikidata");

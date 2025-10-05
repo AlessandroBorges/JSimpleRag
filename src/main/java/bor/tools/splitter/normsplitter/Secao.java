@@ -11,7 +11,7 @@ import lombok.Data;
  * Na integração com AbstractSplitter, uma seção é um "subcapítulo" de capitulo e poderá ser 
  * entendido, na maioria dos casos, como um candidato à objeto bor.tools.simplerag.CapituloDTO.
  * 
- * @see CapituloDTO
+ * @see ChapterDTO
  */
 @Data
 class Secao {

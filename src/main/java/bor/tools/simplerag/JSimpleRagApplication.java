@@ -13,7 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * through a combination of semantic (embedding-based) and textual (full-text) search.
  *
  * Features:
- * - Hierarchical document structure: Biblioteca → Documento → Capítulo → DocEmbedding
+ * - Hierarchical document structure: Library → Documento → Capítulo → DocumentEmbedding
  * - Hybrid search combining semantic similarity and full-text search
  * - Asynchronous document processing and embedding generation
  * - PostgreSQL with PGVector for efficient vector operations

@@ -1,0 +1,42 @@
+package bor.tools.simplerag.entity.enums;
+
+/**
+ * Enum representing the type of association between User and Library.
+ * Maps to PostgreSQL enum tipo_associacao ('proprietario', 'colaborador', 'leitor')
+ */
+public enum TipoAssociacao {
+
+    /**
+     * Owner association (full access)
+     */
+    PROPRIETARIO("proprietario"),
+
+    /**
+     * Collaborator association (edit access)
+     */
+    COLABORADOR("colaborador"),
+
+    /**
+     * Reader association (read-only access)
+     */
+    LEITOR("leitor");
+
+    /**
+     * Persistent value
+     */
+    private final String dbValue;
+
+    /**
+     * 
+     * @param dbValue
+     */
+   private TipoAssociacao(String dbValue) {
+	this.dbValue = dbValue;
+    }
+
+    public String getDbValue() {
+	return dbValue;
+    }
+    
+    
+}

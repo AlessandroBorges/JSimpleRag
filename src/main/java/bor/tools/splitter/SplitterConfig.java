@@ -1,6 +1,7 @@
 package bor.tools.splitter;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -60,6 +61,7 @@ public class SplitterConfig {
     @Data
     public static class BibliotecaConfig {
         private String bibliotecaId;
+        private UUID   bibliotecaUUID;
         private String bibliotecaNome;
         private Integer maxChunkSize;
         private Integer minChunkSize;
@@ -140,8 +142,8 @@ public class SplitterConfig {
      * Obtém configuração para uma biblioteca específica
      */
     @Nullable
-    public BibliotecaConfig getConfigForBiblioteca(@NonNull String bibliotecaId) {
-        return bibliotecas.get(bibliotecaId);
+    public BibliotecaConfig getConfigForBiblioteca(@NonNull UUID bibliotecaId) {
+        return bibliotecas.get(bibliotecaId.toString());
     }
 
     /**
@@ -157,9 +159,9 @@ public class SplitterConfig {
      * 
      * 
      */
-    public void registerBibliotecaConfig(@NonNull String bibliotecaUuId, @NonNull BibliotecaConfig config) {
-        config.setBibliotecaId(bibliotecaUuId);
-        bibliotecas.put(bibliotecaUuId, config);
+    public void registerBibliotecaConfig(@NonNull UUID bibliotecaUuId, @NonNull BibliotecaConfig config) {
+        config.setBibliotecaUUID(bibliotecaUuId);
+        bibliotecas.put(bibliotecaUuId.toString(), config);
         logger.debug("Registered config for biblioteca: {}", bibliotecaUuId);
     }
 

@@ -1,6 +1,6 @@
 package bor.tools.simplerag.dto;
 
-import bor.tools.simplerag.entity.Biblioteca;
+import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaBiblioteca;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,9 +8,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
- * DTO for Biblioteca entity.
+ * DTO for Library entity.
  *
  * Contains only biblioteca data without references to documents for performance.
  * To get documents, query by bibliotecaId using DocumentoRepository.
@@ -19,11 +20,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BibliotecaDTO {
+public class LibraryDTO {
 
     private Integer id;
     
-    private String uuid;
+    private UUID uuid;
 
     private String nome;
 
@@ -47,11 +48,11 @@ public class BibliotecaDTO {
      * @param src - source
      * @return
      */
-    public static BibliotecaDTO from(Biblioteca src) {
+    public static LibraryDTO from(Library src) {
 	if (src == null) {
 	    return null;
 	}
-	return BibliotecaDTO.builder()
+	return LibraryDTO.builder()
 		.id(src.getId())
 		.uuid(src.getUuid())
 		.nome(src.getNome())

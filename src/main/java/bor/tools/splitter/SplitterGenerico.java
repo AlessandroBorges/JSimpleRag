@@ -22,9 +22,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMService;
-import bor.tools.simplerag.dto.CapituloDTO;
+import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
-import bor.tools.simplerag.entity.Capitulo;
+import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.Documento;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -73,7 +73,7 @@ public class SplitterGenerico extends AbstractSplitter {
      * @inheritDoc
      */
     @Override
-    public List<CapituloDTO> splitDocumento(@NonNull DocumentoDTO DocumentoDTO) {
+    public List<ChapterDTO> splitDocumento(@NonNull DocumentoDTO DocumentoDTO) {
 	String text = DocumentoDTO.getTexto();
 	String[] lines = text.split("\n");
 	List<TitleTag> titles = detectTitles(lines);
@@ -93,7 +93,7 @@ public class SplitterGenerico extends AbstractSplitter {
      * @param titles       - titulos do DocumentoDTO
      * @return lista de partes do DocumentoDTO
      */
-    public List<CapituloDTO> splitByTitles(DocumentoDTO DocumentoDTO, String[] lines, List<TitleTag> titles) {
+    public List<ChapterDTO> splitByTitles(DocumentoDTO DocumentoDTO, String[] lines, List<TitleTag> titles) {
 
 	if (titles.isEmpty()) {
 	    return splitBySize(DocumentoDTO, maxWords);
@@ -102,7 +102,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	    if (lines == null)
 		lines = DocumentoDTO.getTexto().split("\n");
 
-	    List<CapituloDTO> lista = new ArrayList<>(n_titles + 1);
+	    List<ChapterDTO> lista = new ArrayList<>(n_titles + 1);
 	    {
 
 		String[] sections = new String[n_titles + 1];
@@ -122,7 +122,7 @@ public class SplitterGenerico extends AbstractSplitter {
 		for (String parag : sections) {
 		    if (parag == null || parag.isEmpty())
 			continue;
-		    CapituloDTO parte = new CapituloDTO();
+		    ChapterDTO parte = new ChapterDTO();
 		    DocumentoDTO.addParte(parte);
 		    parte.setConteudo(parag);
 		    lista.add(parte);
@@ -136,18 +136,18 @@ public class SplitterGenerico extends AbstractSplitter {
     /**
      * Divide DocumentoDTO em partes de tamanho fixo, com base no número máximo de
      */
-    public List<CapituloDTO> splitBySize(DocumentoDTO documento, int maxWords) {
+    public List<ChapterDTO> splitBySize(DocumentoDTO documento, int maxWords) {
 	logger.debug("Splitting document by size with maxWords: {}", maxWords);
 
 	// Use ContentSplitter como base para uma implementação robusta
 	ContentSplitter contentSplitter = new ContentSplitter();
-	List<CapituloDTO> chapters = contentSplitter.splitContent(documento.getTexto(), false);
+	List<ChapterDTO> chapters = contentSplitter.splitContent(documento.getTexto(), false);
 
 	// Ajustar os capítulos para o limite de palavras especificado
-	List<CapituloDTO> adjustedChapters = new ArrayList<>();
+	List<ChapterDTO> adjustedChapters = new ArrayList<>();
 	int chapterNumber = 1;
 
-	for (CapituloDTO chapter : chapters) {
+	for (ChapterDTO chapter : chapters) {
 	    String content = chapter.getConteudo();
 	    int wordCount = countWords(content);
 
@@ -166,7 +166,7 @@ public class SplitterGenerico extends AbstractSplitter {
 
 		    if (currentWords + paragraphWords > maxWords && currentWords > 0) {
 			// Criar novo capítulo
-			CapituloDTO newChapter = new CapituloDTO();
+			ChapterDTO newChapter = new ChapterDTO();
 			newChapter.setTitulo(chapter.getTitulo() + " (Parte " + chapterNumber + ")");
 			newChapter.setConteudo(currentChapter.toString().trim());
 			newChapter.setOrdemDoc(chapterNumber++);
@@ -183,7 +183,7 @@ public class SplitterGenerico extends AbstractSplitter {
 
 		// Adicionar último fragmento
 		if (currentChapter.length() > 0) {
-		    CapituloDTO newChapter = new CapituloDTO();
+		    ChapterDTO newChapter = new ChapterDTO();
 		    newChapter.setTitulo(chapter.getTitulo() + " (Parte " + chapterNumber + ")");
 		    newChapter.setConteudo(currentChapter.toString().trim());
 		    newChapter.setOrdemDoc(chapterNumber++);

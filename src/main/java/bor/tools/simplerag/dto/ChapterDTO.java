@@ -12,10 +12,10 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import bor.tools.simplerag.entity.Capitulo;
+import bor.tools.simplerag.entity.Chapter;
 
 /**
- * DTO for Capitulo entity.
+ * DTO for Chapter entity.
  *
  * Contains chapter data with references to child embeddings.
  * Does NOT contain reference to parent Documento to avoid circular references.
@@ -26,7 +26,7 @@ import bor.tools.simplerag.entity.Capitulo;
 @AllArgsConstructor
 @Builder
 
-public class CapituloDTO {
+public class ChapterDTO {
 
     private Integer id;
 
@@ -56,12 +56,12 @@ public class CapituloDTO {
      * Includes both chapter-level and chunk-level embeddings.
      */
     @Builder.Default
-    private List<DocEmbeddingDTO> embeddings = new ArrayList<>();
+    private List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
 
     /**
      * Constructor with title and content
      */
-    public CapituloDTO(String titulo, String conteudo) {
+    public ChapterDTO(String titulo, String conteudo) {
 	this.titulo = titulo;
 	this.conteudo = conteudo;
     }
@@ -69,23 +69,23 @@ public class CapituloDTO {
     /**
      * Constructor with title and content
      */
-    public CapituloDTO(Integer orderDoc, String titulo, String conteudo) {
+    public ChapterDTO(Integer orderDoc, String titulo, String conteudo) {
 	this.ordemDoc = orderDoc;
 	this.titulo = titulo;
 	this.conteudo = conteudo;
     }
     
     /**
-     * Convert Capitulo entity to CapituloDTO
+     * Convert Chapter entity to ChapterDTO
      * @param src
      * @return
      */
-    public static CapituloDTO from(Capitulo src) {
+    public static ChapterDTO from(Chapter src) {
         if (src == null) {
             return null;
         }
         
-        CapituloDTO dto = CapituloDTO.builder()
+        ChapterDTO dto = ChapterDTO.builder()
                 .id(src.getId())
                 .documentoId(src.getDocumentoId())
                 .titulo(src.getTitulo())
@@ -147,7 +147,7 @@ public class CapituloDTO {
     /**
      * Add embedding to this chapter
      */
-    public void addEmbedding(DocEmbeddingDTO embedding) {
+    public void addEmbedding(DocumentEmbeddingDTO embedding) {
         if (embeddings == null) {
             embeddings = new ArrayList<>();
         }
@@ -157,31 +157,31 @@ public class CapituloDTO {
     /**
      * Get chapter-level embeddings only
      */
-    public List<DocEmbeddingDTO> getChapterEmbeddings() {
+    public List<DocumentEmbeddingDTO> getChapterEmbeddings() {
         if (embeddings == null) {
             return new ArrayList<>();
         }
         return embeddings.stream()
-                .filter(DocEmbeddingDTO::isChapterLevel)
+                .filter(DocumentEmbeddingDTO::isChapterLevel)
                 .toList();
     }
 
     /**
      * Get chunk-level embeddings only
      */
-    public List<DocEmbeddingDTO> getChunkEmbeddings() {
+    public List<DocumentEmbeddingDTO> getChunkEmbeddings() {
         if (embeddings == null) {
             return new ArrayList<>();
         }
         return embeddings.stream()
-                .filter(DocEmbeddingDTO::isChunkLevel)
+                .filter(DocumentEmbeddingDTO::isChunkLevel)
                 .toList();
     }
 
     /**
      * Get embeddings ordered by ordem_cap
      */
-    public List<DocEmbeddingDTO> getEmbeddingsOrdered() {
+    public List<DocumentEmbeddingDTO> getEmbeddingsOrdered() {
         if (embeddings == null) {
             return new ArrayList<>();
         }

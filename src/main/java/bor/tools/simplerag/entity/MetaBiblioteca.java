@@ -3,7 +3,7 @@ package bor.tools.simplerag.entity;
 import java.util.LinkedHashMap;
 
 /**
- * Metadata for Biblioteca and Documento entities.
+ * Metadata for Library and Documento entities.
  * Must include the key 'language' for document processing.
  * Optional keys: 'embedding_model' and 'embedding_dimension'.
  *

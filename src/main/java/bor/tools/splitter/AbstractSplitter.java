@@ -29,7 +29,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import bor.tools.simplerag.dto.CapituloDTO;
+import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.entity.*;
 import bor.tools.simplellm.*;
@@ -49,7 +49,7 @@ import bor.tools.simplellm.exceptions.LLMException;
  * @see DocumentPreprocessor
  * @see SplitterLLMServices
  * @see Provedor
- * @see Biblioteca
+ * @see Library
  * @see ExistsArtefato
  * @see Documento
  */
@@ -173,7 +173,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @param parte - capítulo a ser enriquecido
      * @param contextMetadata - metadata do contexto
      */
-    protected void enrichPartMetadata(CapituloDTO parte, Metadata contextMetadata) {
+    protected void enrichPartMetadata(ChapterDTO parte, Metadata contextMetadata) {
 	
     }
 
@@ -402,7 +402,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * Split de um documento em capítulos.
      * 
      */
-    public abstract List<CapituloDTO> splitDocumento(DocumentoDTO DocumentoDTO);
+    public abstract List<ChapterDTO> splitDocumento(DocumentoDTO DocumentoDTO);
     
     
     /**
@@ -488,8 +488,8 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 	    String textoMD = RAGUtil.convertToMarkdown(data);
 	    String[] lines = textoMD.split("\n");
 	    List<TitleTag> titles = detectTitles(lines);
-	    List<CapituloDTO> partes = splitByTitles(doc, lines, titles);
-	    for (CapituloDTO parte : partes) {
+	    List<ChapterDTO> partes = splitByTitles(doc, lines, titles);
+	    for (ChapterDTO parte : partes) {
 		doc.addParte(parte);
 	    }
 	    doc.setTexto(textoMD);
@@ -505,9 +505,9 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @param doc    - DocumentoDTO
      * @param lines  - lines of text
      * @param titles - detected titles
-     * @return list of CapituloDTO
+     * @return list of ChapterDTO
      */    
-    protected abstract List<CapituloDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles);
+    protected abstract List<ChapterDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles);
 
     /**
      * Detect titles in text lines.
@@ -863,8 +863,8 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @return an unmodifiable list of sub‑chapters
      * @throws LLMException 
      */
-    public List<CapituloDTO> splitLargeChapter(
-            CapituloDTO chapter,
+    public List<ChapterDTO> splitLargeChapter(
+            ChapterDTO chapter,
             Integer idealTokens,
             Integer minTokens) throws LLMException {
 
@@ -885,7 +885,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
             tokenCounts[i] = getTokenCount(paragraphs[i]); // see below
         }
 
-        List<CapituloDTO> parts = new ArrayList<>();
+        List<ChapterDTO> parts = new ArrayList<>();
         StringBuilder current = new StringBuilder(content.length() / 2); // rough hint
         int curTokens = 0;
         int partNo   = 1;
@@ -928,14 +928,14 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
     /* Helper section – keeps the loop body clean and testable             */
     /* ------------------------------------------------------------------ */
 
-    private void addPart(List<CapituloDTO> parts,
-                         CapituloDTO original,
+    private void addPart(List<ChapterDTO> parts,
+                         ChapterDTO original,
                          int number,
                          StringBuilder content) {
         String title = number == 1
                 ? original.getTitulo()
                 : original.getTitulo() + " (Part " + number + ")";
-        parts.add(new CapituloDTO(number, title, content.toString().trim()));
+        parts.add(new ChapterDTO(number, title, content.toString().trim()));
     }
 
 
@@ -946,7 +946,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @param effectiveChunkSize - effective chunk size in tokens / words
      * @return
      */
-    public abstract List<CapituloDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) ;
+    public abstract List<ChapterDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) ;
 
 
 }// fim classe

@@ -31,9 +31,10 @@ public enum TipoEmbedding {
     RESUMO("resumo"),
     
     /**
-     * Metadata
+     * Metadata embedding (for metadata information)
      */
-    METADATA("metadata"),
+    METADADOS("metadados"),
+    
     /**
      * Other types of embeddings
      */

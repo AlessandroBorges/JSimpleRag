@@ -14,12 +14,12 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import bor.tools.simplerag.entity.Capitulo;
+import bor.tools.simplerag.entity.Chapter;
 
 /**
  * DTO for Documento entity.
  *
- * Contains document data with references to parent Biblioteca and child Capitulos.
+ * Contains document data with references to parent Library and child Capitulos.
  * This provides the complete hierarchical context needed by Splitters.
  */
 @Data
@@ -52,7 +52,7 @@ public class DocumentoDTO {
     /**
      * Parent biblioteca reference for full context
      */
-    private BibliotecaDTO biblioteca;
+    private LibraryDTO biblioteca;
     
     /**
      * Attached documents (e.g. annexes)
@@ -63,7 +63,7 @@ public class DocumentoDTO {
      * Child chapters with their embeddings
      */
     @Builder.Default
-    private List<CapituloDTO> capitulos = new ArrayList<>();
+    private List<ChapterDTO> capitulos = new ArrayList<>();
 
     /**
      * Convenience method to check if document is active
@@ -103,7 +103,7 @@ public class DocumentoDTO {
     /**
      * Add chapter to this document
      */
-    public void addCapitulo(CapituloDTO capitulo) {
+    public void addCapitulo(ChapterDTO capitulo) {
         if (capitulos == null) {
             capitulos = new ArrayList<>();
         }
@@ -113,7 +113,7 @@ public class DocumentoDTO {
     /**
      * Get chapters ordered by ordem_doc
      */
-    public List<CapituloDTO> getCapitulosOrdered() {
+    public List<ChapterDTO> getCapitulosOrdered() {
         if (capitulos == null) {
             return new ArrayList<>();
         }
@@ -132,7 +132,7 @@ public class DocumentoDTO {
     /**
      * Get chapter by order
      */
-    public CapituloDTO getCapituloByOrdem(Integer ordem) {
+    public ChapterDTO getCapituloByOrdem(Integer ordem) {
         if (capitulos == null) {
             return null;
         }
@@ -145,22 +145,22 @@ public class DocumentoDTO {
     /**
      * Get first chapter
      */
-    public CapituloDTO getFirstChapter() {
+    public ChapterDTO getFirstChapter() {
         return getCapitulosOrdered().stream().findFirst().orElse(null);
     }
 
     /**
      * Get last chapter
      */
-    public CapituloDTO getLastChapter() {
-        List<CapituloDTO> ordered = getCapitulosOrdered();
+    public ChapterDTO getLastChapter() {
+        List<ChapterDTO> ordered = getCapitulosOrdered();
         return ordered.isEmpty() ? null : ordered.get(ordered.size() - 1);
     }
 
     /**
      * Get all embeddings from all chapters
      */
-    public List<DocEmbeddingDTO> getAllEmbeddings() {
+    public List<DocumentEmbeddingDTO> getAllEmbeddings() {
         if (capitulos == null) {
             return new ArrayList<>();
         }
@@ -179,27 +179,27 @@ public class DocumentoDTO {
     /**
      * Get document-level embeddings only
      */
-    public List<DocEmbeddingDTO> getDocumentEmbeddings() {
+    public List<DocumentEmbeddingDTO> getDocumentEmbeddings() {
         return getAllEmbeddings().stream()
-                .filter(DocEmbeddingDTO::isDocumentLevel)
+                .filter(DocumentEmbeddingDTO::isDocumentLevel)
                 .toList();
     }
 
     /**
      * Get chapter-level embeddings only
      */
-    public List<DocEmbeddingDTO> getChapterEmbeddings() {
+    public List<DocumentEmbeddingDTO> getChapterEmbeddings() {
         return getAllEmbeddings().stream()
-                .filter(DocEmbeddingDTO::isChapterLevel)
+                .filter(DocumentEmbeddingDTO::isChapterLevel)
                 .toList();
     }
 
     /**
      * Get chunk-level embeddings only
      */
-    public List<DocEmbeddingDTO> getChunkEmbeddings() {
+    public List<DocumentEmbeddingDTO> getChunkEmbeddings() {
         return getAllEmbeddings().stream()
-                .filter(DocEmbeddingDTO::isChunkLevel)
+                .filter(DocumentEmbeddingDTO::isChunkLevel)
                 .toList();
     }
 
@@ -282,7 +282,7 @@ public class DocumentoDTO {
 	return getConteudoMarkdown();
     }
     
-    public void addParte(CapituloDTO parte) {
+    public void addParte(ChapterDTO parte) {
 	this.addCapitulo(parte);	
     }
 

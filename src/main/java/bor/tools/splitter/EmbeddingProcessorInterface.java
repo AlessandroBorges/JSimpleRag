@@ -33,8 +33,8 @@ public interface EmbeddingProcessorInterface {
      * @see DocEmbeddings
      * @see Documento
      */
-    List<DocEmbeddingDTO> createChapterEmbeddings(CapituloDTO document,
-    		                                 BibliotecaDTO library,
+    List<DocumentEmbeddingDTO> createChapterEmbeddings(ChapterDTO document,
+    		                                 LibraryDTO library,
     		                                 int flagGeneration);
     
     
@@ -50,8 +50,8 @@ public interface EmbeddingProcessorInterface {
      * @see DocEmbeddings
      * @see Documento
      */
-    List<DocEmbeddingDTO> createChunkEmbeddings(DocEmbeddingDTO document,
-    		                                 BibliotecaDTO library,
+    List<DocumentEmbeddingDTO> createChunkEmbeddings(DocumentEmbeddingDTO document,
+    		                                 LibraryDTO library,
     		                                 int flagGeneration);
 
     /**
@@ -61,8 +61,8 @@ public interface EmbeddingProcessorInterface {
      * @param k - number of questions to generate. Default is 3.
      * @return
      */
-    List<DocEmbeddingDTO>createQAEmbeddings(CapituloDTO document,
-	                                    BibliotecaDTO library,
+    List<DocumentEmbeddingDTO>createQAEmbeddings(ChapterDTO document,
+	                                    LibraryDTO library,
 	                                    Integer k);
 
 
@@ -76,7 +76,7 @@ public interface EmbeddingProcessorInterface {
      * @see EmbeddingsConfig
      **/
      float[] createSearchEmbeddings(String pesquisa,
-	     	    		    BibliotecaDTO library	
+	     	    		    LibraryDTO library	
                                     );
 
      /**
@@ -88,20 +88,20 @@ public interface EmbeddingProcessorInterface {
       */
      float[] createEmbeddings(Embeddings_Op op,
 	     String pesquisa,
-  	     BibliotecaDTO library	
+  	     LibraryDTO library	
              );
     
      /**
       * Creates embeddings for chapter summaries.
       * This method generates a summary of the chapter content and then creates embeddings for it.
-      * @param chapter - CapituloDTO to summarize and create embeddings for
-      * @param library - BibliotecaDTO containing embedding configuration (model name, vector length, etc.)
+      * @param chapter - ChapterDTO to summarize and create embeddings for
+      * @param library - LibraryDTO containing embedding configuration (model name, vector length, etc.)
       * @param maxSummaryLength - Maximum length for the generated summary (optional, can be null for default)
       * @param summaryInstructions - Custom instructions for summarization (optional, can be null for default)
-      * @return List of DocEmbeddingDTO containing the summary embeddings
+      * @return List of DocumentEmbeddingDTO containing the summary embeddings
       */
-     List<DocEmbeddingDTO> createSummaryEmbeddings(CapituloDTO chapter,
-                                                   BibliotecaDTO library,
+     List<DocumentEmbeddingDTO> createSummaryEmbeddings(ChapterDTO chapter,
+                                                   LibraryDTO library,
                                                    Integer maxSummaryLength,
                                                    String summaryInstructions);
 

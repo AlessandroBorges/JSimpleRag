@@ -24,7 +24,7 @@ public enum TipoConteudo {
     RESUMO(17, "resumo"),
     WIKI(18, "wiki"),
     PROJETO(19, "projeto"),
-    DOCUMENTO(20, "documento"),
+    DOCUMENTO_INTERNO(20, "documento_interno"),
     OUTROS(21, "outros");
 
     private final int codigo;

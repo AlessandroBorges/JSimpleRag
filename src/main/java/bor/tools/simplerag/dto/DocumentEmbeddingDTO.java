@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * DTO for DocEmbedding entity.
+ * DTO for DocumentEmbedding entity.
  *
  * Contains basic embedding data without parent references.
  * Used as leaf nodes in the hierarchy for Splitters and processing.
@@ -19,7 +19,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocEmbeddingDTO {
+public class DocumentEmbeddingDTO {
 
     private Integer id;
 

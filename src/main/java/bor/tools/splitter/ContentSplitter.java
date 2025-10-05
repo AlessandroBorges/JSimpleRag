@@ -25,7 +25,7 @@ public class ContentSplitter {
      * @return A list of chapters with titles and content
      * @see Chapter
      */
-    public List<CapituloDTO> splitContent(String content) {
+    public List<ChapterDTO> splitContent(String content) {
     	boolean isMarkDown = RAGUtil.isMarkdown(content);
     	return splitContent(content, isMarkDown);
     }
@@ -37,8 +37,8 @@ public class ContentSplitter {
      * @return A list of chapters with titles and content
      * @see Chapter
      */
-    public List<CapituloDTO> splitContent(String content, boolean isMarkdown) {
-        List<CapituloDTO> chapters = new ArrayList<>();
+    public List<ChapterDTO> splitContent(String content, boolean isMarkdown) {
+        List<ChapterDTO> chapters = new ArrayList<>();
 
         if (isMarkdown) {
             // Handle Markdown content
@@ -55,8 +55,8 @@ public class ContentSplitter {
     /**
      * Split Markdown content using headers as primary split points
      */
-    private List<CapituloDTO> splitMarkdown(String content) {
-        List<CapituloDTO> chapters = new ArrayList<>();
+    private List<ChapterDTO> splitMarkdown(String content) {
+        List<ChapterDTO> chapters = new ArrayList<>();
 
         // Regex for Markdown headers (both # and === or --- style)
         Pattern headerPattern = Pattern.compile(
@@ -73,7 +73,7 @@ public class ContentSplitter {
             String sectionContent = content.substring(lastPos, matcher.start()).trim();
 
             if (!sectionContent.isEmpty()) {
-                chapters.add(new CapituloDTO(currentTitle, sectionContent));
+                chapters.add(new ChapterDTO(currentTitle, sectionContent));
             }
 
             // Update for next iteration
@@ -84,7 +84,7 @@ public class ContentSplitter {
         // Add final section
         String finalContent = content.substring(lastPos).trim();
         if (!finalContent.isEmpty()) {
-            chapters.add(new CapituloDTO(currentTitle, finalContent));
+            chapters.add(new ChapterDTO(currentTitle, finalContent));
         }
 
         return chapters;
@@ -93,8 +93,8 @@ public class ContentSplitter {
     /**
      * Split plain text using paragraph breaks and size-based chunking
      */
-    private List<CapituloDTO> splitPlainText(String content) {
-        List<CapituloDTO> chapters = new ArrayList<>();
+    private List<ChapterDTO> splitPlainText(String content) {
+        List<ChapterDTO> chapters = new ArrayList<>();
 
         // Split on double line breaks (paragraphs)
         String[] paragraphs = content.split("\\n\\s*\\n");
@@ -109,7 +109,7 @@ public class ContentSplitter {
             if (currentTokenCount + paragraphTokens > IDEAL_TOKENS &&
                 currentTokenCount >= MIN_TOKENS) {
                 // Create new chapter if we've reached ideal size
-                chapters.add(new CapituloDTO(
+                chapters.add(new ChapterDTO(
                     "Section " + chapterNumber++,
                     currentChapter.toString().trim()
                 ));
@@ -123,7 +123,7 @@ public class ContentSplitter {
 
         // Add final chapter
         if (currentChapter.length() > 0) {
-            chapters.add(new CapituloDTO(
+            chapters.add(new ChapterDTO(
                 "Section " + chapterNumber,
                 currentChapter.toString().trim()
             ));
@@ -135,17 +135,17 @@ public class ContentSplitter {
     /**
      * Optimize chapter sizes by merging or splitting as needed
      */
-    private List<CapituloDTO> optimizeChapterSizes(List<CapituloDTO> chapters) {
-        List<CapituloDTO> optimizedChapters = new ArrayList<>();
+    private List<ChapterDTO> optimizeChapterSizes(List<ChapterDTO> chapters) {
+        List<ChapterDTO> optimizedChapters = new ArrayList<>();
 
         for (int i = 0; i < chapters.size(); i++) {
-        	CapituloDTO current = chapters.get(i);
+        	ChapterDTO current = chapters.get(i);
             int tokenCount = estimateTokenCount(current.getConteudo());
 
             if (tokenCount < MIN_TOKENS && i < chapters.size() - 1) {
                 // Merge with next chapter if too small
-            	CapituloDTO next = chapters.get(i + 1);
-                optimizedChapters.add(new CapituloDTO(
+            	ChapterDTO next = chapters.get(i + 1);
+                optimizedChapters.add(new ChapterDTO(
                     current.getTitulo(),
                     current.getConteudo() + "\n\n" + next.getConteudo()
                 ));
@@ -164,8 +164,8 @@ public class ContentSplitter {
     /**
      * Split a large chapter into smaller ones
      */
-    private List<CapituloDTO> splitLargeChapter(CapituloDTO chapter) {
-        List<CapituloDTO> subChapters = new ArrayList<>();
+    private List<ChapterDTO> splitLargeChapter(ChapterDTO chapter) {
+        List<ChapterDTO> subChapters = new ArrayList<>();
         String[] paragraphs = chapter.getConteudo().split("\\n\\s*\\n");
 
         StringBuilder currentContent = new StringBuilder();
@@ -178,7 +178,7 @@ public class ContentSplitter {
             if (currentTokens + paragraphTokens > IDEAL_TOKENS &&
                 currentTokens >= MIN_TOKENS) {
         	
-                subChapters.add(new CapituloDTO(partNumber,
+                subChapters.add(new ChapterDTO(partNumber,
                     chapter.getTitulo() + " (Part " + partNumber++ + ")",
                     currentContent.toString().trim()
                 ));
@@ -191,7 +191,7 @@ public class ContentSplitter {
         }
 
         if (currentContent.length() > 0) {
-            subChapters.add(new CapituloDTO(
+            subChapters.add(new ChapterDTO(
         	    partNumber,
                 chapter.getTitulo() + (partNumber > 1 ? " (Part " + partNumber + ")" : ""),
                 currentContent.toString().trim()

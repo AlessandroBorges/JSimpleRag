@@ -3,7 +3,7 @@ package bor.tools.splitter;
 import java.net.URL;
 import java.util.List;
 
-import bor.tools.simplerag.dto.CapituloDTO;
+import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.entity.*;
 
@@ -16,7 +16,7 @@ public interface DocumentSplitter {
      * @param document The document to split
      * @return List of document parts
      */
-    List<CapituloDTO> splitDocumento(DocumentoDTO document);
+    List<ChapterDTO> splitDocumento(DocumentoDTO document);
 
     /**
      * Loads a document from a URL.

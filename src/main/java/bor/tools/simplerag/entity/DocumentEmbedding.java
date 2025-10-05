@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Entity representing document embeddings for search (document, chapter, or chunk level).
+ * Entity representing document embeddings for search. (document, chapter, or chunk level).<br>
+ * It can reference documents, chapters, or text chunks.<br>
  * Maps to the 'doc_embedding' table in PostgreSQL.
  *
  * Note: This entity uses Spring JDBC for vector operations due to PGVector requirements.
@@ -24,7 +25,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class DocEmbedding {
+public class DocumentEmbedding extends Updatable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,7 +57,7 @@ public class DocEmbedding {
      * Note: For vector operations, use DocEmbeddingJdbcRepository
      * This field is mapped but vector operations require native SQL.
      */
-    @Column(name = "embedding_vector", columnDefinition = "vector(1536)")
+    @Column(name = "embedding_vector", columnDefinition = "vector(1536)") // Default dimension for text-embedding-ada-002
     @ToString.Exclude
     private float[] embeddingVector;
 
@@ -83,20 +84,33 @@ public class DocEmbedding {
     @PrePersist
     @PreUpdate
     private void validateConsistency() {
-        switch (tipoEmbedding) {
-            case DOCUMENTO:
-                if (capituloId != null || ordemCap != null)
-					throw new IllegalStateException("Embedding de documento não deve ter capítulo ou ordem");
-                break;
-            case CAPITULO:
-                if (capituloId == null || ordemCap != null)
-					throw new IllegalStateException("Embedding de capítulo deve ter capítulo, mas não ordem");
-                break;
-            case TRECHO:
-                if (capituloId == null || ordemCap == null)
-					throw new IllegalStateException("Embedding de trecho deve ter capítulo e ordem");
-                break;
-        }
+	switch (tipoEmbedding) {
+	case RESUMO:
+	case DOCUMENTO:
+	    if (capituloId != null || ordemCap != null)
+		throw new IllegalStateException("Embedding de documento não deve ter capítulo ou ordem");
+	    break;
+	case CAPITULO:
+	    if (capituloId == null || ordemCap != null)
+		throw new IllegalStateException("Embedding de capítulo deve ter capítulo, mas não ordem");
+	    break;
+	case TRECHO:
+	    if (capituloId == null || ordemCap == null)
+		throw new IllegalStateException("Embedding de trecho deve ter capítulo e ordem");
+	    break;
+	    
+	case METADADOS:
+	    break;
+	    
+	case OUTROS:
+	    break;
+	    
+	case PERGUNTAS_RESPOSTAS:
+	    break;
+	default:
+	    break;
+
+	}
     }
 
     /**

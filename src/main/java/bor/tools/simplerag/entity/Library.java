@@ -7,6 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import bor.tools.simplerag.entity.enums.TipoBiblioteca;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,7 +26,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Biblioteca {
+public class Library extends Updatable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,22 +36,44 @@ public class Biblioteca {
     /**
      * Identificador único para biblioteca
      */
-    @Column(name="uuid", nullable=false)
-    private String uuid;
+    @Column(name="uuid", nullable=false, unique=true)
+    private UUID uuid;
 
+    /**
+     * Name of the library
+     */	
     @Column(nullable = false)
     private String nome;
 
+    /**
+     * Knowledge area of the library (e.g., Law, Medicine, Engineering).
+     * Used to guide LLM responses.
+     */	
     @Column(name = "area_conhecimento", nullable = false)
     private String areaConhecimento;
 
+    /**
+     * Weight for semantic search (e.g., embeddings).
+     * The sum of semantic and textual weights must equal 1.0.
+     */
     @Column(name = "peso_semantico", precision = 3, scale = 2)
     @Builder.Default
     private Float pesoSemantico = 0.60f;
 
+    /**
+     * Weight for textual search (e.g., BM25).
+     * The sum of semantic and textual weights must equal 1.0.
+     */
     @Column(name = "peso_textual", precision = 3, scale = 2)
     @Builder.Default
     private Float pesoTextual = 0.40f;
+       
+    /**
+     * Type of library: PUBLIC (shared) or PRIVATE (user-specific).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo", nullable = false)
+    private TipoBiblioteca tipo;
 
     /**
      * Arbitrary metadata stored as JSONB.
@@ -59,13 +83,6 @@ public class Biblioteca {
     @Column(columnDefinition = "jsonb")
     private MetaBiblioteca metadados;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
      /**
      * Validates that semantic and textual weights sum to 1.0
@@ -76,7 +93,7 @@ public class Biblioteca {
         if (pesoSemantico != null && pesoTextual != null) {
             float sum = pesoSemantico + pesoTextual;
             if (Math.abs(sum - 1.0f) > 0.001f)
-				throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
+		throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
         }
     }
     
@@ -84,9 +101,9 @@ public class Biblioteca {
      * Get or create UUID
      * @return
      */
-    public String getUuid() {
+    public UUID getUuid() {
 	if(this.uuid==null)
-	    uuid = UUID.randomUUID().toString();
+	    uuid = UUID.randomUUID();
 	return this.uuid;
     }
 }

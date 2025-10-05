@@ -14,8 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMService;
-import bor.tools.simplerag.dto.CapituloDTO;
-import bor.tools.simplerag.dto.DocEmbeddingDTO;
+import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.splitter.normsplitter.Artigo;
 import bor.tools.splitter.normsplitter.Normativo;
@@ -46,7 +46,7 @@ public class SplitterNorma  extends AbstractSplitter{
 	/**
 	 * Construtor
 	 * @param provedorIA - Provedor de  serviços de IA
-	 * @param biblioteca - Biblioteca para gestão de documentos
+	 * @param biblioteca - Library para gestão de documentos
 	 *
 	 */
 	public SplitterNorma(LLMService provedor)  {
@@ -123,17 +123,17 @@ public class SplitterNorma  extends AbstractSplitter{
 		List<Artigo> listaArtigos =  normativo.getArtigos();
 
 		LinkedList<String> partes = new LinkedList<>();
-		Map<String, CapituloDTO> mapPartes = new LinkedHashMap<>();
+		Map<String, ChapterDTO> mapPartes = new LinkedHashMap<>();
 
 		String identificacao = normativo.getId();
 
 		for (Artigo artigo : listaArtigos) {
 			artigo.smartSplit();
 			String titulo_id = montaTitulo(artigo, identificacao);
-			CapituloDTO parte = mapPartes.get(titulo_id);
+			ChapterDTO parte = mapPartes.get(titulo_id);
 
 			if (parte == null) {
-				parte = new CapituloDTO();
+				parte = new ChapterDTO();
 				doc.addParte(parte);
 
 				parte.setTitulo(titulo_id);
@@ -150,9 +150,9 @@ public class SplitterNorma  extends AbstractSplitter{
 			}
 			criaEmbeddingsBasicos(artigo, parte, titulo_id);
 		}
-		// cria embeddings para as CapituloDTO s
-		for (CapituloDTO capDTO  : doc.getCapitulos()) {
-			DocEmbeddingDTO emb = new DocEmbeddingDTO();
+		// cria embeddings para as ChapterDTO s
+		for (ChapterDTO capDTO  : doc.getCapitulos()) {
+			DocumentEmbeddingDTO emb = new DocumentEmbeddingDTO();
 			capDTO.addEmbedding(emb);
 
 			String texto = capDTO .getConteudo();
@@ -211,13 +211,13 @@ public class SplitterNorma  extends AbstractSplitter{
 	/**
 	 * Cria embeddings básicos, sem Q&A
 	 * @param artigo - artigo a ser processado
-	 * @param CapituloDTO  - CapituloDTO  a ser populada
+	 * @param ChapterDTO  - ChapterDTO  a ser populada
 	 *
 	 * @param titulo - titulo ou metadados do artigo
 	 */
-	protected void criaEmbeddingsBasicos(Artigo artigo, CapituloDTO  capDTO , String titulo) {
+	protected void criaEmbeddingsBasicos(Artigo artigo, ChapterDTO  capDTO , String titulo) {
 		String texto = artigo.getConteudo();
-		DocEmbeddingDTO emb = new DocEmbeddingDTO();
+		DocumentEmbeddingDTO emb = new DocumentEmbeddingDTO();
 		//emb.set (titulo);
 		emb.setTrechoTexto(titulo + "\n" + texto);
 		capDTO.addEmbedding(emb);
@@ -225,7 +225,7 @@ public class SplitterNorma  extends AbstractSplitter{
 		List<String> extras = artigo.getListaSubtexto();
 		if (extras != null) {
 			for (String extra : extras) {
-				DocEmbeddingDTO embExtra = new DocEmbeddingDTO();
+				DocumentEmbeddingDTO embExtra = new DocumentEmbeddingDTO();
 				embExtra.setTrechoTexto(titulo + "\n" + extra);
 				capDTO .addEmbedding(embExtra);
 			}
@@ -270,7 +270,7 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
     @Override
-    public List<CapituloDTO > splitDocumento(@NonNull DocumentoDTO documento) {
+    public List<ChapterDTO > splitDocumento(@NonNull DocumentoDTO documento) {
         return documento.getCapitulos();
     }
 
@@ -309,34 +309,34 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
 	@Override
-	protected List<CapituloDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
+	protected List<ChapterDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
 	    logger.debug("Splitting legal document by titles. Found {} titles", titles.size());
 
 	    if (titles.isEmpty()) {
 	        // Se não há títulos, criar um único capítulo com todo o conteúdo
-	        CapituloDTO capitulo = new CapituloDTO();
+	        ChapterDTO capitulo = new ChapterDTO();
 	        capitulo.setTitulo(doc.getTitulo());
 	        capitulo.setConteudo(doc.getTexto());
 	        capitulo.setOrdemDoc(1);
 	        return List.of(capitulo);
 	    }
 
-	    List<CapituloDTO> capitulos = new ArrayList<>();
+	    List<ChapterDTO> capitulos = new ArrayList<>();
 	    String currentSection = null;
 	    StringBuilder currentContent = new StringBuilder();
 	    int currentChapterNumber = 1;
 
-	    // Agrupar por Seções (nível 4) que serão mapeadas para CapituloDTO
+	    // Agrupar por Seções (nível 4) que serão mapeadas para ChapterDTO
 	    for (int i = 0; i < titles.size(); i++) {
 	        TitleTag title = titles.get(i);
 
-	        // Se encontramos uma seção, ela se torna um novo CapituloDTO
+	        // Se encontramos uma seção, ela se torna um novo ChapterDTO
 	        if ("secao".equals(title.getTag()) ||
 	            ("capitulo".equals(title.getTag()) && currentSection == null)) {
 
 	            // Finalizar seção anterior
 	            if (currentSection != null && currentContent.length() > 0) {
-	                CapituloDTO capitulo = createCapituloFromSection(currentSection,
+	                ChapterDTO capitulo = createCapituloFromSection(currentSection,
 	                                                               currentContent.toString().trim(),
 	                                                               currentChapterNumber++);
 	                capitulos.add(capitulo);
@@ -371,7 +371,7 @@ public class SplitterNorma  extends AbstractSplitter{
 
 	    // Finalizar última seção
 	    if (currentSection != null && currentContent.length() > 0) {
-	        CapituloDTO capitulo = createCapituloFromSection(currentSection,
+	        ChapterDTO capitulo = createCapituloFromSection(currentSection,
 	                                                       currentContent.toString().trim(),
 	                                                       currentChapterNumber);
 	        capitulos.add(capitulo);
@@ -379,7 +379,7 @@ public class SplitterNorma  extends AbstractSplitter{
 
 	    // Se não foi possível criar capítulos por seções, criar por conteúdo completo
 	    if (capitulos.isEmpty()) {
-	        CapituloDTO capitulo = new CapituloDTO();
+	        ChapterDTO capitulo = new ChapterDTO();
 	        capitulo.setTitulo(doc.getTitulo());
 	        capitulo.setConteudo(doc.getTexto());
 	        capitulo.setOrdemDoc(1);
@@ -391,10 +391,10 @@ public class SplitterNorma  extends AbstractSplitter{
 	}
 
 	/**
-	 * Cria um CapituloDTO a partir de uma seção de normativo
+	 * Cria um ChapterDTO a partir de uma seção de normativo
 	 */
-	private CapituloDTO createCapituloFromSection(String sectionTitle, String content, int ordem) {
-	    CapituloDTO capitulo = new CapituloDTO();
+	private ChapterDTO createCapituloFromSection(String sectionTitle, String content, int ordem) {
+	    ChapterDTO capitulo = new ChapterDTO();
 	    capitulo.setTitulo(sectionTitle);
 	    capitulo.setConteudo(content);
 	    capitulo.setOrdemDoc(ordem);
@@ -480,7 +480,7 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
 	@Override
-	public List<CapituloDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
+	public List<ChapterDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
 	   throw new UnsupportedOperationException("Split by size not supported for legal documents");
 	}
 

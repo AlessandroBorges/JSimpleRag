@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import bor.tools.simplerag.dto.BibliotecaDTO;
-import bor.tools.simplerag.dto.CapituloDTO;
-import bor.tools.simplerag.dto.DocEmbeddingDTO;
+import bor.tools.simplerag.dto.LibraryDTO;
+import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 
@@ -58,8 +58,8 @@ public class AsyncSplitterService {
      * @return Future com lista de capítulos processados
      */
     @Async
-    public CompletableFuture<List<CapituloDTO>> processDocumentAsync(DocumentoDTO documento,
-                                                                    BibliotecaDTO biblioteca,
+    public CompletableFuture<List<ChapterDTO>> processDocumentAsync(DocumentoDTO documento,
+                                                                    LibraryDTO biblioteca,
                                                                     TipoConteudo tipoConteudo) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -74,14 +74,15 @@ public class AsyncSplitterService {
                 }
 
                 // 2. Dividir documento em capítulos
-                List<CapituloDTO> capitulos = splitter.splitBySize(documento,
-                    splitterFactory.getSplitterConfig().getEffectiveChunkSize(biblioteca.getUuid(),
+                List<ChapterDTO> capitulos = splitter.splitBySize(documento,
+                    splitterFactory.getSplitterConfig().getEffectiveChunkSize(biblioteca.getUuid().toString(),
+                	    
                 	    tipoConteudo));
 
                 logger.debug("Document {} split into {} chapters", documento.getTitulo(), capitulos.size());
 
                 // 3. Enriquecer capítulos com metadados
-                for (CapituloDTO capitulo : capitulos) {
+                for (ChapterDTO capitulo : capitulos) {
                     enrichChapterMetadata(capitulo, documento, biblioteca, tipoConteudo);
                 }
 
@@ -103,14 +104,14 @@ public class AsyncSplitterService {
      * @return Future com lista de embeddings gerados
      */
     @Async
-    public CompletableFuture<List<DocEmbeddingDTO>> generateEmbeddingsAsync(CapituloDTO capitulo,
-                                                                           BibliotecaDTO biblioteca,
+    public CompletableFuture<List<DocumentEmbeddingDTO>> generateEmbeddingsAsync(ChapterDTO capitulo,
+                                                                           LibraryDTO biblioteca,
                                                                            int flagGeneration) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 logger.debug("Generating embeddings for chapter: {}", capitulo.getTitulo());
 
-                List<DocEmbeddingDTO> embeddings = embeddingProcessor.createChapterEmbeddings(
+                List<DocumentEmbeddingDTO> embeddings = embeddingProcessor.createChapterEmbeddings(
                     capitulo, biblioteca, flagGeneration);
 
                 logger.debug("Generated {} embeddings for chapter: {}", embeddings.size(), capitulo.getTitulo());
@@ -133,14 +134,14 @@ public class AsyncSplitterService {
      * @return Future com lista de embeddings Q&A
      */
     @Async
-    public CompletableFuture<List<DocEmbeddingDTO>> generateQAAsync(CapituloDTO capitulo,
-                                                                   BibliotecaDTO biblioteca,
+    public CompletableFuture<List<DocumentEmbeddingDTO>> generateQAAsync(ChapterDTO capitulo,
+                                                                   LibraryDTO biblioteca,
                                                                    Integer numQuestions) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 logger.debug("Generating Q&A for chapter: {}", capitulo.getTitulo());
 
-                List<DocEmbeddingDTO> qaEmbeddings = embeddingProcessor.createQAEmbeddings(
+                List<DocumentEmbeddingDTO> qaEmbeddings = embeddingProcessor.createQAEmbeddings(
                     capitulo, biblioteca, numQuestions);
 
                 logger.debug("Generated {} Q&A embeddings for chapter: {}", qaEmbeddings.size(), capitulo.getTitulo());
@@ -164,15 +165,15 @@ public class AsyncSplitterService {
      * @return Future com lista de embeddings de sumário
      */
     @Async
-    public CompletableFuture<List<DocEmbeddingDTO>> generateSummaryAsync(CapituloDTO capitulo,
-                                                                        BibliotecaDTO biblioteca,
+    public CompletableFuture<List<DocumentEmbeddingDTO>> generateSummaryAsync(ChapterDTO capitulo,
+                                                                        LibraryDTO biblioteca,
                                                                         Integer maxLength,
                                                                         String instructions) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 logger.debug("Generating summary for chapter: {}", capitulo.getTitulo());
 
-                List<DocEmbeddingDTO> summaryEmbeddings = embeddingProcessor.createSummaryEmbeddings(
+                List<DocumentEmbeddingDTO> summaryEmbeddings = embeddingProcessor.createSummaryEmbeddings(
                     capitulo, biblioteca, maxLength, instructions);
 
                 logger.debug("Generated {} summary embeddings for chapter: {}",
@@ -199,7 +200,7 @@ public class AsyncSplitterService {
      */
     @Async
     public CompletableFuture<ProcessingResult> fullProcessingAsync(DocumentoDTO documento,
-                                                                  BibliotecaDTO biblioteca,
+                                                                  LibraryDTO biblioteca,
                                                                   TipoConteudo tipoConteudo,
                                                                   boolean includeQA,
                                                                   boolean includeSummary) {
@@ -212,25 +213,25 @@ public class AsyncSplitterService {
                 result.setBiblioteca(biblioteca);
 
                 // 1. Processar documento (splitting)
-                List<CapituloDTO> capitulos = processDocumentAsync(documento, biblioteca, tipoConteudo).get();
+                List<ChapterDTO> capitulos = processDocumentAsync(documento, biblioteca, tipoConteudo).get();
                 result.setCapitulos(capitulos);
 
                 // 2. Para cada capítulo, gerar embeddings
-                for (CapituloDTO capitulo : capitulos) {
+                for (ChapterDTO capitulo : capitulos) {
                     // Embeddings básicos
-                    List<DocEmbeddingDTO> embeddings = generateEmbeddingsAsync(
+                    List<DocumentEmbeddingDTO> embeddings = generateEmbeddingsAsync(
                         capitulo, biblioteca, EmbeddingProcessorInterface.FLAG_AUTO).get();
                     result.addEmbeddings(embeddings);
 
                     // Q&A se solicitado
                     if (includeQA) {
-                        List<DocEmbeddingDTO> qaEmbeddings = generateQAAsync(capitulo, biblioteca, null).get();
+                        List<DocumentEmbeddingDTO> qaEmbeddings = generateQAAsync(capitulo, biblioteca, null).get();
                         result.addEmbeddings(qaEmbeddings);
                     }
 
                     // Sumário se solicitado
                     if (includeSummary) {
-                        List<DocEmbeddingDTO> summaryEmbeddings = generateSummaryAsync(
+                        List<DocumentEmbeddingDTO> summaryEmbeddings = generateSummaryAsync(
                             capitulo, biblioteca, null, null).get();
                         result.addEmbeddings(summaryEmbeddings);
                     }
@@ -252,8 +253,8 @@ public class AsyncSplitterService {
     /**
      * Enriquece metadados do capítulo com informações de processamento
      */
-    private void enrichChapterMetadata(CapituloDTO capitulo, DocumentoDTO documento,
-                                     BibliotecaDTO biblioteca, TipoConteudo tipoConteudo) {
+    private void enrichChapterMetadata(ChapterDTO capitulo, DocumentoDTO documento,
+                                     LibraryDTO biblioteca, TipoConteudo tipoConteudo) {
         if (capitulo.getMetadados() == null) {
             capitulo.initializeMetadata();
         }
@@ -281,24 +282,24 @@ public class AsyncSplitterService {
      */
     public static class ProcessingResult {
         private DocumentoDTO documento;
-        private BibliotecaDTO biblioteca;
-        private List<CapituloDTO> capitulos;
-        private List<DocEmbeddingDTO> allEmbeddings = new java.util.ArrayList<>();
+        private LibraryDTO biblioteca;
+        private List<ChapterDTO> capitulos;
+        private List<DocumentEmbeddingDTO> allEmbeddings = new java.util.ArrayList<>();
 
         // Getters e Setters
         public DocumentoDTO getDocumento() { return documento; }
         public void setDocumento(DocumentoDTO documento) { this.documento = documento; }
 
-        public BibliotecaDTO getBiblioteca() { return biblioteca; }
-        public void setBiblioteca(BibliotecaDTO biblioteca) { this.biblioteca = biblioteca; }
+        public LibraryDTO getBiblioteca() { return biblioteca; }
+        public void setBiblioteca(LibraryDTO biblioteca) { this.biblioteca = biblioteca; }
 
-        public List<CapituloDTO> getCapitulos() { return capitulos; }
-        public void setCapitulos(List<CapituloDTO> capitulos) { this.capitulos = capitulos; }
+        public List<ChapterDTO> getCapitulos() { return capitulos; }
+        public void setCapitulos(List<ChapterDTO> capitulos) { this.capitulos = capitulos; }
 
-        public List<DocEmbeddingDTO> getAllEmbeddings() { return allEmbeddings; }
-        public void setAllEmbeddings(List<DocEmbeddingDTO> allEmbeddings) { this.allEmbeddings = allEmbeddings; }
+        public List<DocumentEmbeddingDTO> getAllEmbeddings() { return allEmbeddings; }
+        public void setAllEmbeddings(List<DocumentEmbeddingDTO> allEmbeddings) { this.allEmbeddings = allEmbeddings; }
 
-        public void addEmbeddings(List<DocEmbeddingDTO> embeddings) {
+        public void addEmbeddings(List<DocumentEmbeddingDTO> embeddings) {
             if (embeddings != null) {
                 this.allEmbeddings.addAll(embeddings);
             }
