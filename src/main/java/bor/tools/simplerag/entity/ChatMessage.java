@@ -5,7 +5,6 @@ package bor.tools.simplerag.entity;
 
 import java.util.UUID;
 
-import bor.tools.simplerag.dto.Metadata;
 import jakarta.persistence.Column;
 import jakarta.persistence.*;
 import jakarta.persistence.GeneratedValue;

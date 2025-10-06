@@ -16,7 +16,7 @@ import java.util.Map;
  * Maps to the 'capitulo' table in PostgreSQL.
  */
 @Entity
-@Table(name = "capitulo")
+@Table(name = "chapter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -49,22 +49,9 @@ public class Chapter extends Updatable {
     @Column(name = "token_fim")
     private Integer tokenFim;
 
-    @Column(name = "tokens_total")
-    private Integer tokensTotal;
-
     @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
-    private Map<String, Object> metadados;
+    private Metadata metadados;
 
 
-    /**
-     * Calculate tokens total if not set
-     */
-    @PrePersist
-    @PreUpdate
-    private void calculateTokensTotal() {
-        if (tokensTotal == null && tokenInicio != null && tokenFim != null) {
-            tokensTotal = tokenFim - tokenInicio;
-        }
-    }
 }

@@ -2,7 +2,6 @@ package bor.tools.simplerag.entity;
 
 import java.util.UUID;
 
-import bor.tools.simplerag.dto.Metadata;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -66,13 +65,13 @@ public class Project extends Updatable{
      * 
      */
     @Column(columnDefinition = "jsonb")
-    private Metadata metadata;
+    private MetaProject metadata;
     
     /**
      * UUID of the client (user) who owns this chat.
      */
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
-    private UUID chat_id;
+    private UUID user_id;
     
     @Column(name = "ordem")
     private Integer ordem;

@@ -28,8 +28,17 @@ public class UserDTO {
     private String email;
 
     private Boolean ativo;
+    
+    /**
+     *  Plain text password for input only (not stored or output)
+     */
+    private String password; // Only used for input, not output
+    
+    /**
+     *  IDs of libraries associated with the user
+     */
+    private Integer[] libraryIds; //
 
-    private Integer fkUsuBibliotecas;
 
     /**
      * Create DTO from entity
@@ -45,8 +54,7 @@ public class UserDTO {
                 .uuid(src.getUuid())
                 .nome(src.getNome())
                 .email(src.getEmail())
-                .ativo(src.getAtivo())
-                .fkUsuBibliotecas(src.getFk_usu_bibliotecas())
+                .ativo(src.getAtivo())                
                 .build();
     }
 
@@ -60,8 +68,7 @@ public class UserDTO {
                 .uuid(this.uuid)
                 .nome(this.nome)
                 .email(this.email)
-                .ativo(this.ativo)
-                .fk_usu_bibliotecas(this.fkUsuBibliotecas)
+                .ativo(this.ativo)                
                 .build();
     }
 

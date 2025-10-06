@@ -1,5 +1,6 @@
 package bor.tools.simplerag.dto;
 
+import bor.tools.simplerag.entity.Metadata;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

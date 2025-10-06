@@ -15,7 +15,7 @@ import java.util.Optional;
  * Provides standard CRUD operations and custom queries for User entities.
  */
 @Repository
-public interface UsuarioRepository extends JpaRepository<User, Integer> {
+public interface UserRepository extends JpaRepository<User, Integer> {
 
     /**
      * Busca usuário por UUID

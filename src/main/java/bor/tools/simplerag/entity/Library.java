@@ -20,7 +20,7 @@ import java.util.UUID;
  * Maps to the 'biblioteca' table in PostgreSQL.
  */
 @Entity
-@Table(name = "biblioteca")
+@Table(name = "library")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

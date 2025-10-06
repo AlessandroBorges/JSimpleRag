@@ -10,10 +10,12 @@ import jakarta.persistence.Table;
 import lombok.*;
 
 /**
+ * Entity representing a user in the system.
+ * Maps to the 'user' table in PostgreSQL.
  * 
  */
 @Entity
-@Table(name = "usuario")
+@Table(name = "user")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

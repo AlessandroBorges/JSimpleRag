@@ -16,7 +16,7 @@ import java.util.Optional;
  * Provides operations for managing the N:N relationship between User and Library.
  */
 @Repository
-public interface UsuarioBibliotecaRepository extends JpaRepository<UserLibrary, Integer> {
+public interface UserLibraryRepository extends JpaRepository<UserLibrary, Integer> {
 
     /**
      * Busca todas as associações de um usuário

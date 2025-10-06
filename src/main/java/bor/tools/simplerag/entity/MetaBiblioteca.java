@@ -17,7 +17,7 @@ import java.util.LinkedHashMap;
  * @author bor
  *
  */
-public class MetaBiblioteca extends LinkedHashMap<String, Object> {
+public class MetaBiblioteca extends Metadata{
 	/**
 	 *
 	 */

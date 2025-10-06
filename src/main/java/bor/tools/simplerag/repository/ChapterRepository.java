@@ -15,7 +15,7 @@ import java.util.Optional;
  * Provides standard CRUD operations and custom queries for Chapter entities.
  */
 @Repository
-public interface CapituloRepository extends JpaRepository<Chapter, Integer> {
+public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
 
     /**
      * Busca capítulos por documento, ordenados por ordem

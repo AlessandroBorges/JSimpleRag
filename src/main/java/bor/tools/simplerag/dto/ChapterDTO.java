@@ -13,6 +13,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import bor.tools.simplerag.entity.Chapter;
+import bor.tools.simplerag.entity.Metadata;
 
 /**
  * DTO for Chapter entity.
@@ -38,8 +39,16 @@ public class ChapterDTO {
 
     private Integer ordemDoc;
 
+    /**
+     * In Chapter context, 1 token = 1 char (utf8).
+     * For Embedding Tokens, consider using LLMService instead, 
+     */
     private Integer tokenInicio;
 
+    /**
+     * In Chapter context, 1 token = 1 char (utf8).
+     * For Embedding Tokens, consider using LLMService instead, 
+     */
     private Integer tokenFim;
 
     private Integer tokensTotal;
@@ -92,27 +101,34 @@ public class ChapterDTO {
                 .conteudo(src.getConteudo())
                 .ordemDoc(src.getOrdemDoc())
                 .tokenInicio(src.getTokenInicio())
-                .tokenFim(src.getTokenFim())
-                .tokensTotal(src.getTokensTotal())
+                .tokenFim(src.getTokenFim())             
                 .createdAt(src.getCreatedAt())
                 .updatedAt(src.getUpdatedAt())
                 .build();
         
-        // Convert metadata Map to Metadata object
+        // Convert metadata if present
         if (src.getMetadados() != null) {
-            dto.setMetadados(new Metadata(src.getMetadados()));
+            dto.setMetadados(src.getMetadados());
         }
         
         return dto;
     }
     
     /**
-     * Calculate tokens total if not set
+     * Calculate tokens total if not set.<br>
+     * In Chapter context, 1 token = 1 char (utf8).
+     * For Embedding Tokens, consider using LLMService instead. <br>
+     * 
+     * In this case, "tokensTotal" = "tokenFim" - "tokenInicio"'
      */
     public Integer calculateTokensTotal() {
         if (tokensTotal == null && tokenInicio != null && tokenFim != null) {
             tokensTotal = tokenFim - tokenInicio;
-        }
+        }else if(conteudo != null) {
+		tokensTotal = conteudo.length();
+	} else {
+		tokensTotal = 0;
+	}
         return tokensTotal;
     }
 
@@ -204,33 +220,31 @@ public class ChapterDTO {
         return metadados != null ? metadados.get(key) : null;
     }
 
-    /**
-     * Set metadata value
-     */
-    public void setMetadataValue(String key, Object value) {
+    
+    public Metadata getMetadados() {
         if (metadados == null) {
             metadados = new Metadata();
         }
-        metadados.put(key, value);
-    }
-
-    public void addMetadata(Map<String, Object> meta) {
-	if (metadados == null) {
-	    metadados = new Metadata();
-	}
-	metadados.putAll(meta);
+        return metadados;
     }
     
-    public void addMetadata(String key, Object value) {
-	if (metadados == null)
-	    metadados = new Metadata();
-	metadados.put(key, value);
+    /**
+     * Set metadata value
+     */
+    public void setMetadataValue(String key, Object value) {        
+	getMetadados().put(key, value);
+    }
+
+    public void addMetadata(Map<String, Object> meta) {	
+	getMetadados().putAll(meta);
+    }
+    
+    public void addMetadata(String key, Object value) {	
+	getMetadados().put(key, value);
     }
     
     public void addMetadata(Metadata meta) {
-	if (metadados == null)
-	    metadados = new Metadata();
-	 metadados.putAll(meta);
+	getMetadados().putAll(meta);
     }
     
     /**

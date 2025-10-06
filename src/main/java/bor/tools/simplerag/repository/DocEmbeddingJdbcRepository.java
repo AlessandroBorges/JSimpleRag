@@ -94,12 +94,12 @@ public class DocEmbeddingJdbcRepository {
     private RowMapper<DocumentEmbedding> rowMapper = (rs, rowNum) -> {
         DocumentEmbedding doc = DocumentEmbedding.builder()
             .id(rs.getInt("id"))
-            .bibliotecaId(rs.getInt("biblioteca_id"))
+            .libraryId(rs.getInt("biblioteca_id"))
             .documentoId(rs.getInt("documento_id"))
-            .capituloId(rs.getObject("capitulo_id", Integer.class))
+            .chapterId(rs.getObject("capitulo_id", Integer.class))
             .tipoEmbedding(TipoEmbedding.fromDbValue(rs.getString("tipo_embedding")))
             .trechoTexto(rs.getString("trecho_texto"))
-            .ordemCap(rs.getObject("ordem_cap", Integer.class))
+            .orderChapter(rs.getObject("ordem_cap", Integer.class))
             .textoIndexado(rs.getString("texto_indexado"))
             .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
             .build();
@@ -114,7 +114,7 @@ public class DocEmbeddingJdbcRepository {
 
         // Processa embedding vector
         Object pg = rs.getObject("embedding_vector");
-        MetaBiblioteca config = getBibliotecaConfig(doc.getBibliotecaId());
+        MetaBiblioteca config = getBibliotecaConfig(doc.getLibraryId());
         if (config != null && config.getEmbeddingDimension() != null) {
             Integer vecLength = config.getEmbeddingDimension();
             pg = fixEmbeddingLength(pg, vecLength);
@@ -553,12 +553,12 @@ public class DocEmbeddingJdbcRepository {
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setInt(1, doc.getBibliotecaId());
+            ps.setInt(1, doc.getLibraryId());
             ps.setInt(2, doc.getDocumentoId());
-            ps.setObject(3, doc.getCapituloId());
+            ps.setObject(3, doc.getChapterId());
             ps.setString(4, doc.getTipoEmbedding().getDbValue());
             ps.setString(5, doc.getTrechoTexto());
-            ps.setObject(6, doc.getOrdemCap());
+            ps.setObject(6, doc.getOrderChapter());
 
             if (doc.getEmbeddingVector() != null) {
                 ps.setObject(7, new PGvector(doc.getEmbeddingVector()));
@@ -598,12 +598,12 @@ public class DocEmbeddingJdbcRepository {
             """;
 
         return jdbcTemplate.update(sql,
-            doc.getBibliotecaId(),
+            doc.getLibraryId(),
             doc.getDocumentoId(),
-            doc.getCapituloId(),
+            doc.getChapterId(),
             doc.getTipoEmbedding().getDbValue(),
             doc.getTrechoTexto(),
-            doc.getOrdemCap(),
+            doc.getOrderChapter(),
             doc.getEmbeddingVector() != null ? new PGvector(doc.getEmbeddingVector()) : null,
             doc.getMetadados() != null ? "{}" : null, // JSON serialization
             doc.getId()

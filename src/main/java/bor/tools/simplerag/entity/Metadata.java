@@ -1,7 +1,7 @@
 /**
  * 
  */
-package bor.tools.simplerag.dto;
+package bor.tools.simplerag.entity;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

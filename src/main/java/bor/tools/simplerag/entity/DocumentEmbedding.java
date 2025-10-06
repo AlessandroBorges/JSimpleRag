@@ -32,14 +32,14 @@ public class DocumentEmbedding extends Updatable {
     @EqualsAndHashCode.Include
     private Integer id;
 
-    @Column(name = "biblioteca_id", nullable = false)
-    private Integer bibliotecaId;
+    @Column(name = "libray_id", nullable = false)
+    private Integer libraryId;
 
     @Column(name = "documento_id", nullable = false)
     private Integer documentoId;
 
-    @Column(name = "capitulo_id", nullable = true)
-    private Integer capituloId;
+    @Column(name = "chapter_id", nullable = true)
+    private Integer chapterId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_embedding", nullable = false)
@@ -49,8 +49,8 @@ public class DocumentEmbedding extends Updatable {
     @ToString.Exclude // Avoid printing large content in toString
     private String trechoTexto;
 
-    @Column(name = "ordem_cap")
-    private Integer ordemCap;
+    @Column(name = "order_chapter")
+    private Integer orderChapter;
 
     /**
      * Vector embedding stored as float array.
@@ -87,15 +87,15 @@ public class DocumentEmbedding extends Updatable {
 	switch (tipoEmbedding) {
 	case RESUMO:
 	case DOCUMENTO:
-	    if (capituloId != null || ordemCap != null)
+	    if (chapterId != null || orderChapter != null)
 		throw new IllegalStateException("Embedding de documento não deve ter capítulo ou ordem");
 	    break;
 	case CAPITULO:
-	    if (capituloId == null || ordemCap != null)
+	    if (chapterId == null || orderChapter != null)
 		throw new IllegalStateException("Embedding de capítulo deve ter capítulo, mas não ordem");
 	    break;
 	case TRECHO:
-	    if (capituloId == null || ordemCap == null)
+	    if (chapterId == null || orderChapter == null)
 		throw new IllegalStateException("Embedding de trecho deve ter capítulo e ordem");
 	    break;
 	    

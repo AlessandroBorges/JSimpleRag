@@ -3,7 +3,7 @@ package bor.tools.splitter.normsplitter;
 import java.util.ArrayList;
 import java.util.List;
 
-import bor.tools.simplerag.dto.Metadata;
+import bor.tools.simplerag.entity.Metadata;
 import lombok.Data;
 
 /**
