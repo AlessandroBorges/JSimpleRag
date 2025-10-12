@@ -1,23 +1,29 @@
 package bor.tools.simplerag.controller;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.dto.LibraryWithUsersDTO;
-import bor.tools.simplerag.dto.UserDTO;
 import bor.tools.simplerag.dto.UserWithAssociationDTO;
-import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.service.LibraryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * REST Controller for Library management.
@@ -42,27 +48,12 @@ public class LibraryController {
         log.info("Saving library: {}", dto.getNome());
 
         try {
-            // Validate weights
-            if (!dto.isWeightValid()) {
-                throw new IllegalArgumentException(
-                        String.format("Pesos inválidos: semântico=%.2f + textual=%.2f != 1.0",
-                                dto.getPesoSemantico(), dto.getPesoTextual())
-                );
-            }
-
-            // Convert DTO to Entity
-            Library library = toEntity(dto);
-
-            // Save
-            Library saved = libraryService.save(library);
-
-            // Convert back to DTO
-            LibraryDTO response = LibraryDTO.from(saved);
+            LibraryDTO saved = libraryService.save(dto);
 
             log.info("Library saved: id={}, uuid={}", saved.getId(), saved.getUuid());
 
             return ResponseEntity.status(dto.getId() == null ? HttpStatus.CREATED : HttpStatus.OK)
-                    .body(response);
+                    .body(saved);
 
         } catch (IllegalArgumentException e) {
             log.error("Validation error saving library: {}", e.getMessage());
@@ -84,10 +75,7 @@ public class LibraryController {
         log.info("Deleting library: uuid={}, hard={}", uuid, hard);
 
         try {
-            Library library = libraryService.findByUuid(uuid)
-                    .orElseThrow(() -> new IllegalArgumentException("Biblioteca não encontrada: " + uuid));
-
-            libraryService.delete(library, hard);
+            libraryService.delete(uuid, hard);
 
             log.info("Library deleted: uuid={}, hard={}", uuid, hard);
 
@@ -110,10 +98,10 @@ public class LibraryController {
     public ResponseEntity<LibraryDTO> findByUuid(@PathVariable UUID uuid) {
         log.debug("Finding library by UUID: {}", uuid);
 
-        Library library = libraryService.findByUuid(uuid)
+        LibraryDTO library = libraryService.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Biblioteca não encontrada: " + uuid));
 
-        return ResponseEntity.ok(LibraryDTO.from(library));
+        return ResponseEntity.ok(library);
     }
 
     /**
@@ -130,11 +118,11 @@ public class LibraryController {
                     .orElseThrow(() -> new IllegalArgumentException("Biblioteca não encontrada: " + uuid));
 
             // Convert to DTO
-            LibraryDTO libraryDTO = LibraryDTO.from(libraryWithUsers.getLibrary());
+            LibraryDTO libraryDTO = libraryWithUsers.getLibrary();
 
             List<UserWithAssociationDTO> userDTOs = libraryWithUsers.getUsersWithAssociations().stream()
                     .map(ua -> UserWithAssociationDTO.builder()
-                            .user(UserDTO.from(ua.getUser()))
+                            .user(ua.getUser())  // Já é UserDTO
                             .tipoAssociacao(ua.getAssociation().getTipoAssociacao())
                             .associationId(ua.getAssociation().getId())
                             .build())
@@ -166,10 +154,10 @@ public class LibraryController {
     public ResponseEntity<LibraryDTO> findByNome(@PathVariable String nome) {
         log.debug("Finding library by name: {}", nome);
 
-        Library library = libraryService.findByNome(nome)
+        LibraryDTO library = libraryService.findByNome(nome)
                 .orElseThrow(() -> new IllegalArgumentException("Biblioteca não encontrada: " + nome));
 
-        return ResponseEntity.ok(LibraryDTO.from(library));
+        return ResponseEntity.ok(library);
     }
 
     /**
@@ -185,18 +173,4 @@ public class LibraryController {
         return ResponseEntity.ok(areas);
     }
 
-    /**
-     * Convert DTO to Entity
-     */
-    private Library toEntity(LibraryDTO dto) {
-        Library library = new Library();
-        library.setId(dto.getId());
-        library.setUuid(dto.getUuid());
-        library.setNome(dto.getNome());
-        library.setAreaConhecimento(dto.getAreaConhecimento());
-        library.setPesoSemantico(dto.getPesoSemantico());
-        library.setPesoTextual(dto.getPesoTextual());
-        library.setMetadados(dto.getMetadados());
-        return library;
-    }
 }

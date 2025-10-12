@@ -8,8 +8,9 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * DTO for User with associated libraries.
- * Used by GET /api/v1/users/{uuid}/with-libraries
+ * DTO for User with associated libraries. <br> 
+ * Used by GET
+ * /api/v1/users/{uuid}/with-libraries
  */
 @Data
 @NoArgsConstructor
@@ -27,12 +28,7 @@ public class UserWithLibrariesDTO {
      */
     private List<LibraryWithAssociationDTO> libraries;
 
-    /**
-     * Total library count
-     */
-    private Integer libraryCount;
-
     public Integer getLibraryCount() {
-        return libraries != null ? libraries.size() : 0;
+	return libraries != null ? libraries.size() : 0;
     }
 }

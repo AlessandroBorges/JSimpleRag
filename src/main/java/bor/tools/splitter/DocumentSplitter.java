@@ -5,7 +5,6 @@ import java.util.List;
 
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
-import bor.tools.simplerag.entity.*;
 
 /**
  * Core interface for document splitting operations.

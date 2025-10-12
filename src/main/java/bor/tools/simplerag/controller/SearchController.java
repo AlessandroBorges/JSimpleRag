@@ -1,6 +1,22 @@
 package bor.tools.simplerag.controller;
 
-import bor.tools.simplerag.dto.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import bor.tools.simplerag.dto.LibraryDTO;
+import bor.tools.simplerag.dto.SearchRequest;
+import bor.tools.simplerag.dto.SearchResponse;
+import bor.tools.simplerag.dto.SearchResultDTO;
+import bor.tools.simplerag.dto.SemanticSearchRequest;
+import bor.tools.simplerag.dto.TextualSearchRequest;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.DocumentEmbedding;
 import bor.tools.simplerag.entity.Documento;
@@ -15,16 +31,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * REST Controller for RAG search operations.

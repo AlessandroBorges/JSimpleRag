@@ -6,7 +6,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,17 +22,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
+import bor.tools.simplellm.CompletionResponse;
+import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.MapParam;
+import bor.tools.simplellm.exceptions.LLMException;
+import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.entity.Documento;
+import bor.tools.simplerag.entity.Library;
 import bor.tools.utils.RAGUtil;
 import lombok.Data;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
-import bor.tools.simplerag.entity.*;
-import bor.tools.simplellm.*;
-import bor.tools.simplellm.exceptions.LLMException;
 
 /**
  * <h2>ISplitter de documentos.</h2> Previsão de implementação de diferentes

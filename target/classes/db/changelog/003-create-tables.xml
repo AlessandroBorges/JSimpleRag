@@ -4,10 +4,13 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
 
-    <changeSet id="003-001-create-biblioteca-table" author="jsimplerag">
-        <createTable tableName="biblioteca">
+    <changeSet id="003-001-create-library-table" author="jsimplerag">
+        <createTable tableName="library">
             <column name="id" type="SERIAL">
                 <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID">
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="nome" type="VARCHAR(255)">
                 <constraints nullable="false"/>
@@ -21,6 +24,9 @@
             <column name="peso_textual" type="DECIMAL(3,2)" defaultValue="0.40">
                 <constraints nullable="false"/>
             </column>
+            <column name="tipo" type="tipo_biblioteca">
+                <constraints nullable="false"/>
+            </column>
             <column name="metadados" type="JSONB"/>
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
@@ -28,13 +34,13 @@
 
         <!-- Check constraints -->
         <sql>
-            ALTER TABLE biblioteca ADD CONSTRAINT peso_semantico_range_check CHECK (peso_semantico BETWEEN 0 AND 1);
-            ALTER TABLE biblioteca ADD CONSTRAINT peso_textual_range_check CHECK (peso_textual BETWEEN 0 AND 1);
-            ALTER TABLE biblioteca ADD CONSTRAINT peso_total_check CHECK (peso_semantico + peso_textual = 1.0);
+            ALTER TABLE library ADD CONSTRAINT peso_semantico_range_check CHECK (peso_semantico BETWEEN 0 AND 1);
+            ALTER TABLE library ADD CONSTRAINT peso_textual_range_check CHECK (peso_textual BETWEEN 0 AND 1);
+            ALTER TABLE library ADD CONSTRAINT peso_total_check CHECK (peso_semantico + peso_textual = 1.0);
         </sql>
 
         <rollback>
-            DROP TABLE IF EXISTS biblioteca;
+            DROP TABLE IF EXISTS library;
         </rollback>
     </changeSet>
 
@@ -66,8 +72,8 @@
         <addForeignKeyConstraint
             baseTableName="documento"
             baseColumnNames="biblioteca_id"
-            constraintName="fk_documento_biblioteca"
-            referencedTableName="biblioteca"
+            constraintName="fk_documento_library"
+            referencedTableName="library"
             referencedColumnNames="id"
             onDelete="CASCADE"/>
 
@@ -76,8 +82,8 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="003-003-create-capitulo-table" author="jsimplerag">
-        <createTable tableName="capitulo">
+    <changeSet id="003-003-create-chapter-table" author="jsimplerag">
+        <createTable tableName="chapter">
             <column name="id" type="SERIAL">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -95,7 +101,6 @@
             </column>
             <column name="token_inicio" type="INTEGER"/>
             <column name="token_fim" type="INTEGER"/>
-            <column name="tokens_total" type="INTEGER"/>
             <column name="metadados" type="JSONB"/>
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
@@ -103,21 +108,21 @@
 
         <!-- Foreign Key -->
         <addForeignKeyConstraint
-            baseTableName="capitulo"
+            baseTableName="chapter"
             baseColumnNames="documento_id"
-            constraintName="fk_capitulo_documento"
+            constraintName="fk_chapter_documento"
             referencedTableName="documento"
             referencedColumnNames="id"
             onDelete="CASCADE"/>
 
         <!-- Unique constraint -->
         <addUniqueConstraint
-            tableName="capitulo"
+            tableName="chapter"
             columnNames="documento_id, ordem_doc"
             constraintName="unique_ordem_por_doc"/>
 
         <rollback>
-            DROP TABLE IF EXISTS capitulo;
+            DROP TABLE IF EXISTS chapter;
         </rollback>
     </changeSet>
 
@@ -125,23 +130,33 @@
         <sql>
             CREATE TABLE doc_embedding (
                 id SERIAL PRIMARY KEY,
-                biblioteca_id BIGINT NOT NULL,
+                libray_id BIGINT NOT NULL,
                 documento_id BIGINT NOT NULL,
-                capitulo_id BIGINT,
+                chapter_id BIGINT,
                 tipo_embedding tipo_embedding NOT NULL,
-                trecho_texto TEXT,
-                ordem_cap INTEGER,
-                embedding_vector vector(1536),
-                texto_indexado tsvector,
+                texto TEXT,
+                order_chapter INTEGER,
+                embedding_vector vector(768) NULL,
+                text_search_tsv tsvector GENERATED ALWAYS AS (
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'nome', '')), 'A') ||         -- Título ou nome da obra
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'capitulo', '')), 'A') ||     -- Nome do capítulo
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'descricao', '')), 'B') ||    -- Descrição geral
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'area_conhecimento', '')), 'C') || -- Área temática
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>
+				    
+				    'palavras_chave', '')), 'C') ||   -- Palavras-chave
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'autor', '')), 'D') ||        -- Autor (menos relevante para conteúdo)
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'metadados', '')), 'D') ||    -- Outros metadados
+				    setweight(to_tsvector('portuguese', COALESCE(texto, '')), 'C')                  -- Texto completo do chunk (CORRIGIDO)
+				) STORED,               
                 metadados JSONB,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
                 -- Foreign Key Constraints
-                CONSTRAINT fk_embedding_biblioteca FOREIGN KEY (biblioteca_id) REFERENCES biblioteca(id) ON DELETE CASCADE,
+                CONSTRAINT fk_embedding_library FOREIGN KEY (libray_id) REFERENCES library(id) ON DELETE CASCADE,
                 CONSTRAINT fk_embedding_documento FOREIGN KEY (documento_id) REFERENCES documento(id) ON DELETE CASCADE,
-                CONSTRAINT fk_embedding_capitulo FOREIGN KEY (capitulo_id) REFERENCES capitulo(id) ON DELETE CASCADE,
-
-              
+                CONSTRAINT fk_embedding_chapter FOREIGN KEY (chapter_id) REFERENCES chapter(id) ON DELETE CASCADE
             );
         </sql>
 

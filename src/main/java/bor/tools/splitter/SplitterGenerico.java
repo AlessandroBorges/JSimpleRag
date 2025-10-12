@@ -1,22 +1,12 @@
 package bor.tools.splitter;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.AutoDetectParser;
-import org.apache.tika.parser.ParseContext;
-import org.apache.tika.sax.BodyContentHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -24,18 +14,8 @@ import org.springframework.lang.NonNull;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
-import bor.tools.simplerag.entity.Chapter;
-import bor.tools.simplerag.entity.Documento;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import bor.tools.simplellm.*;
-import bor.tools.simplerag.entity.*;
-
-import bor.tools.simplerag.dto.*;
 
 /**
  * Splitter genérico para documentos em texto plano e Markdown.

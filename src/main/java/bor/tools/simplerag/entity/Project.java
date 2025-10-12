@@ -9,7 +9,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Class to represent a project.<br>
@@ -23,6 +25,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class Project extends Updatable{
 
     @Id

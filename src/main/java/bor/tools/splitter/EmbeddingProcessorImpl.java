@@ -526,8 +526,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
 
             // Criar embedding híbrido (sumário + contexto) se o texto original for muito longo
             if (chapter.getConteudo().length() > DEFAULT_CHUNK_SIZE * 2) {
-                DocumentEmbeddingDTO hybridEmbedding = createHybridSummaryEmbedding(
-                    chapter, summary, library, instructions);
+                DocumentEmbeddingDTO hybridEmbedding = createHybridSummaryEmbedding( chapter, summary, library);
                 if (hybridEmbedding != null) {
                     summaryEmbeddings.add(hybridEmbedding);
                 }
@@ -549,8 +548,10 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * Cria um embedding híbrido combinando sumário com contexto estrutural
      */
-    private DocumentEmbeddingDTO createHybridSummaryEmbedding(ChapterDTO chapter, String summary, 
-                                                        LibraryDTO library, String instructions) {
+    private DocumentEmbeddingDTO createHybridSummaryEmbedding(ChapterDTO chapter, 
+	    						String summary, 
+                                                        LibraryDTO library) 
+    {
         try {
             StringBuilder hybridContent = new StringBuilder();
             

@@ -1,15 +1,20 @@
 package bor.tools.simplerag.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonType;
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import io.hypersistence.utils.hibernate.type.json.JsonType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Entity representing a chapter - a section of a document (~8k tokens by default).
@@ -20,8 +25,8 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class Chapter extends Updatable {
 
     @Id

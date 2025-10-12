@@ -46,7 +46,7 @@ public class SearchResultDTO {
     /**
      * Text excerpt from the embedding
      */
-    private String trechoTexto;
+    private String texto;
 
     /**
      * Embedding type (DOCUMENT/CHAPTER/CHUNK)
@@ -85,7 +85,7 @@ public class SearchResultDTO {
                 .embeddingId(embedding.getId())
                 .documentoId(embedding.getDocumentoId())
                 .capituloId(embedding.getChapterId())
-                .trechoTexto(embedding.getTrechoTexto())
+                .texto(embedding.getTexto())
                 .tipoEmbedding(embedding.getTipoEmbedding())
                 .metadados(embedding.getMetadados())
                 .build();

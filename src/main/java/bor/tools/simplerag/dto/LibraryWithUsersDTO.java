@@ -1,11 +1,11 @@
 package bor.tools.simplerag.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 /**
  * DTO for Library with associated users.
@@ -33,6 +33,7 @@ public class LibraryWithUsersDTO {
     private Integer userCount;
 
     public Integer getUserCount() {
-        return users != null ? users.size() : 0;
+	userCount = users != null ? users.size() : 0;
+        return userCount;
     }
 }

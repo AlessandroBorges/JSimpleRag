@@ -10,13 +10,17 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "chat")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class Chat extends Updatable {
 
     /**

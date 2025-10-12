@@ -20,4 +20,7 @@
     <!-- Phase 5: Triggers for tsvector -->
     <include file="db/changelog/005-create-triggers.xml"/>
 
+    <!-- Phase 6: User, Project, and Chat Tables -->
+    <include file="db/changelog/006-create-user-project-chat-tables.xml"/>
+
 </databaseChangeLog>

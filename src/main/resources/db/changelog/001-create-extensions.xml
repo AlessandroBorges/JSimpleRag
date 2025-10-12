@@ -24,4 +24,14 @@
         <rollback>DROP EXTENSION IF EXISTS pg_trgm;</rollback>
     </changeSet>
 
+    <changeSet id="001-create-unaccent-extension" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM pg_extension WHERE extname = 'unaccent'
+            </sqlCheck>
+        </preConditions>
+        <sql>CREATE EXTENSION IF NOT EXISTS unaccent;</sql>
+        <rollback>DROP EXTENSION IF EXISTS unaccent;</rollback>
+    </changeSet>
+
 </databaseChangeLog>

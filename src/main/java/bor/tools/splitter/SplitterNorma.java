@@ -140,7 +140,7 @@ public class SplitterNorma  extends AbstractSplitter{
 				parte.getMetadados().setNomeDocumento(identificacao + " " + titulo_id);
 
 				String texto = titulo_id + "\n" +  artigo.getConteudo() ;
-				parte.setConteudo(identificacao);
+				parte.setConteudo(texto);
 
 				mapPartes.put(titulo_id, parte);
 				partes.add(titulo_id);
@@ -186,7 +186,7 @@ public class SplitterNorma  extends AbstractSplitter{
 	 * @param nivel - nivel atual de aninhamento
      *
 	 */
-	@SuppressWarnings("deprecation")
+	
 	protected void carregaNormasAssociadas(Normativo normativo, DocumentoDTO doc, int nivel) {
 		// carregamento recursivo das normas relacionadas
 		List<Normativo> nAssociados = new ArrayList<>();

@@ -10,6 +10,7 @@ import jakarta.persistence.*;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Class to represent a chat message.<br>
@@ -27,6 +28,8 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class ChatMessage extends Updatable{
 
     @Id

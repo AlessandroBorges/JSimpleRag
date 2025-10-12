@@ -8,6 +8,7 @@ import java.util.UUID;
 import jakarta.persistence.*;
 import jakarta.persistence.Table;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Entity representing a user in the system.
@@ -19,8 +20,8 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class User extends Updatable {
 
     @Id

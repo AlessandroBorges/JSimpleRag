@@ -48,10 +48,7 @@ public class JsonToStringBuilder {
     }
 
 
-    public JsonToStringBuilder(Object o) {
-        super();
-        aJson.ensureCapacity(256);
-    }
+    
 
     /**
      * This append method prepares the a Key and Value element in the JSON for input of fieldName

@@ -33,7 +33,8 @@ public class ChatWithMessagesDTO {
     private Integer messageCount;
 
     public Integer getMessageCount() {
-        return messages != null ? messages.size() : 0;
+	messageCount = messages != null ? messages.size() : 0;
+        return messageCount;
     }
 
     /**

@@ -47,7 +47,12 @@ public class HtmlToMarkdown {
 	 * Classe interna
 	 */
     static class CustomLinkResolver implements HtmlLinkResolver {
-        public CustomLinkResolver(HtmlNodeConverterContext context) {
+	
+	@SuppressWarnings("unused")
+	private HtmlNodeConverterContext context;
+	
+        public CustomLinkResolver(@SuppressWarnings("unused") HtmlNodeConverterContext context) {
+            this.context = context;
         }
 
         @Override
@@ -102,8 +107,11 @@ public class HtmlToMarkdown {
     }
 
     static class CustomHtmlNodeConverter implements HtmlNodeRenderer {
+	@SuppressWarnings("unused")
+	private DataHolder options;
+	
         public CustomHtmlNodeConverter(DataHolder options) {
-
+            this.options = options;
         }
 
         @Override

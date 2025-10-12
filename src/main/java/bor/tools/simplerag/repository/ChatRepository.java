@@ -1,14 +1,14 @@
 package bor.tools.simplerag.repository;
 
-import bor.tools.simplerag.entity.Chat;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import bor.tools.simplerag.entity.Chat;
 
 /**
  * Repositório JPA para a entidade Chat.

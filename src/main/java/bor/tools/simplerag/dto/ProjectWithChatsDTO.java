@@ -34,8 +34,13 @@ public class ProjectWithChatsDTO {
      */
     private Integer chatCount;
 
+    /**
+     * Get total chat count
+     * @return
+     */
     public Integer getChatCount() {
-        return chats != null ? chats.size() : 0;
+	chatCount = chats != null ? chats.size() : 0;
+        return chatCount;
     }
 
     /**

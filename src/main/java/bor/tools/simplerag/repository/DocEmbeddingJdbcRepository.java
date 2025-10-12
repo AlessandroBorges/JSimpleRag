@@ -44,14 +44,14 @@ import lombok.Setter;
  * - documento_id
  * - capitulo_id (nullable)
  * - tipo_embedding
- * - trecho_texto
+ * - texto
  * - ordem_cap (nullable)
  * - embedding_vector
  * - metadados
  * - created_at
  *
  * Campo read-only (gerado por trigger):
- * - texto_indexado (tsvector)
+ * - text_search_tsv (tsvector)
  */
 @Repository
 @SuppressWarnings("null")
@@ -98,9 +98,9 @@ public class DocEmbeddingJdbcRepository {
             .documentoId(rs.getInt("documento_id"))
             .chapterId(rs.getObject("capitulo_id", Integer.class))
             .tipoEmbedding(TipoEmbedding.fromDbValue(rs.getString("tipo_embedding")))
-            .trechoTexto(rs.getString("trecho_texto"))
+            .texto(rs.getString("texto"))
             .orderChapter(rs.getObject("ordem_cap", Integer.class))
-            .textoIndexado(rs.getString("texto_indexado"))
+            .textoIndexado(rs.getString("text_search_tsv"))
             .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
             .build();
 
@@ -359,7 +359,7 @@ public class DocEmbeddingJdbcRepository {
 
         // Assume dimensão padrão - em implementação real pegaria da biblioteca
         // @TODO Recuperar dimensão correta do vetor da biblioteca
-        Integer vecLength = 1536;
+        //Integer vecLength = 1536;
 
         String sql = """
             WITH semantic_search AS (
@@ -372,11 +372,11 @@ public class DocEmbeddingJdbcRepository {
             ),
             text_search AS (
                 SELECT id,
-                       1.0 / (? + RANK() OVER (ORDER BY ts_rank_cd(texto_indexado, to_tsquery('portuguese', ?)) DESC)) AS score_text,
-                       RANK() OVER (ORDER BY ts_rank_cd(texto_indexado, to_tsquery('portuguese', ?)) DESC) AS rank_text
+                       1.0 / (? + RANK() OVER (ORDER BY ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) DESC)) AS score_text,
+                       RANK() OVER (ORDER BY ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) DESC) AS rank_text
                 FROM doc_embedding
                 WHERE biblioteca_id IN (%s)
-                AND texto_indexado @@ to_tsquery('portuguese', ?)
+                AND text_search_tsv @@ to_tsquery('portuguese', ?)
                 LIMIT ?
             )
             SELECT d.*,
@@ -415,8 +415,9 @@ public class DocEmbeddingJdbcRepository {
      */
     public List<DocumentEmbedding> pesquisaSemantica(@NonNull float[] vec,
                                                @NonNull Integer[] bibliotecaIds,
-                                               @NonNull Integer k) {
-        if (k == null) k = k_pesquisa;
+                                               Integer k) {
+        if (k == null) 
+            k = k_pesquisa;
 
         String libIds = Arrays.stream(bibliotecaIds)
                              .map(String::valueOf)
@@ -455,11 +456,11 @@ public class DocEmbeddingJdbcRepository {
         String sql = """
             SELECT d.*,
                    0.0 AS score_semantic,
-                   ts_rank_cd(texto_indexado, to_tsquery('portuguese', ?)) AS score_text,
-                   ts_rank_cd(texto_indexado, to_tsquery('portuguese', ?)) AS score
+                   ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) AS score_text,
+                   ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) AS score
             FROM doc_embedding d
             WHERE biblioteca_id IN (%s)
-            AND texto_indexado @@ to_tsquery('portuguese', ?)
+            AND text_search_tsv @@ to_tsquery('portuguese', ?)
             ORDER BY score DESC
             LIMIT ?
             """.formatted(libIds);
@@ -547,7 +548,7 @@ public class DocEmbeddingJdbcRepository {
         final String sql = """
             INSERT INTO doc_embedding
             (biblioteca_id, documento_id, capitulo_id, tipo_embedding,
-             trecho_texto, ordem_cap, embedding_vector, metadados, created_at)
+             texto, ordem_cap, embedding_vector, metadados, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
             """;
 
@@ -557,7 +558,7 @@ public class DocEmbeddingJdbcRepository {
             ps.setInt(2, doc.getDocumentoId());
             ps.setObject(3, doc.getChapterId());
             ps.setString(4, doc.getTipoEmbedding().getDbValue());
-            ps.setString(5, doc.getTrechoTexto());
+            ps.setString(5, doc.getTexto());
             ps.setObject(6, doc.getOrderChapter());
 
             if (doc.getEmbeddingVector() != null) {
@@ -592,7 +593,7 @@ public class DocEmbeddingJdbcRepository {
         final String sql = """
             UPDATE doc_embedding SET
             biblioteca_id = ?, documento_id = ?, capitulo_id = ?,
-            tipo_embedding = ?, trecho_texto = ?, ordem_cap = ?,
+            tipo_embedding = ?, texto = ?, ordem_cap = ?,
             embedding_vector = ?, metadados = ?::jsonb
             WHERE id = ?
             """;
@@ -602,7 +603,7 @@ public class DocEmbeddingJdbcRepository {
             doc.getDocumentoId(),
             doc.getChapterId(),
             doc.getTipoEmbedding().getDbValue(),
-            doc.getTrechoTexto(),
+            doc.getTexto(),
             doc.getOrderChapter(),
             doc.getEmbeddingVector() != null ? new PGvector(doc.getEmbeddingVector()) : null,
             doc.getMetadados() != null ? "{}" : null, // JSON serialization

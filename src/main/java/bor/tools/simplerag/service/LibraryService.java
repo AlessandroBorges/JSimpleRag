@@ -12,12 +12,16 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import bor.tools.simplerag.dto.LibraryDTO;
+import bor.tools.simplerag.dto.UserDTO;
+import bor.tools.simplerag.dto.UserLibraryDTO;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.User;
 import bor.tools.simplerag.entity.UserLibrary;
 import bor.tools.simplerag.repository.LibraryRepository;
 import bor.tools.simplerag.repository.UserLibraryRepository;
 import bor.tools.simplerag.repository.UserRepository;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,32 +39,62 @@ public class LibraryService {
     private final UserRepository userRepository;
 
     /**
-     * Save (create or update) library entity
-     * @param library - library to save
-     * @return saved library
+     * Save (create or update) library
+     * @param dto - library DTO to save
+     * @return saved library DTO
      */
     @Transactional
-    public Library save(Library library) {
-        log.debug("Saving library: {}", library.getNome());
+    public LibraryDTO save(LibraryDTO dto) {
+        log.debug("Saving library: {}", dto.getNome());
 
-        // Validate weights before saving (additional validation to @PrePersist)
-        validateWeights(library);
+        // Validate weights
+        if (!dto.isWeightValid()) {
+            throw new IllegalArgumentException(
+                    String.format("A soma dos pesos deve ser 1.0 (atual: %.2f + %.2f = %.2f)",
+                            dto.getPesoSemantico(), dto.getPesoTextual(),
+                            dto.getPesoSemantico() + dto.getPesoTextual())
+            );
+        }
+
+        // Convert DTO to Entity
+        Library library = toEntity(dto);
 
         // Generate UUID if not present
         if (library.getUuid() == null) {
             library.setUuid(UUID.randomUUID());
         }
 
-        return libraryRepository.save(library);
+        Library saved = libraryRepository.save(library);
+        return LibraryDTO.from(saved);
+    }
+
+    /**
+     * Convert DTO to Entity
+     */
+    private Library toEntity(LibraryDTO dto) {
+        Library library = new Library();
+        library.setId(dto.getId());
+        library.setUuid(dto.getUuid());
+        library.setNome(dto.getNome());
+        library.setAreaConhecimento(dto.getAreaConhecimento());
+        library.setPesoSemantico(dto.getPesoSemantico());
+        library.setPesoTextual(dto.getPesoTextual());
+        library.setMetadados(dto.getMetadados());
+        return library;
     }
 
     /**
      * Delete library (soft or hard delete)
-     * @param library - library to delete
+     * @param uuid - library UUID
      * @param isHardDelete - true for physical delete, false for soft delete
      */
     @Transactional
-    public void delete(Library library, boolean isHardDelete) {
+    public void delete(UUID uuid, boolean isHardDelete) {
+        Library library = libraryRepository.findAll().stream()
+                .filter(lib -> uuid.equals(lib.getUuid()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Biblioteca não encontrada: " + uuid));
+
         log.debug("Deleting library: {} (hard={})", library.getNome(), isHardDelete);
 
         if (isHardDelete) {
@@ -87,21 +121,23 @@ public class LibraryService {
     /**
      * Find library by UUID
      * @param uuid - library UUID
-     * @return Optional library
+     * @return Optional library DTO
      */
-    public Optional<Library> findByUuid(UUID uuid) {
+    public Optional<LibraryDTO> findByUuid(UUID uuid) {
         return libraryRepository.findAll().stream()
                 .filter(lib -> uuid.equals(lib.getUuid()))
-                .findFirst();
+                .findFirst()
+                .map(LibraryDTO::from);
     }
 
     /**
      * Find library by name
      * @param nome - library name
-     * @return Optional library
+     * @return Optional library DTO
      */
-    public Optional<Library> findByNome(String nome) {
-        return libraryRepository.findByNomeIgnoreCase(nome);
+    public Optional<LibraryDTO> findByNome(String nome) {
+        return libraryRepository.findByNomeIgnoreCase(nome)
+                .map(LibraryDTO::from);
     }
 
     /**
@@ -130,34 +166,53 @@ public class LibraryService {
      */
     @Transactional(readOnly = true)
     public Optional<LibraryWithUsers> loadLibraryWithUsers(UUID libraryUuid) {
-        Optional<Library> libraryOpt = findByUuid(libraryUuid);
+        Optional<LibraryDTO> libraryOpt = findByUuid(libraryUuid);
 
         if (libraryOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Library library = libraryOpt.get();
+        LibraryDTO library = libraryOpt.get();
 
         // Load user-library associations
-        List<UserLibrary> associations = userLibraryRepository.findByBibliotecaId(library.getId());
+        List<UserLibraryDTO> associations = toListUserLibs(userLibraryRepository.findByBibliotecaId(library.getId()));
 
         // Load users
         Set<Integer> userIds = associations.stream()
-                .map(UserLibrary::getUserId)
+                .map(UserLibraryDTO::getUserId)
                 .collect(Collectors.toSet());
 
-        List<User> users = userIds.isEmpty()
+        List<UserDTO> users = userIds.isEmpty()
                 ? Collections.emptyList()
-                : userRepository.findAllById(userIds);
+                : toList(userRepository.findAllById(userIds));
 
         // Create association map for quick lookup
-        Map<Integer, UserLibrary> associationMap = associations.stream()
+        Map<Integer, UserLibraryDTO> associationMap = associations.stream()
                 .collect(Collectors.toMap(
-                        UserLibrary::getUserId,
+                        UserLibraryDTO::getUserId,
                         assoc -> assoc
                 ));
 
         return Optional.of(new LibraryWithUsers(library, users, associationMap));
+    }
+
+    private List<UserLibraryDTO> toListUserLibs(List<UserLibrary> byBibliotecaId) {
+	List<UserLibraryDTO> list = byBibliotecaId.stream()
+		.map(UserLibraryDTO::from)
+		.collect(Collectors.toList());
+	return list;
+    }
+
+    /**
+     * 
+     * @param allById
+     * @return
+     */
+    private List<UserDTO> toList(List<User> allById) {
+	List<UserDTO> list = allById.stream()
+		.map(UserDTO::from)
+		.collect(Collectors.toList());
+	return list;
     }
 
     /**
@@ -184,13 +239,13 @@ public class LibraryService {
      */
     @Transactional(readOnly = true)
     public Optional<LibraryStats> getLibraryStats(UUID libraryUuid) {
-        Optional<Library> libraryOpt = findByUuid(libraryUuid);
+        Optional<LibraryDTO> libraryOpt = findByUuid(libraryUuid);
 
         if (libraryOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Library library = libraryOpt.get();
+        LibraryDTO library = libraryOpt.get();
 
         // Count users
         long userCount = userLibraryRepository.countByBibliotecaId(library.getId());
@@ -212,25 +267,25 @@ public class LibraryService {
      * DTO class to return library with users and associations
      */
     public static class LibraryWithUsers {
-        private final Library library;
-        private final List<User> users;
-        private final Map<Integer, UserLibrary> associations;
+        private final LibraryDTO library;
+        private final List<UserDTO> users;
+        private final Map<Integer, UserLibraryDTO> associations;
 
-        public LibraryWithUsers(Library library, List<User> users, Map<Integer, UserLibrary> associations) {
+        public LibraryWithUsers(LibraryDTO library, List<UserDTO> users, Map<Integer, UserLibraryDTO> associations) {
             this.library = library;
             this.users = users;
             this.associations = associations;
         }
 
-        public Library getLibrary() {
+        public LibraryDTO getLibrary() {
             return library;
         }
 
-        public List<User> getUsers() {
+        public List<UserDTO> getUsers() {
             return users;
         }
 
-        public Map<Integer, UserLibrary> getAssociations() {
+        public Map<Integer, UserLibraryDTO> getAssociations() {
             return associations;
         }
 
@@ -250,27 +305,21 @@ public class LibraryService {
     /**
      * DTO class to pair user with association
      */
+    @Getter
     public static class UserWithAssociation {
-        private final User user;
-        private final UserLibrary association;
+        private final UserDTO user;
+        private final UserLibraryDTO association;
 
-        public UserWithAssociation(User user, UserLibrary association) {
+        public UserWithAssociation(UserDTO user, UserLibraryDTO association) {
             this.user = user;
             this.association = association;
-        }
-
-        public User getUser() {
-            return user;
-        }
-
-        public UserLibrary getAssociation() {
-            return association;
-        }
+        }       
     }
 
     /**
      * DTO class for library statistics
      */
+    @Getter
     public static class LibraryStats {
         private final Integer libraryId;
         private final UUID libraryUuid;
@@ -290,33 +339,6 @@ public class LibraryService {
             this.tokenCount = tokenCount;
             this.embeddingCount = embeddingCount;
         }
-
-        public Integer getLibraryId() {
-            return libraryId;
-        }
-
-        public UUID getLibraryUuid() {
-            return libraryUuid;
-        }
-
-        public String getNome() {
-            return nome;
-        }
-
-        public long getUserCount() {
-            return userCount;
-        }
-
-        public long getDocCount() {
-            return docCount;
-        }
-
-        public long getTokenCount() {
-            return tokenCount;
-        }
-
-        public long getEmbeddingCount() {
-            return embeddingCount;
-        }
+       
     }
 }

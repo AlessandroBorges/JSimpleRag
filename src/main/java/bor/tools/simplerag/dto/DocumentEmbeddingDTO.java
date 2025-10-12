@@ -1,14 +1,13 @@
 package bor.tools.simplerag.dto;
 
+import java.time.LocalDateTime;
+
 import bor.tools.simplerag.entity.Metadata;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
-import java.util.Map;
 
 /**
  * DTO for DocumentEmbedding entity.
@@ -20,6 +19,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+
 public class DocumentEmbeddingDTO {
 
     private Integer id;

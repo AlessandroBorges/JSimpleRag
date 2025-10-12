@@ -1,6 +1,5 @@
-package bor.tools.simplerag.entity;
 
-import java.util.LinkedHashMap;
+package bor.tools.simplerag.entity;
 
 /**
  * Metadata for Library and Documento entities.
@@ -22,6 +21,7 @@ public class MetaBiblioteca extends Metadata{
 	 *
 	 */
 	private static final long serialVersionUID = -1309098035532919716L;
+	
 	public static final String lANG_KEY = "language";
 	public static final String MODEL_KEY = "embedding_model";
 	public static final String DIMENSION_KEY = "embedding_dimension";

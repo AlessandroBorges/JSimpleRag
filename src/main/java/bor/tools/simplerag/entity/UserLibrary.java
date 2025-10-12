@@ -3,6 +3,7 @@ package bor.tools.simplerag.entity;
 import bor.tools.simplerag.entity.enums.TipoAssociacao;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Entity representing the association between User and Library.
@@ -12,6 +13,8 @@ import lombok.*;
 @Table(name = "user_library")
 @Data
 @NoArgsConstructor
+@SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class UserLibrary extends Updatable {
 
     @Id

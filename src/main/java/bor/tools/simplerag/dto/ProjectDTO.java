@@ -1,9 +1,9 @@
+
 package bor.tools.simplerag.dto;
 
 import java.util.UUID;
 
 import bor.tools.simplerag.entity.MetaProject;
-import bor.tools.simplerag.entity.Metadata;
 import bor.tools.simplerag.entity.Project;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,21 +1,18 @@
 package bor.tools.simplerag.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.Metadata;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * DTO for Documento entity.
@@ -58,6 +55,7 @@ public class DocumentoDTO {
     /**
      * Attached documents (e.g. annexes)
      */
+    @Builder.Default
     private List<DocumentoDTO> anexos = new ArrayList<>();
 
     /**

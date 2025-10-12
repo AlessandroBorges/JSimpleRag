@@ -170,7 +170,7 @@ public class SplitterFactory {
     /**
      * Aplica configurações específicas ao splitter
      */
-    private void applySplitterConfig(AbstractSplitter splitter, SplitterConfig.BibliotecaConfig config) {
+    private void applySplitterConfig(@SuppressWarnings("unused")     AbstractSplitter splitter, SplitterConfig.BibliotecaConfig config) {
         // As configurações específicas serão implementadas quando SplitterConfig estiver pronto
         logger.debug("Applied config to splitter: maxChunkSize={}, model={}",
                     config.getMaxChunkSize(), config.getPreferredModel());

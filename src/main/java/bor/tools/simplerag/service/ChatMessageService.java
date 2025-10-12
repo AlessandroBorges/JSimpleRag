@@ -1,18 +1,18 @@
 package bor.tools.simplerag.service;
 
-import bor.tools.simplerag.entity.Chat;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import bor.tools.simplerag.entity.ChatMessage;
 import bor.tools.simplerag.repository.ChatMessageRepository;
 import bor.tools.simplerag.repository.ChatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Service for ChatMessage entity operations.

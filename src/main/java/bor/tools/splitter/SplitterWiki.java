@@ -12,7 +12,6 @@ import org.springframework.lang.NonNull;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
-import bor.tools.utils.RAGUtil;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
