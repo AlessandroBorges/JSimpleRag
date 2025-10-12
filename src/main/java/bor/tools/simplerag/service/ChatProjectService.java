@@ -3,10 +3,10 @@ package bor.tools.simplerag.service;
 import bor.tools.simplerag.entity.Chat;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaProject;
-import bor.tools.simplerag.entity.Project;
+import bor.tools.simplerag.entity.ChatProject;
 import bor.tools.simplerag.repository.ChatRepository;
 import bor.tools.simplerag.repository.LibraryRepository;
-import bor.tools.simplerag.repository.ProjectRepository;
+import bor.tools.simplerag.repository.ChatProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,15 +17,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for Project entity operations.
+ * Service for ChatProject entity operations.
  * Handles project organization, chat grouping via metadata, and library associations.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ProjectService {
+public class ChatProjectService {
 
-    private final ProjectRepository projectRepository;
+    private final ChatProjectRepository projectRepository;
     private final ChatRepository chatRepository;
     private final LibraryRepository libraryRepository;
 
@@ -35,11 +35,11 @@ public class ProjectService {
      * @return saved project
      */
     @Transactional
-    public Project save(Project project) {
+    public ChatProject save(ChatProject project) {
         log.debug("Saving project: {}", project.getTitulo());
 
         // Validate user ID
-        if (project.getUser_id() == null) {
+        if (project.getUser_uuid() == null) {
             throw new IllegalArgumentException("User ID é obrigatório");
         }
 
@@ -50,7 +50,7 @@ public class ProjectService {
 
         // Set ordem if not present
         if (project.getOrdem() == null) {
-            Integer nextOrdem = projectRepository.findNextOrdem(project.getUser_id());
+            Integer nextOrdem = projectRepository.findNextOrdem(project.getUser_uuid());
             project.setOrdem(nextOrdem);
         }
 
@@ -63,16 +63,16 @@ public class ProjectService {
      * @param isHardDelete - true for physical delete, false for soft delete
      */
     @Transactional
-    public void delete(Project project, boolean isHardDelete) {
+    public void delete(ChatProject project, boolean isHardDelete) {
         log.debug("Deleting project: {} (hard={})", project.getTitulo(), isHardDelete);
 
         if (isHardDelete) {
             projectRepository.delete(project);
-            log.info("Project hard deleted: {}", project.getTitulo());
+            log.info("ChatProject hard deleted: {}", project.getTitulo());
         } else {
             project.setDeletedAt(LocalDateTime.now());
             projectRepository.save(project);
-            log.info("Project soft deleted: {}", project.getTitulo());
+            log.info("ChatProject soft deleted: {}", project.getTitulo());
         }
     }
 
@@ -81,7 +81,7 @@ public class ProjectService {
      * @param id - project UUID
      * @return Optional project
      */
-    public Optional<Project> findById(UUID id) {
+    public Optional<ChatProject> findById(UUID id) {
         return projectRepository.findById(id);
     }
 
@@ -90,7 +90,7 @@ public class ProjectService {
      * @param userId - user UUID
      * @return List of projects
      */
-    public List<Project> loadUserProjects(UUID userId) {
+    public List<ChatProject> loadUserProjects(UUID userId) {
         return projectRepository.findByUserIdOrderByOrdemAsc(userId);
     }
 
@@ -110,13 +110,13 @@ public class ProjectService {
      */
     @Transactional(readOnly = true)
     public Optional<ProjectWithChats> loadProjectWithChats(UUID projectId) {
-        Optional<Project> projectOpt = findById(projectId);
+        Optional<ChatProject> projectOpt = findById(projectId);
 
         if (projectOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Project project = projectOpt.get();
+        ChatProject project = projectOpt.get();
         List<Chat> chats = Collections.emptyList();
 
         // Extract chat IDs from metadata if MetaProject
@@ -144,7 +144,7 @@ public class ProjectService {
      */
     @Transactional(readOnly = true)
     public Optional<Library> loadProjectLibrary(UUID projectId) {
-        Optional<Project> projectOpt = findById(projectId);
+        Optional<ChatProject> projectOpt = findById(projectId);
 
         if (projectOpt.isEmpty() || projectOpt.get().getBiblioteca_privativa() == null) {
             return Optional.empty();
@@ -164,15 +164,15 @@ public class ProjectService {
      * @return updated project
      */
     @Transactional
-    public Optional<Project> addChatToProject(UUID projectId, UUID chatId) {
-        Optional<Project> projectOpt = findById(projectId);
+    public Optional<ChatProject> addChatToProject(UUID projectId, UUID chatId) {
+        Optional<ChatProject> projectOpt = findById(projectId);
         Optional<Chat> chatOpt = chatRepository.findById(chatId);
 
         if (projectOpt.isEmpty() || chatOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Project project = projectOpt.get();
+        ChatProject project = projectOpt.get();
         Chat chat = chatOpt.get();
 
         // Ensure metadata is MetaProject
@@ -194,15 +194,15 @@ public class ProjectService {
      * @return updated project
      */
     @Transactional
-    public Optional<Project> removeChatFromProject(UUID projectId, UUID chatId) {
-        Optional<Project> projectOpt = findById(projectId);
+    public Optional<ChatProject> removeChatFromProject(UUID projectId, UUID chatId) {
+        Optional<ChatProject> projectOpt = findById(projectId);
         Optional<Chat> chatOpt = chatRepository.findById(chatId);
 
         if (projectOpt.isEmpty() || chatOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Project project = projectOpt.get();
+        ChatProject project = projectOpt.get();
         Chat chat = chatOpt.get();
 
         if (!(project.getMetadata() instanceof MetaProject)) {
@@ -222,8 +222,8 @@ public class ProjectService {
      * @return updated projects
      */
     @Transactional
-    public List<Project> reorderProjects(UUID userId, Map<UUID, Integer> projectOrders) {
-        List<Project> projects = projectRepository.findByUserId(userId);
+    public List<ChatProject> reorderProjects(UUID userId, Map<UUID, Integer> projectOrders) {
+        List<ChatProject> projects = projectRepository.findByUserId(userId);
 
         projects.forEach(project -> {
             if (projectOrders.containsKey(project.getId())) {
@@ -240,7 +240,7 @@ public class ProjectService {
      * @param titulo - project title
      * @return Optional project
      */
-    public Optional<Project> findByUserIdAndTitulo(UUID userId, String titulo) {
+    public Optional<ChatProject> findByUserIdAndTitulo(UUID userId, String titulo) {
         return projectRepository.findByUserIdAndTitulo(userId, titulo);
     }
 
@@ -259,7 +259,7 @@ public class ProjectService {
      * @param limit - number of projects to return
      * @return List of recent projects
      */
-    public List<Project> findRecentProjects(UUID userId, int limit) {
+    public List<ChatProject> findRecentProjects(UUID userId, int limit) {
         return projectRepository.findTopNRecentProjects(userId, limit);
     }
 
@@ -267,15 +267,15 @@ public class ProjectService {
      * DTO class to return project with chats
      */
     public static class ProjectWithChats {
-        private final Project project;
+        private final ChatProject project;
         private final List<Chat> chats;
 
-        public ProjectWithChats(Project project, List<Chat> chats) {
+        public ProjectWithChats(ChatProject project, List<Chat> chats) {
             this.project = project;
             this.chats = chats;
         }
 
-        public Project getProject() {
+        public ChatProject getProject() {
             return project;
         }
 

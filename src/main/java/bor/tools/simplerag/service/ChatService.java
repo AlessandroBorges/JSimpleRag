@@ -37,7 +37,7 @@ public class ChatService {
         log.debug("Saving chat: {}", chat.getTitulo());
 
         // Validate client UUID
-        if (chat.getClient_uuid() == null) {
+        if (chat.getUser_uuid() == null) {
             throw new IllegalArgumentException("Client UUID é obrigatório");
         }
 

@@ -4,14 +4,14 @@ package bor.tools.simplerag.dto;
 import java.util.UUID;
 
 import bor.tools.simplerag.entity.MetaProject;
-import bor.tools.simplerag.entity.Project;
+import bor.tools.simplerag.entity.ChatProject;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO for Project entity.
+ * DTO for ChatProject entity.
  *
  * Represents a project that can group multiple chats and related resources
  * under a common theme or purpose.
@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProjectDTO {
+public class ChatProjectDTO {
 
     /**
      * Unique identifier for the project
@@ -52,7 +52,7 @@ public class ProjectDTO {
     /**
      * UUID of the user who owns this project
      */
-    private UUID userId;
+    private UUID userUuid;
 
     /**
      * Order/sequence number for organizing projects
@@ -64,33 +64,33 @@ public class ProjectDTO {
      * @param src - source entity
      * @return DTO instance
      */
-    public static ProjectDTO from(Project src) {
+    public static ChatProjectDTO from(ChatProject src) {
         if (src == null) {
             return null;
         }
-        return ProjectDTO.builder()
+        return ChatProjectDTO.builder()
                 .id(src.getId())
                 .bibliotecaPrivativa(src.getBiblioteca_privativa())
                 .titulo(src.getTitulo())
                 .descricao(src.getDescricao())
                 .metadata(src.getMetadata())
-                .userId(src.getUser_id())
+                .userUuid(src.getUser_uuid())
                 .ordem(src.getOrdem())
                 .build();
     }
 
     /**
      * Convert DTO to entity
-     * @return Project entity
+     * @return ChatProject entity
      */
-    public Project toEntity() {
-        Project entity = new Project();
+    public ChatProject toEntity() {
+        ChatProject entity = new ChatProject();
         entity.setId(this.id);
         entity.setBiblioteca_privativa(this.bibliotecaPrivativa);
         entity.setTitulo(this.titulo);
         entity.setDescricao(this.descricao);
         entity.setMetadata(this.metadata);
-        entity.setUser_id(this.userId);
+        entity.setUser_uuid(this.userUuid);
         entity.setOrdem(this.ordem);
         return entity;
     }
@@ -99,7 +99,7 @@ public class ProjectDTO {
      * Validates if required fields are present
      */
     public boolean isValid() {
-        return userId != null
+        return userUuid != null
                 && titulo != null && !titulo.trim().isEmpty();
     }
 

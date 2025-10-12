@@ -10,19 +10,19 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * DTO for Project with associated chats (from MetaProject).
+ * DTO for ChatProject with associated chats (from MetaProject).
  * Used by GET /api/v1/projects/{uuid}/with-chats
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProjectWithChatsDTO {
+public class ChatProjectWithChatsDTO {
 
     /**
-     * Project information
+     * ChatProject information
      */
-    private ProjectDTO project;
+    private ChatProjectDTO project;
 
     /**
      * Chats associated with this project

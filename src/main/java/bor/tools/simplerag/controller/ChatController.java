@@ -285,7 +285,7 @@ public class ChatController {
     private Chat toEntity(ChatDTO dto) {
         Chat chat = new Chat();
         chat.setId(dto.getId());
-        chat.setClient_uuid(dto.getClientUuid());
+        chat.setUser_uuid(dto.getUserUuid());
         chat.setTitulo(dto.getTitulo());
         chat.setResumo(dto.getResumo());
         chat.setBiblioteca_privativa(dto.getBibliotecaPrivativa());

@@ -1,10 +1,10 @@
 package bor.tools.simplerag.controller;
 
 import bor.tools.simplerag.dto.ChatDTO;
-import bor.tools.simplerag.dto.ProjectDTO;
-import bor.tools.simplerag.dto.ProjectWithChatsDTO;
-import bor.tools.simplerag.entity.Project;
-import bor.tools.simplerag.service.ProjectService;
+import bor.tools.simplerag.dto.ChatProjectDTO;
+import bor.tools.simplerag.dto.ChatProjectWithChatsDTO;
+import bor.tools.simplerag.entity.ChatProject;
+import bor.tools.simplerag.service.ChatProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,17 +19,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * REST Controller for Project management.
+ * REST Controller for ChatProject management.
  * Provides CRUD operations and chat association management via MetaProject.
  */
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Projects", description = "Project management")
-public class ProjectController {
+@Tag(name = "Projects", description = "ChatProject management")
+public class ChatProjectController {
 
-    private final ProjectService projectService;
+    private final ChatProjectService projectService;
 
     /**
      * Create or update project
@@ -37,20 +37,20 @@ public class ProjectController {
     @PostMapping
     @Operation(summary = "Create or update project",
                description = "Saves project with auto-increment ordem if not provided")
-    public ResponseEntity<ProjectDTO> save(@Valid @RequestBody ProjectDTO dto) {
+    public ResponseEntity<ChatProjectDTO> save(@Valid @RequestBody ChatProjectDTO dto) {
         log.info("Saving project: {}", dto.getTitulo());
 
         try {
             // Convert DTO to Entity
-            Project project = toEntity(dto);
+            ChatProject project = toEntity(dto);
 
             // Save (ordem will be auto-generated if null)
-            Project saved = projectService.save(project);
+            ChatProject saved = projectService.save(project);
 
             // Convert back to DTO
-            ProjectDTO response = ProjectDTO.from(saved);
+            ChatProjectDTO response = ChatProjectDTO.from(saved);
 
-            log.info("Project saved: id={}, ordem={}", saved.getId(), saved.getOrdem());
+            log.info("ChatProject saved: id={}, ordem={}", saved.getId(), saved.getOrdem());
 
             return ResponseEntity.status(dto.getId() == null ? HttpStatus.CREATED : HttpStatus.OK)
                     .body(response);
@@ -75,17 +75,17 @@ public class ProjectController {
         log.info("Deleting project: uuid={}, hard={}", uuid, hard);
 
         try {
-            Project project = projectService.findById(uuid)
+            ChatProject project = projectService.findById(uuid)
                     .orElseThrow(() -> new IllegalArgumentException("Projeto não encontrado: " + uuid));
 
             projectService.delete(project, hard);
 
-            log.info("Project deleted: uuid={}, hard={}", uuid, hard);
+            log.info("ChatProject deleted: uuid={}, hard={}", uuid, hard);
 
             return ResponseEntity.noContent().build();
 
         } catch (IllegalArgumentException e) {
-            log.error("Project not found: {}", e.getMessage());
+            log.error("ChatProject not found: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("Error deleting project: {}", e.getMessage(), e);
@@ -98,13 +98,13 @@ public class ProjectController {
      */
     @GetMapping("/{uuid}")
     @Operation(summary = "Get project by UUID")
-    public ResponseEntity<ProjectDTO> findById(@PathVariable UUID uuid) {
+    public ResponseEntity<ChatProjectDTO> findById(@PathVariable UUID uuid) {
         log.debug("Finding project by UUID: {}", uuid);
 
-        Project project = projectService.findById(uuid)
+        ChatProject project = projectService.findById(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Projeto não encontrado: " + uuid));
 
-        return ResponseEntity.ok(ProjectDTO.from(project));
+        return ResponseEntity.ok(ChatProjectDTO.from(project));
     }
 
     /**
@@ -113,31 +113,31 @@ public class ProjectController {
     @GetMapping("/{uuid}/with-chats")
     @Operation(summary = "Get project with associated chats",
                description = "Returns project with chat IDs extracted from MetaProject metadata")
-    public ResponseEntity<ProjectWithChatsDTO> getWithChats(@PathVariable UUID uuid) {
+    public ResponseEntity<ChatProjectWithChatsDTO> getWithChats(@PathVariable UUID uuid) {
         log.debug("Finding project with chats: uuid={}", uuid);
 
         try {
-            ProjectService.ProjectWithChats projectWithChats = projectService.loadProjectWithChats(uuid)
+            ChatProjectService.ProjectWithChats projectWithChats = projectService.loadProjectWithChats(uuid)
                     .orElseThrow(() -> new IllegalArgumentException("Projeto não encontrado: " + uuid));
 
             // Convert to DTO
-            ProjectDTO projectDTO = ProjectDTO.from(projectWithChats.getProject());
+            ChatProjectDTO projectDTO = ChatProjectDTO.from(projectWithChats.getProject());
 
             List<ChatDTO> chatDTOs = projectWithChats.getChats().stream()
                     .map(ChatDTO::from)
                     .collect(Collectors.toList());
 
-            ProjectWithChatsDTO response = ProjectWithChatsDTO.builder()
+            ChatProjectWithChatsDTO response = ChatProjectWithChatsDTO.builder()
                     .project(projectDTO)
                     .chats(chatDTOs)
                     .build();
 
-            log.debug("Project with chats found: {} chats", response.getChatCount());
+            log.debug("ChatProject with chats found: {} chats", response.getChatCount());
 
             return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
-            log.error("Project not found: {}", e.getMessage());
+            log.error("ChatProject not found: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("Error loading project with chats: {}", e.getMessage(), e);
@@ -151,18 +151,18 @@ public class ProjectController {
     @PutMapping("/{projectId}/chats/{chatId}")
     @Operation(summary = "Add chat to project",
                description = "Adds chat ID to project's MetaProject metadata")
-    public ResponseEntity<ProjectDTO> addChat(@PathVariable UUID projectId,
+    public ResponseEntity<ChatProjectDTO> addChat(@PathVariable UUID projectId,
                                               @PathVariable UUID chatId) {
         log.info("Adding chat {} to project {}", chatId, projectId);
 
         try {
-            Project updated = projectService.addChatToProject(projectId, chatId)
+            ChatProject updated = projectService.addChatToProject(projectId, chatId)
                     .orElseThrow(() -> new IllegalArgumentException(
                             String.format("Projeto %s ou chat %s não encontrado", projectId, chatId)));
 
             log.info("Chat {} added to project {}", chatId, projectId);
 
-            return ResponseEntity.ok(ProjectDTO.from(updated));
+            return ResponseEntity.ok(ChatProjectDTO.from(updated));
 
         } catch (IllegalArgumentException e) {
             log.error("Error adding chat to project: {}", e.getMessage());
@@ -179,18 +179,18 @@ public class ProjectController {
     @DeleteMapping("/{projectId}/chats/{chatId}")
     @Operation(summary = "Remove chat from project",
                description = "Removes chat ID from project's MetaProject metadata")
-    public ResponseEntity<ProjectDTO> removeChat(@PathVariable UUID projectId,
+    public ResponseEntity<ChatProjectDTO> removeChat(@PathVariable UUID projectId,
                                                   @PathVariable UUID chatId) {
         log.info("Removing chat {} from project {}", chatId, projectId);
 
         try {
-            Project updated = projectService.removeChatFromProject(projectId, chatId)
+            ChatProject updated = projectService.removeChatFromProject(projectId, chatId)
                     .orElseThrow(() -> new IllegalArgumentException(
                             String.format("Projeto %s ou chat %s não encontrado", projectId, chatId)));
 
             log.info("Chat {} removed from project {}", chatId, projectId);
 
-            return ResponseEntity.ok(ProjectDTO.from(updated));
+            return ResponseEntity.ok(ChatProjectDTO.from(updated));
 
         } catch (IllegalArgumentException e) {
             log.error("Error removing chat from project: {}", e.getMessage());
@@ -206,13 +206,13 @@ public class ProjectController {
      */
     @GetMapping("/by-user/{userId}")
     @Operation(summary = "Get user projects ordered by ordem")
-    public ResponseEntity<List<ProjectDTO>> getUserProjects(@PathVariable UUID userId) {
+    public ResponseEntity<List<ChatProjectDTO>> getUserProjects(@PathVariable UUID userId) {
         log.debug("Finding projects for user: {}", userId);
 
-        List<Project> projects = projectService.loadUserProjects(userId);
+        List<ChatProject> projects = projectService.loadUserProjects(userId);
 
-        List<ProjectDTO> response = projects.stream()
-                .map(ProjectDTO::from)
+        List<ChatProjectDTO> response = projects.stream()
+                .map(ChatProjectDTO::from)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(response);
@@ -224,14 +224,14 @@ public class ProjectController {
     @GetMapping("/by-user/{userId}/recent")
     @Operation(summary = "Get recent projects for user",
                description = "Returns most recent projects (default limit: 10)")
-    public ResponseEntity<List<ProjectDTO>> getRecentProjects(@PathVariable UUID userId,
+    public ResponseEntity<List<ChatProjectDTO>> getRecentProjects(@PathVariable UUID userId,
                                                                @RequestParam(defaultValue = "10") int limit) {
         log.debug("Finding recent projects for user: {} (limit={})", userId, limit);
 
-        List<Project> projects = projectService.findRecentProjects(userId, limit);
+        List<ChatProject> projects = projectService.findRecentProjects(userId, limit);
 
-        List<ProjectDTO> response = projects.stream()
-                .map(ProjectDTO::from)
+        List<ChatProjectDTO> response = projects.stream()
+                .map(ChatProjectDTO::from)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(response);
@@ -240,15 +240,8 @@ public class ProjectController {
     /**
      * Convert DTO to Entity
      */
-    private Project toEntity(ProjectDTO dto) {
-        Project project = new Project();
-        project.setId(dto.getId());
-        project.setUser_id(dto.getUserId());
-        project.setTitulo(dto.getTitulo());
-        project.setDescricao(dto.getDescricao());
-        project.setOrdem(dto.getOrdem());
-        project.setBiblioteca_privativa(dto.getBibliotecaPrivativa());
-        project.setMetadata(dto.getMetadata());
+    private ChatProject toEntity(ChatProjectDTO dto) {
+        ChatProject project = dto.toEntity();
         return project;
     }
 }

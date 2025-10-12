@@ -27,7 +27,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
-public class Project extends Updatable{
+public class ChatProject extends Updatable{
 
     @Id
     @GeneratedValue
@@ -35,9 +35,9 @@ public class Project extends Updatable{
     private UUID id;
     
     /**
-     * UUID of the privative Library associated with this Project.
+     * UUID of the privative Library associated with this ChatProject.
      * This Library is exclusive to the user and not shared.
-     * Can be null if the Project does not use a privative Library.
+     * Can be null if the ChatProject does not use a privative Library.
      */
     @Column(columnDefinition = "uuid", nullable = true)
     private UUID biblioteca_privativa;
@@ -75,7 +75,7 @@ public class Project extends Updatable{
      * UUID of the client (user) who owns this chat.
      */
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
-    private UUID user_id;
+    private UUID user_uuid;
     
     @Column(name = "ordem")
     private Integer ordem;

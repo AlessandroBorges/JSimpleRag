@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!--
+    NOTE: Database Corrections - Phase 1
+
+    This changeset fixes two critical issues:
+    1. Typo in column name: libray_id → library_id
+    2. Duplicate GIN index on text_search_tsv field
+
+    IMPORTANT: Since the database is empty (no tables created yet), these corrections
+    are preventive. The real fixes are in 003-create-tables.xml and 004-create-indexes.xml.
+
+    This file exists as a migration path for future scenarios where tables already exist.
+    -->
+
+    <changeSet id="007-001-rename-libray-id-to-library-id" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <!-- Only run if doc_embedding table exists AND has libray_id column -->
+            <and>
+                <tableExists tableName="doc_embedding"/>
+                <columnExists tableName="doc_embedding" columnName="libray_id"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            -- Renomear coluna com typo: libray_id → library_id
+            ALTER TABLE doc_embedding RENAME COLUMN libray_id TO library_id;
+        </sql>
+
+        <rollback>
+            ALTER TABLE doc_embedding RENAME COLUMN library_id TO libray_id;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="007-002-remove-duplicate-text-search-index" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <!-- Only run if idx_embedding_texto exists -->
+            <indexExists tableName="doc_embedding" indexName="idx_embedding_texto"/>
+        </preConditions>
+
+        <sql>
+            -- Remover índice duplicado (idx_embedding_texto é duplicado de idx_text_search_tsv)
+            -- Ambos são GIN indexes no mesmo campo text_search_tsv
+            DROP INDEX IF EXISTS idx_embedding_texto;
+        </sql>
+
+        <rollback>
+            -- Recriar índice se necessário (não recomendado - é duplicado)
+            CREATE INDEX idx_embedding_texto ON doc_embedding USING gin(text_search_tsv);
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

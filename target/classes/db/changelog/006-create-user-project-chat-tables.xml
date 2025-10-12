@@ -40,10 +40,10 @@
             <column name="id" type="SERIAL">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="user_id" type="BIGINT">
+            <column name="user_id" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="library_id" type="BIGINT">
+            <column name="library_id" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="tipo_associacao" type="tipo_associacao">
@@ -93,7 +93,7 @@
             </column>
             <column name="descricao" type="VARCHAR(255)"/>
             <column name="metadata" type="JSONB"/>
-            <column name="user_id" type="UUID">
+            <column name="user_uuid" type="UUID">
                 <constraints nullable="false"/>
             </column>
             <column name="ordem" type="INTEGER"/>
@@ -112,7 +112,7 @@
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="client_uuid" type="UUID">
+            <column name="user_uuid" type="UUID">
                 <constraints nullable="false"/>
             </column>
             <column name="biblioteca_privativa" type="UUID"/>

@@ -49,7 +49,7 @@
             <column name="id" type="SERIAL">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="biblioteca_id" type="BIGINT">
+            <column name="biblioteca_id" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="titulo" type="VARCHAR(500)">
@@ -87,7 +87,7 @@
             <column name="id" type="SERIAL">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="documento_id" type="BIGINT">
+            <column name="documento_id" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="titulo" type="VARCHAR(500)">
@@ -130,9 +130,9 @@
         <sql>
             CREATE TABLE doc_embedding (
                 id SERIAL PRIMARY KEY,
-                libray_id BIGINT NOT NULL,
-                documento_id BIGINT NOT NULL,
-                chapter_id BIGINT,
+                library_id INT NOT NULL,
+                documento_id INT NOT NULL,
+                chapter_id INT,
                 tipo_embedding tipo_embedding NOT NULL,
                 texto TEXT,
                 order_chapter INTEGER,
@@ -142,9 +142,7 @@
 				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'capitulo', '')), 'A') ||     -- Nome do capítulo
 				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'descricao', '')), 'B') ||    -- Descrição geral
 				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'area_conhecimento', '')), 'C') || -- Área temática
-				    setweight(to_tsvector('portuguese', COALESCE(metadados->>
-				    
-				    'palavras_chave', '')), 'C') ||   -- Palavras-chave
+				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'palavras_chave', '')), 'C') ||   -- Palavras-chave
 				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'autor', '')), 'D') ||        -- Autor (menos relevante para conteúdo)
 				    setweight(to_tsvector('portuguese', COALESCE(metadados->>'metadados', '')), 'D') ||    -- Outros metadados
 				    setweight(to_tsvector('portuguese', COALESCE(texto, '')), 'C')                  -- Texto completo do chunk (CORRIGIDO)
@@ -154,7 +152,7 @@
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
                 -- Foreign Key Constraints
-                CONSTRAINT fk_embedding_library FOREIGN KEY (libray_id) REFERENCES library(id) ON DELETE CASCADE,
+                CONSTRAINT fk_embedding_library FOREIGN KEY (library_id) REFERENCES library(id) ON DELETE CASCADE,
                 CONSTRAINT fk_embedding_documento FOREIGN KEY (documento_id) REFERENCES documento(id) ON DELETE CASCADE,
                 CONSTRAINT fk_embedding_chapter FOREIGN KEY (chapter_id) REFERENCES chapter(id) ON DELETE CASCADE
             );

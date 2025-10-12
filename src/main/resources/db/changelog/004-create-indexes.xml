@@ -56,7 +56,7 @@
     <!-- DocEmbedding Indexes -->
     <changeSet id="004-004-create-doc-embedding-indexes" author="jsimplerag">
         <createIndex tableName="doc_embedding" indexName="idx_embedding_library">
-            <column name="libray_id"/>
+            <column name="library_id"/>
         </createIndex>
 
         <createIndex tableName="doc_embedding" indexName="idx_embedding_documento">
@@ -84,25 +84,20 @@
         <sql>
             -- Vector similarity index (IVFFlat for approximate nearest neighbor)
             CREATE INDEX idx_embedding_vector ON doc_embedding
-            USING ivfflat (embedding_vector(768) vector_cosine_ops)
+            USING ivfflat (embedding_vector vector_cosine_ops)
             WITH (lists = 100);
 
             -- Full-text search index for text_search_tsv (generated column)
             CREATE INDEX idx_text_search_tsv ON doc_embedding
             USING gin(text_search_tsv);
 
-            -- Full-text search index for text_search_tsv (trigger-updated column)
-            CREATE INDEX idx_embedding_texto ON doc_embedding
-            USING gin(text_search_tsv);
-
             -- Composite index for hybrid search optimization
-            CREATE INDEX idx_embedding_tipo_library ON doc_embedding(libray_id, tipo_embedding);
+            CREATE INDEX idx_embedding_tipo_library ON doc_embedding(library_id, tipo_embedding);
         </sql>
 
         <rollback>
             DROP INDEX IF EXISTS idx_embedding_vector;
             DROP INDEX IF EXISTS idx_text_search_tsv;
-            DROP INDEX IF EXISTS idx_embedding_texto;
             DROP INDEX IF EXISTS idx_embedding_tipo_library;
         </rollback>
     </changeSet>

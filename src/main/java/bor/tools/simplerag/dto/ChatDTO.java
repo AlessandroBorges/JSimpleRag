@@ -26,9 +26,9 @@ public class ChatDTO {
     private UUID id;
 
     /**
-     * UUID of the client (user) who owns this chat
+     * UUID of the user who owns this chat
      */
-    private UUID clientUuid;
+    private UUID userUuid;
 
     /**
      * UUID of the privative Library associated with this chat
@@ -62,7 +62,7 @@ public class ChatDTO {
         }
         return ChatDTO.builder()
                 .id(src.getId())
-                .clientUuid(src.getClient_uuid())
+                .userUuid(src.getUser_uuid())
                 .bibliotecaPrivativa(src.getBiblioteca_privativa())
                 .metadata(src.getMetadata())
                 .resumo(src.getResumo())
@@ -77,7 +77,7 @@ public class ChatDTO {
     public Chat toEntity() {
         Chat entity = new Chat();
         entity.setId(this.id);
-        entity.setClient_uuid(this.clientUuid);
+        entity.setUser_uuid(this.userUuid);
         entity.setBiblioteca_privativa(this.bibliotecaPrivativa);
         entity.setMetadata(this.metadata);
         entity.setResumo(this.resumo);
@@ -89,7 +89,7 @@ public class ChatDTO {
      * Validates if required fields are present
      */
     public boolean isValid() {
-        return clientUuid != null
+        return  userUuid != null
                 && titulo != null && !titulo.trim().isEmpty();
     }
 

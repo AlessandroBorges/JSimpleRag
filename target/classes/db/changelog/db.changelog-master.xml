@@ -23,4 +23,7 @@
     <!-- Phase 6: User, Project, and Chat Tables -->
     <include file="db/changelog/006-create-user-project-chat-tables.xml"/>
 
+    <!-- Phase 7: Database Corrections -->
+    <include file="db/changelog/007-fix-libray-id-typo.xml"/>
+
 </databaseChangeLog>

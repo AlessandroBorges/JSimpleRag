@@ -35,7 +35,7 @@ public class Chat extends Updatable {
      * UUID of the client (user) who owns this chat.
      */
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
-    private UUID client_uuid;
+    private UUID user_uuid;
 
     /**
      * UUID of the privative Library associated with this chat. This Library is

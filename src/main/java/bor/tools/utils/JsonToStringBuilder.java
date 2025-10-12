@@ -2,7 +2,7 @@ package bor.tools.utils;
 
 /**
  * JsonToStringBuilder.java
- * Project EclipseToStringBuilderForJson
+ * ChatProject EclipseToStringBuilderForJson
  * Licensed under MIT.
  * Source: https://github.com/djaganathan/EclipseToStringBuilderForJson
  */

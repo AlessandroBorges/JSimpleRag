@@ -48,7 +48,7 @@ public class DocumentEmbedding extends Updatable {
     /**
      * ID of the library this embedding belongs to (foreign key).
      */
-    @Column(name = "libray_id", nullable = false)
+    @Column(name = "library_id", nullable = false)
     private Integer libraryId;
 
     /**
