@@ -28,6 +28,74 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Service for Library entity operations.
  * Handles library management, weight validation, and user associations.
+ *
+ * <h2>Search Weight Configuration</h2>
+ *
+ * <p>Each library can configure default search weights that balance semantic
+ * and textual search components:</p>
+ *
+ * <ul>
+ *   <li><b>pesoSemantico</b> (0.0-1.0): Weight for embedding-based semantic search</li>
+ *   <li><b>pesoTextual</b> (0.0-1.0): Weight for PostgreSQL full-text search</li>
+ *   <li><b>Constraint</b>: pesoSemantico + pesoTextual = 1.0</li>
+ * </ul>
+ *
+ * <h3>Recommended Weights by Content Type</h3>
+ * <table border="1">
+ *   <tr>
+ *     <th>Content Type</th>
+ *     <th>Semantic</th>
+ *     <th>Textual</th>
+ *     <th>Rationale</th>
+ *   </tr>
+ *   <tr>
+ *     <td>Technical documentation</td>
+ *     <td>0.7</td>
+ *     <td>0.3</td>
+ *     <td>Conceptual understanding &gt; exact keywords</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Legal documents</td>
+ *     <td>0.4</td>
+ *     <td>0.6</td>
+ *     <td>Exact terminology matters</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Scientific papers</td>
+ *     <td>0.6</td>
+ *     <td>0.4</td>
+ *     <td>Balance concepts and terms</td>
+ *   </tr>
+ *   <tr>
+ *     <td>General knowledge</td>
+ *     <td>0.6</td>
+ *     <td>0.4</td>
+ *     <td>Default balanced approach</td>
+ *   </tr>
+ *   <tr>
+ *     <td>News articles</td>
+ *     <td>0.5</td>
+ *     <td>0.5</td>
+ *     <td>Equal importance</td>
+ *   </tr>
+ * </table>
+ *
+ * <h3>Usage</h3>
+ * <pre>
+ * // Library-level defaults (can be overridden per query)
+ * LibraryDTO library = new LibraryDTO();
+ * library.setPesoSemantico(0.6f);
+ * library.setPesoTextual(0.4f);
+ * libraryService.save(library);
+ *
+ * // Query-level override
+ * SearchRequest request = new SearchRequest();
+ * request.setPesoSemantico(0.8f);  // Override library default
+ * request.setPesoTextual(0.2f);
+ * </pre>
+ *
+ * @see bor.tools.simplerag.controller.SearchController#hybridSearch
+ * @since 0.0.1
  */
 @Service
 @RequiredArgsConstructor

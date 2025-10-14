@@ -52,6 +52,8 @@ import lombok.Setter;
  *
  * Campo read-only (gerado por trigger):
  * - text_search_tsv (tsvector)
+ * 
+ * Fornece métodos CRUD básicos e avançados, incluindo pesquisa semântica,
  */
 @Repository
 @SuppressWarnings("null")
@@ -94,21 +96,21 @@ public class DocEmbeddingJdbcRepository {
     private RowMapper<DocumentEmbedding> rowMapper = (rs, rowNum) -> {
         DocumentEmbedding doc = DocumentEmbedding.builder()
             .id(rs.getInt("id"))
-            .libraryId(rs.getInt("biblioteca_id"))
+            .libraryId(rs.getInt("library_id"))
             .documentoId(rs.getInt("documento_id"))
-            .chapterId(rs.getObject("capitulo_id", Integer.class))
+            .chapterId(rs.getObject("chapter_id", Integer.class))
             .tipoEmbedding(TipoEmbedding.fromDbValue(rs.getString("tipo_embedding")))
             .texto(rs.getString("texto"))
-            .orderChapter(rs.getObject("ordem_cap", Integer.class))
-            .textoIndexado(rs.getString("text_search_tsv"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+            .orderChapter(rs.getObject("order_chapter", Integer.class))
+            .createdAt(rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null)
+            .updatedAt(rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toLocalDateTime() : null)
             .build();
 
         // Parse metadados JSON
         String metadataJson = rs.getString("metadados");
-        if (metadataJson != null) {
-            // Aqui poderia usar Jackson para parse do JSON
-            // Por simplicidade, criamos um mapa vazio
+        if (metadataJson != null && !metadataJson.isEmpty() && !metadataJson.equals("{}")) {
+            // TODO: Usar Jackson para parse adequado do JSON
+            // Por enquanto, criamos um mapa vazio para evitar NPE
             doc.setMetadados(new HashMap<>());
         }
 
@@ -302,7 +304,7 @@ public class DocEmbeddingJdbcRepository {
      */
     public List<DocumentEmbedding> findByDocumentoId(Integer documentoId)
             throws DataAccessException, SQLException {
-        return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE documento_id = ? ORDER BY ordem_cap",
+        return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE documento_id = ? ORDER BY order_chapter",
                                   rowMapper,
                                   new Object[]{documentoId});
     }
@@ -312,7 +314,7 @@ public class DocEmbeddingJdbcRepository {
      */
     public List<DocumentEmbedding> findByBibliotecaId(Integer bibliotecaId)
             throws DataAccessException, SQLException {
-        return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE biblioteca_id = ? ORDER BY documento_id, ordem_cap",
+        return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE library_id = ? ORDER BY documento_id, order_chapter",
                                   rowMapper,
                                   new Object[]{bibliotecaId});
     }
@@ -322,7 +324,7 @@ public class DocEmbeddingJdbcRepository {
      */
     public List<DocumentEmbedding> findByCapituloId(Integer capituloId)
             throws DataAccessException, SQLException {
-        return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE capitulo_id = ? ORDER BY ordem_cap",
+        return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE chapter_id = ? ORDER BY order_chapter",
                                   rowMapper,
                                   new Object[]{capituloId});
     }
@@ -367,16 +369,16 @@ public class DocEmbeddingJdbcRepository {
                        1.0 / (? + RANK() OVER (ORDER BY embedding_vector <=> ? ASC)) AS score_semantic,
                        RANK() OVER (ORDER BY embedding_vector <=> ? ASC) AS rank_semantic
                 FROM doc_embedding de
-                WHERE de.biblioteca_id IN (%s)
+                WHERE de.library_id IN (%s)
                 LIMIT ?
             ),
             text_search AS (
                 SELECT id,
-                       1.0 / (? + RANK() OVER (ORDER BY ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) DESC)) AS score_text,
-                       RANK() OVER (ORDER BY ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) DESC) AS rank_text
+                       1.0 / (? + RANK() OVER (ORDER BY ts_rank_cd(text_search_tsv, ?::tsquery) DESC)) AS score_text,
+                       RANK() OVER (ORDER BY ts_rank_cd(text_search_tsv, ?::tsquery) DESC) AS rank_text
                 FROM doc_embedding
-                WHERE biblioteca_id IN (%s)
-                AND text_search_tsv @@ to_tsquery('portuguese', ?)
+                WHERE library_id IN (%s)
+                AND text_search_tsv @@ ?::tsquery
                 LIMIT ?
             )
             SELECT d.*,
@@ -386,7 +388,7 @@ public class DocEmbeddingJdbcRepository {
             FROM doc_embedding d
             LEFT JOIN semantic_search s ON d.id = s.id
             LEFT JOIN text_search t ON d.id = t.id
-            WHERE d.biblioteca_id IN (%s)
+            WHERE d.library_id IN (%s)
             AND (s.id IS NOT NULL OR t.id IS NOT NULL)
             ORDER BY score DESC
             LIMIT ?
@@ -429,7 +431,7 @@ public class DocEmbeddingJdbcRepository {
                 0.0 AS score_text,
                 1.0 / (1 + (embedding_vector <-> ?)) AS score
                 FROM doc_embedding d
-                WHERE biblioteca_id IN (%s)
+                WHERE library_id IN (%s)
                 ORDER BY embedding_vector <-> ?
                 LIMIT ?
                 """.formatted(libIds);
@@ -456,11 +458,11 @@ public class DocEmbeddingJdbcRepository {
         String sql = """
             SELECT d.*,
                    0.0 AS score_semantic,
-                   ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) AS score_text,
-                   ts_rank_cd(text_search_tsv, to_tsquery('portuguese', ?)) AS score
+                   ts_rank_cd(text_search_tsv, ?::tsquery) AS score_text,
+                   ts_rank_cd(text_search_tsv, ?::tsquery) AS score
             FROM doc_embedding d
-            WHERE biblioteca_id IN (%s)
-            AND text_search_tsv @@ to_tsquery('portuguese', ?)
+            WHERE library_id IN (%s)
+            AND text_search_tsv @@ ?::tsquery
             ORDER BY score DESC
             LIMIT ?
             """.formatted(libIds);
@@ -479,7 +481,10 @@ public class DocEmbeddingJdbcRepository {
     }
 
     /**
-     * Transforma uma frase em query para PostgreSQL websearch_to_tsquery
+     * Transforma uma frase em query para PostgreSQL websearch_to_tsquery 
+     * dando opção de pesquisa ampla
+     * 
+     * 
      */
     public String query_phraseto_websearch(String frase, boolean pesquisaAmpla) {
         if (frase == null || frase.trim().isEmpty()) {
@@ -547,8 +552,8 @@ public class DocEmbeddingJdbcRepository {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         final String sql = """
             INSERT INTO doc_embedding
-            (biblioteca_id, documento_id, capitulo_id, tipo_embedding,
-             texto, ordem_cap, embedding_vector, metadados, created_at)
+            (library_id, documento_id, chapter_id, tipo_embedding,
+             texto, order_chapter, embedding_vector, metadados, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
             """;
 
@@ -592,9 +597,9 @@ public class DocEmbeddingJdbcRepository {
 
         final String sql = """
             UPDATE doc_embedding SET
-            biblioteca_id = ?, documento_id = ?, capitulo_id = ?,
-            tipo_embedding = ?, texto = ?, ordem_cap = ?,
-            embedding_vector = ?, metadados = ?::jsonb
+            library_id = ?, documento_id = ?, chapter_id = ?,
+            tipo_embedding = ?, texto = ?, order_chapter = ?,
+            embedding_vector = ?, metadados = ?::jsonb, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """;
 
@@ -613,8 +618,16 @@ public class DocEmbeddingJdbcRepository {
 
     /**
      * Deleta um registro da tabela doc_embedding
+     * 
      */
     public int delete(int id) throws DataAccessException, SQLException {
         return jdbcTemplate.update("DELETE FROM doc_embedding WHERE id = ?", id);
+    }
+
+    /**
+     * Delete
+     */
+    public int deleteAll()  throws DataAccessException, SQLException {
+        return jdbcTemplate.update("DELETE FROM doc_embedding WHERE id >= ?", 1);
     }
 }

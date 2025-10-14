@@ -167,4 +167,10 @@ public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
         ORDER BY d.id, c.ordem_doc
         """, nativeQuery = true)
     List<Chapter> findByBiblioteca(@Param("bibliotecaId") Integer bibliotecaId);
+
+    /**
+     * Conta capítulos por documento
+     */
+    @Query("SELECT COUNT(c) FROM Chapter c WHERE c.documentoId = :id")
+    long countByDocumentoId(Integer id);
 }

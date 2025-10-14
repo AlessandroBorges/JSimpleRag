@@ -840,7 +840,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
             return List.of();
         }
 
-        return llmServices.modelNames();
+        return llmServices.getRegisterdModelNames();
     }
     
     /**

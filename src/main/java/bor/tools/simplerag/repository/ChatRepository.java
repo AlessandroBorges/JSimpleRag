@@ -14,6 +14,7 @@ import bor.tools.simplerag.entity.Chat;
  * Repositório JPA para a entidade Chat.
  *
  * Provides standard CRUD operations and custom queries for Chat entities.
+ * 
  */
 @Repository
 public interface ChatRepository extends JpaRepository<Chat, UUID> {

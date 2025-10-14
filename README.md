@@ -158,6 +158,79 @@ curl -X POST http://localhost:8080/api/v1/pesquisa \
   }'
 ```
 
+## 🔍 Guia de Sintaxe de Pesquisa
+
+O JSimpleRag suporta queries em linguagem natural com sintaxe poderosa para pesquisas precisas.
+
+### Sintaxe Básica
+
+| Query | Significado | Exemplo |
+|-------|-------------|---------|
+| `café leite` | Busca OR (qualquer palavra) | Encontra documentos com "café" OU "leite" |
+| `"pão quente"` | Frase exata | Encontra apenas "pão quente" adjacente |
+| `café -açúcar` | Exclusão | Encontra "café" SEM "açúcar" |
+
+### Recursos de Linguagem
+
+- ✅ **Insensível a acentos**: `café` = `cafe`, `açúcar` = `acucar`
+- ✅ **Insensível a maiúsculas**: `CAFÉ` = `café` = `Café`
+- ✅ **Stemming em português**: `trabalho` = `trabalhar` = `trabalhando`
+- ✅ **Ponderação por metadados**: Títulos têm maior relevância que conteúdo
+
+### Exemplos de API
+
+#### Busca Híbrida (Recomendada)
+```bash
+curl -X POST http://localhost:8080/api/v1/search/hybrid \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "machine learning algoritmos",
+    "libraryIds": [1, 2],
+    "limit": 10,
+    "pesoSemantico": 0.6,
+    "pesoTextual": 0.4
+  }'
+```
+
+#### Busca Textual Apenas
+```bash
+curl -X POST http://localhost:8080/api/v1/search/textual \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "\"artigo 5º\" constituição -emenda",
+    "libraryIds": [1],
+    "limit": 20
+  }'
+```
+
+#### Busca Semântica Apenas
+```bash
+curl -X POST http://localhost:8080/api/v1/search/semantic \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Como implementar autenticação em APIs REST?",
+    "libraryIds": [1],
+    "limit": 10
+  }'
+```
+
+### Recomendações de Pesos de Pesquisa
+
+| Tipo de Conteúdo | Semântico | Textual | Por Quê? |
+|------------------|-----------|---------|----------|
+| Documentação técnica | 0.7 | 0.3 | Favorece compreensão conceitual |
+| Documentos legais | 0.4 | 0.6 | Terminologia exata importa |
+| Artigos científicos | 0.6 | 0.4 | Balanceia conceitos e termos |
+| Conhecimento geral | 0.6 | 0.4 | Abordagem balanceada padrão |
+| Notícias | 0.5 | 0.5 | Importância igual |
+
+### Dicas de Performance
+
+1. **Use busca de frase** para correspondências exatas: `"machine learning"`
+2. **Limite os resultados** para reduzir latência: `"limit": 10`
+3. **Ajuste os pesos** por tipo de biblioteca (veja tabela acima)
+4. **Evite queries muito longas** (máximo 500 caracteres recomendado)
+
 ## 🏗️ Estrutura do Projeto
 
 ```
@@ -235,23 +308,282 @@ rag:
 
 ## 🧪 Testes
 
-### Executar Testes
-```bash
-# Testes unitários
-./mvnw test
+O JSimpleRag possui uma estratégia de testes em 3 camadas: **Unit Tests** (Mockito), **Integration Tests** (Ollama + LM Studio locais) e **E2E Tests** (staging).
 
-# Testes de integração
-./mvnw test -P integration-tests
+### 🎯 Arquitetura de Testes
 
-# Todos os testes
-./mvnw verify
+```
+┌─────────────────────────────────────────┐
+│  Layer 1: Unit Tests                    │  < 1s   (sempre)
+│  - Lógica de roteamento                 │
+│  - Validações                           │
+│  - Estatísticas                         │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  Layer 2: Integration Tests             │  ~30s   (PR/merge)
+│  - Ollama + LM Studio (locais)          │
+│  - Testes com LLMs reais                │
+│  - Roteamento multi-provedor            │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│  Layer 3: E2E Tests                     │  ~5min  (release)
+│  - Fluxo completo RAG                   │
+│  - Ambiente staging                     │
+└─────────────────────────────────────────┘
 ```
 
-### Cobertura de Testes
-- Meta: >80% cobertura de código
-- Testes unitários para services e mappers
-- Testes de integração para controllers
-- Testes de performance para consultas
+### 🚀 Quick Start - Testes
+
+```bash
+# 1. Unit tests apenas (sempre funciona, sem setup)
+mvn test
+
+# 2. Setup provedores para integration tests
+./scripts/setup-ollama.sh        # Instala e configura Ollama
+./scripts/setup-lmstudio.sh      # Guia setup LM Studio
+
+# 3. Verificar provedores
+./scripts/check-providers.sh
+
+# 4. Integration tests (Ollama apenas - rápido)
+mvn verify -P integration-tests-ollama
+
+# 5. Integration tests completo (Ollama + LM Studio)
+mvn verify -P integration-tests
+```
+
+### 📋 Profiles Maven Disponíveis
+
+| Profile | Descrição | Duração | Quando Usar |
+|---------|-----------|---------|-------------|
+| **(default)** | Unit tests apenas | < 5s | Desenvolvimento diário |
+| `integration-tests-ollama` | Testes com Ollama | ~15s | CI/CD, PR |
+| `integration-tests` | Ollama + LM Studio | ~45s | Pre-merge, validação completa |
+| `multi-provider-tests` | Apenas multi-provider | ~30s | Testes de failover/routing |
+| `e2e-tests` | End-to-end staging | ~5min | Antes de releases |
+| `all-tests` | Todos os testes | Variável | Validação completa |
+
+### 📦 Requisitos para Integration Tests
+
+**Opção 1: Ollama apenas (mínimo, recomendado para CI/CD)**
+```bash
+# Instalar Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Iniciar servidor
+ollama serve &
+
+# Baixar modelos necessários
+ollama pull tinyllama           # ~600MB - rápido
+ollama pull nomic-embed-text    # ~274MB - embeddings
+
+# Verificar
+ollama list
+```
+
+**Opção 2: Ollama + LM Studio (completo, melhor para dev local)**
+```bash
+# 1. Setup Ollama (veja acima)
+
+# 2. Baixar e instalar LM Studio
+# https://lmstudio.ai/
+
+# 3. Abrir LM Studio e:
+#    - Ir em "Local Server"
+#    - Clicar "Start Server" (porta 1234)
+#    - Baixar modelos: qwen2.5-7b-instruct, nomic-embed-text
+
+# 4. Verificar ambos
+./scripts/check-providers.sh --test
+```
+
+### 🎮 Comandos de Teste
+
+#### Unit Tests
+```bash
+# Executar todos unit tests
+mvn test
+
+# Teste específico
+mvn test -Dtest=LLMServiceManagerTest
+
+# Com coverage
+mvn test jacoco:report
+```
+
+#### Integration Tests
+```bash
+# Ollama apenas (CI/CD friendly)
+mvn verify -P integration-tests-ollama
+
+# Ollama + LM Studio (desenvolvimento local)
+mvn verify -P integration-tests
+
+# Apenas testes multi-provider
+mvn verify -P multi-provider-tests
+
+# Teste específico
+mvn verify -P integration-tests -Dit.test=FailoverStrategyIntegrationTest
+
+# Com debug
+mvn verify -P integration-tests -X
+```
+
+#### E2E Tests
+```bash
+# Requer ambiente staging configurado
+mvn verify -P e2e-tests
+```
+
+### 📊 Cobertura de Testes
+
+**Estrutura Atual:**
+```
+src/test/java/
+├── unit/                        → 27 testes (lógica pura)
+│   ├── LLMServiceManagerUnitTest
+│   ├── StrategySelectionTest
+│   └── ModelDiscoveryTest
+│
+├── integration/                 → 23 testes (LLMs reais)
+│   ├── providers/
+│   │   ├── OllamaProviderTest          (9 testes)
+│   │   ├── LMStudioProviderTest        (6 testes)
+│   │   └── ProviderCompatibilityTest   (7 testes)
+│   │
+│   └── strategies/
+│       ├── FailoverStrategyIntegrationTest    (5 testes)
+│       └── ModelBasedStrategyIntegrationTest  (+ testes)
+│
+└── e2e/                         → 5+ testes (fluxo completo)
+    └── RAGSearchE2ETest
+
+Total: 55+ testes automatizados
+```
+
+**Metas de Cobertura:**
+- Unit Tests: >95% (lógica de negócio)
+- Integration Tests: >80% (integração com LLMs)
+- E2E Tests: >50% (fluxos principais)
+
+### 🔧 Scripts de Automação
+
+O projeto inclui scripts bash para facilitar o setup:
+
+| Script | Descrição |
+|--------|-----------|
+| `scripts/setup-ollama.sh` | Instala e configura Ollama automaticamente |
+| `scripts/setup-lmstudio.sh` | Guia instalação e configuração do LM Studio |
+| `scripts/check-providers.sh` | Verifica status e testa conectividade |
+
+**Exemplo de uso:**
+```bash
+# Setup completo automatizado
+./scripts/setup-ollama.sh
+
+# Verificar status e executar testes de conectividade
+./scripts/check-providers.sh --test
+
+# Output esperado:
+# ✅ Ollama (localhost:11434)
+#    ✅ Server is running
+#    ✅ Models installed: 2
+#    ✅ tinyllama (required) ✓
+#    ✅ nomic-embed-text (required) ✓
+#
+# ✅ LM Studio (localhost:1234)
+#    ✅ Server is running
+#    ✅ Models loaded: 2
+#    ✅ qwen (recommended) ✓
+#
+# ╔════════════════════════════════════════╗
+# ║  ✅ ALL SYSTEMS GO!                    ║
+# ║  Both providers ready for tests        ║
+# ╚════════════════════════════════════════╝
+```
+
+### 📚 Documentação de Testes
+
+Para informações detalhadas sobre testes, consulte:
+
+- **[INTEGRATION_TEST_EXAMPLES.md](INTEGRATION_TEST_EXAMPLES.md)** - Exemplos completos de testes (4 classes prontas)
+- **[MAVEN_PROFILES_GUIDE.md](MAVEN_PROFILES_GUIDE.md)** - Guia de uso dos profiles Maven
+- **[novo_framework_testes.md](novo_framework_testes.md)** - Arquitetura e estratégia de testes
+- **[scripts/README.md](scripts/README.md)** - Documentação dos scripts de setup
+
+### 🐛 Troubleshooting
+
+**Problema: "Connection refused" para Ollama**
+```bash
+# Verificar se está rodando
+curl http://localhost:11434/api/tags
+
+# Se não, iniciar
+ollama serve &
+
+# Verificar logs
+tail -f /tmp/ollama.log
+```
+
+**Problema: "Connection refused" para LM Studio**
+```bash
+# 1. Abrir LM Studio
+# 2. Ir em "Local Server" (ícone ↔)
+# 3. Clicar "Start Server"
+# 4. Verificar porta 1234
+```
+
+**Problema: Testes lentos**
+```bash
+# Usar modelos menores
+ollama pull tinyllama  # Em vez de llama2
+
+# Ou executar apenas testes rápidos
+mvn verify -P integration-tests -Dgroups="integration & !slow"
+```
+
+### 🎯 CI/CD Integration
+
+**GitHub Actions exemplo:**
+```yaml
+name: Tests
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+      - name: Unit Tests
+        run: mvn test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+      - name: Setup Ollama
+        run: ./scripts/setup-ollama.sh
+      - name: Integration Tests
+        run: mvn verify -P integration-tests-ollama
+```
+
+### ✅ Checklist de Desenvolvimento
+
+Antes de criar um PR:
+
+- [ ] Todos unit tests passam: `mvn test`
+- [ ] Integration tests passam: `mvn verify -P integration-tests-ollama`
+- [ ] Código formatado corretamente
+- [ ] Novos testes adicionados para novas features
+- [ ] Documentação atualizada se necessário
 
 ## 🚀 Deploy e Produção
 

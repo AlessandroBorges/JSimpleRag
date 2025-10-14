@@ -26,7 +26,20 @@
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 		<springdoc.version>2.2.0</springdoc.version>
 		<hypersistence.version>3.5.1</hypersistence.version>
+		<junit.jupiter.version>5.10.1</junit.jupiter.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.junit</groupId>
+				<artifactId>junit-bom</artifactId>
+				<version>${junit.jupiter.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<!-- Spring Boot Starters -->
@@ -104,14 +117,12 @@
 			<version>${hypersistence.version}</version>
 		</dependency>
 
-		<!-- JSimpleLLM dependency (will be added when available) -->
-		<!--
-    <dependency>
-      <groupId>bor.tools</groupId>
-      <artifactId>jsimplellm</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-    -->
+		<!-- JSimpleLLM dependency (local Maven project) -->
+		<dependency>
+			<groupId>bor.tools</groupId>
+			<artifactId>JSimpleLLM</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 
 		<!-- Test Dependencies -->
 		<dependency>
@@ -183,6 +194,25 @@
 			<artifactId>spring-boot-configuration-processor</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+		<!-- Explicit JUnit Jupiter dependencies to ensure alignment -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-params</artifactId>
+			
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -238,5 +268,204 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<!-- ============================================= -->
+	<!-- Integration Test Profiles -->
+	<!-- ============================================= -->
+	<profiles>
+		<!-- Profile 1: Unit tests only (default behavior) -->
+		<!-- No profile needed - maven-surefire-plugin runs by default -->
+
+		<!-- Profile 2: Integration tests with Ollama only -->
+		<profile>
+			<id>integration-tests-ollama</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<includes>
+								<include>**/*IntegrationTest.java</include>
+							</includes>
+							<groups>integration &amp; ollama</groups>
+							<systemPropertyVariables>
+								<ollama.url>http://localhost:11434</ollama.url>
+							</systemPropertyVariables>
+							<argLine>-Xmx512m</argLine>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Profile 3: Integration tests with Ollama + LM Studio (full) -->
+		<profile>
+			<id>integration-tests</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<includes>
+								<include>**/*IntegrationTest.java</include>
+							</includes>
+							<groups>integration</groups>
+							<excludedGroups>e2e</excludedGroups>
+							<systemPropertyVariables>
+								<ollama.url>http://localhost:11434</ollama.url>
+								<lmstudio.url>http://localhost:1234</lmstudio.url>
+							</systemPropertyVariables>
+							<argLine>-Xmx1024m</argLine>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Profile 4: Multi-provider tests only -->
+		<profile>
+			<id>multi-provider-tests</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<includes>
+								<include>**/*IntegrationTest.java</include>
+							</includes>
+							<groups>multi-provider</groups>
+							<systemPropertyVariables>
+								<ollama.url>http://localhost:11434</ollama.url>
+								<lmstudio.url>http://localhost:1234</lmstudio.url>
+							</systemPropertyVariables>
+							<argLine>-Xmx1024m</argLine>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Profile 5: E2E tests (staging/production) -->
+		<profile>
+			<id>e2e-tests</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<includes>
+								<include>**/*E2ETest.java</include>
+							</includes>
+							<groups>e2e</groups>
+							<systemPropertyVariables>
+								<test.environment>staging</test.environment>
+							</systemPropertyVariables>
+							<argLine>-Xmx2048m</argLine>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Profile 6: All tests (unit + integration + e2e) -->
+		<profile>
+			<id>all-tests</id>
+			<build>
+				<plugins>
+					<!-- Surefire for unit tests -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<includes>
+								<include>**/*Test.java</include>
+								<include>**/*Tests.java</include>
+							</includes>
+							<excludes>
+								<exclude>**/*IntegrationTest.java</exclude>
+								<exclude>**/*E2ETest.java</exclude>
+							</excludes>
+						</configuration>
+					</plugin>
+
+					<!-- Failsafe for integration + e2e tests -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<includes>
+								<include>**/*IntegrationTest.java</include>
+								<include>**/*E2ETest.java</include>
+							</includes>
+							<systemPropertyVariables>
+								<ollama.url>http://localhost:11434</ollama.url>
+								<lmstudio.url>http://localhost:1234</lmstudio.url>
+								<test.environment>local</test.environment>
+							</systemPropertyVariables>
+							<argLine>-Xmx2048m</argLine>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Profile 7: Skip integration tests (for quick builds) -->
+		<profile>
+			<id>skip-integration-tests</id>
+			<properties>
+				<skipITs>true</skipITs>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>

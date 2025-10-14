@@ -7,7 +7,12 @@ import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 
 /**
- * Core interface for document splitting operations.
+ * Core interface for document splitting operations. <br>
+ * 
+ * docStub can be null when loading a document. It represents a partial document
+ * and maybe used to pass metadata or context.
+ * 
+ * 
  */
 public interface DocumentSplitter {
     /**
@@ -20,7 +25,7 @@ public interface DocumentSplitter {
     /**
      * Loads a document from a URL.
      * @param url Document URL
-     * @param docStub Document's stub
+     * @param docStub Document's stub. Can be null
      * @return Loaded document
      */
     DocumentoDTO carregaDocumento(URL url, DocumentoDTO docStub) throws Exception;
@@ -28,7 +33,7 @@ public interface DocumentSplitter {
     /**
      * Loads a document from a string path.
      * @param path Document path
-     * @param docStub Document's stub
+     * @param docStub Document's stub. Can be null
      * @return Loaded document
      */
     DocumentoDTO carregaDocumento(String path, DocumentoDTO docStub) throws Exception;

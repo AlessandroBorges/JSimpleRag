@@ -1,0 +1,540 @@
+package bor.tools.simplerag.service;
+
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.LibraryDTO;
+import bor.tools.simplerag.entity.Chapter;
+import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.Documento;
+import bor.tools.simplerag.entity.Metadata;
+import bor.tools.simplerag.entity.enums.TipoConteudo;
+import bor.tools.simplerag.repository.ChapterRepository;
+import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
+import bor.tools.simplerag.repository.DocumentoRepository;
+import bor.tools.splitter.AsyncSplitterService;
+import bor.tools.splitter.DocumentRouter;
+import bor.tools.utils.DocumentConverter;
+import lombok.RequiredArgsConstructor;
+
+/**
+ * Service for Documento entity operations.
+ *
+ * Handles document management, processing, and persistence according to
+ * the workflow defined in Fluxo_carga_documents.md:
+ *
+ * <ol>
+ *   <li>(a) Document upload (text, URL, or file)</li>
+ *   <li>(b) Format detection</li>
+ *   <li>(c) Convert to Markdown using DocumentConverter</li>
+ *   <li>(d) Choose appropriate splitter via DocumentRouter</li>
+ *   <li>(e) Persist Documento, Chapter, DocEmbeddings</li>
+ *   <li>(f) Generate embeddings asynchronously</li>
+ *   <li>(g) Update embeddings in database</li>
+ * </ol>
+ *
+ * IMPORTANT: Uses DocEmbeddingJdbcRepository (not JPA) for embedding
+ * persistence to support PGVector operations and custom SQL.
+ *
+ * @see Fluxo_carga_documents.md
+ * @see PLAN_CORRECTION_JDBC_REPOSITORY.md
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class DocumentoService {
+
+    private static final Logger log = LoggerFactory.getLogger(DocumentoService.class);
+
+    // Repository dependencies
+    private final DocumentoRepository documentoRepository;
+    private final ChapterRepository chapterRepository;
+
+    // ✅ USE THE EXISTING JDBC REPOSITORY (NOT JPA)
+    private final DocEmbeddingJdbcRepository embeddingRepository;
+
+    // Service dependencies
+    private final LibraryService libraryService;
+    private final DocumentConverter documentConverter;
+    private final DocumentRouter documentRouter;
+    private final AsyncSplitterService asyncSplitterService;
+
+    /**
+     * Upload document from text content (Fluxo step a)
+     *
+     * @param titulo Document title
+     * @param conteudoMarkdown Markdown content
+     * @param libraryId Library ID
+     * @param metadata Optional metadata
+     * @return Saved document DTO
+     */
+    public DocumentoDTO uploadFromText(String titulo, String conteudoMarkdown,
+                                      Integer libraryId, Map<String, Object> metadata) {
+        log.debug("Uploading document from text: {}", titulo);
+
+        // Validate library exists
+        Optional<bor.tools.simplerag.entity.Library> library = libraryService.findById(libraryId);
+        if (library.isEmpty()) {
+            throw new IllegalArgumentException("Library not found: " + libraryId);
+        }
+
+        // Create documento entity
+        Documento documento = Documento.builder()
+                .bibliotecaId(libraryId)
+                .titulo(titulo)
+                .conteudoMarkdown(conteudoMarkdown)
+                .flagVigente(true)
+                .dataPublicacao(java.time.LocalDate.now())
+                .metadados(metadata != null ? metadata : new HashMap<>())
+                .build();
+
+        // Calculate token count
+        int tokenCount = estimateTokenCount(conteudoMarkdown);
+        documento.setTokensTotal(tokenCount);
+
+        // Save documento
+        Documento saved = documentoRepository.save(documento);
+        log.info("Document uploaded with ID: {}", saved.getId());
+
+        return toDTO(saved);
+    }
+
+    /**
+     * Upload document from URL (Fluxo step a)
+     *
+     * @param url Document URL
+     * @param libraryId Library ID
+     * @param titulo Optional title (will be derived from URL if null)
+     * @param metadata Optional metadata
+     * @return Saved document DTO
+     * @throws Exception If download or conversion fails
+     */
+    public DocumentoDTO uploadFromUrl(String url, Integer libraryId,
+                                     String titulo, Map<String, Object> metadata) throws Exception {
+        log.debug("Uploading document from URL: {}", url);
+
+        // Validate library exists
+        Optional<bor.tools.simplerag.entity.Library> library = libraryService.findById(libraryId);
+        if (library.isEmpty()) {
+            throw new IllegalArgumentException("Library not found: " + libraryId);
+        }
+
+        // Download and convert content (Fluxo steps b and c)
+        java.net.URI uri = new java.net.URI(url);
+
+        // Detect format (Fluxo step b)
+        String detectedFormat = documentConverter.detectFormat(uri);
+        log.debug("Detected format: {}", detectedFormat);
+
+        // Convert to Markdown (Fluxo step c)
+        String markdown = documentConverter.convertToMarkdown(uri, detectedFormat);
+
+        // Derive title if not provided
+        if (titulo == null || titulo.trim().isEmpty()) {
+            titulo = deriveTitle(url, markdown);
+        }
+
+        // Add URL to metadata
+        if (metadata == null) {
+            metadata = new HashMap<>();
+        }
+        metadata.put("url", url);
+        metadata.put("detected_format", detectedFormat);
+
+        // Create and save document
+        return uploadFromText(titulo, markdown, libraryId, metadata);
+    }
+
+    /**
+     * Upload document from file bytes (Fluxo step a)
+     *
+     * @param fileName File name
+     * @param fileContent File content as bytes
+     * @param libraryId Library ID
+     * @param metadata Optional metadata
+     * @return Saved document DTO
+     * @throws Exception If conversion fails
+     */
+    public DocumentoDTO uploadFromFile(String fileName, byte[] fileContent,
+                                      Integer libraryId, Map<String, Object> metadata) throws Exception {
+        log.debug("Uploading document from file: {}", fileName);
+
+        // Validate library exists
+        Optional<bor.tools.simplerag.entity.Library> library = libraryService.findById(libraryId);
+        if (library.isEmpty()) {
+            throw new IllegalArgumentException("Library not found: " + libraryId);
+        }
+
+        // Detect format (Fluxo step b)
+        String detectedFormat = documentConverter.detectFormat(fileContent);
+        log.debug("Detected format: {} for file: {}", detectedFormat, fileName);
+
+        // Convert to Markdown (Fluxo step c)
+        String markdown = documentConverter.convertToMarkdown(fileContent, detectedFormat);
+
+        // Derive title from filename
+        String titulo = deriveTitle(fileName, markdown);
+
+        // Add file info to metadata
+        if (metadata == null) {
+            metadata = new HashMap<>();
+        }
+        metadata.put("file_name", fileName);
+        metadata.put("detected_format", detectedFormat);
+        metadata.put("file_size_bytes", fileContent.length);
+
+        // Create and save document
+        return uploadFromText(titulo, markdown, libraryId, metadata);
+    }
+
+    /**
+     * Process document asynchronously (Fluxo steps d, e, f, g)
+     *
+     * Performs:
+     * - Document splitting via DocumentRouter
+     * - Chapter persistence
+     * - Embedding generation
+     * - Embedding persistence
+     *
+     * @param documentId Document ID
+     * @param includeQA Whether to include Q&A generation
+     * @param includeSummary Whether to include summary generation
+     * @return CompletableFuture with processing result
+     */
+    @Async
+    public CompletableFuture<ProcessingStatus> processDocumentAsync(Integer documentId,
+                                                                    boolean includeQA,
+                                                                    boolean includeSummary) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.info("Starting async processing for document ID: {}", documentId);
+
+                // Load document
+                Documento documento = documentoRepository.findById(documentId)
+                        .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+
+                // Load library
+                Optional<bor.tools.simplerag.entity.Library> libraryOpt =
+                    libraryService.findById(documento.getBibliotecaId());
+                if (libraryOpt.isEmpty()) {
+                    throw new IllegalArgumentException("Library not found: " + documento.getBibliotecaId());
+                }
+
+                LibraryDTO biblioteca = LibraryDTO.from(libraryOpt.get());
+                DocumentoDTO documentoDTO = toDTO(documento);
+                documentoDTO.setBiblioteca(biblioteca);
+
+                // Determine content type using DocumentRouter (Fluxo step d)
+                TipoConteudo tipoConteudo = documentRouter.detectContentType(documento.getConteudoMarkdown());
+                log.debug("Detected content type: {} for document: {}", tipoConteudo, documento.getTitulo());
+
+                // Full async processing (Fluxo steps e, f, g)
+                AsyncSplitterService.ProcessingResult result = asyncSplitterService
+                        .fullProcessingAsync(documentoDTO, biblioteca, tipoConteudo, includeQA, includeSummary)
+                        .get();
+
+                // Persist processing results (Fluxo step e and g)
+                persistProcessingResult(result, documento);
+
+                ProcessingStatus status = new ProcessingStatus();
+                status.setDocumentId(documentId);
+                status.setStatus("COMPLETED");
+                status.setChaptersCount(result.getCapitulos().size());
+                status.setEmbeddingsCount(result.getAllEmbeddings().size());
+                status.setProcessedAt(LocalDateTime.now());
+
+                log.info("Document {} processing completed: {} chapters, {} embeddings",
+                        documentId, status.getChaptersCount(), status.getEmbeddingsCount());
+
+                return status;
+
+            } catch (Exception e) {
+                log.error("Failed to process document {}: {}", documentId, e.getMessage(), e);
+
+                ProcessingStatus status = new ProcessingStatus();
+                status.setDocumentId(documentId);
+                status.setStatus("FAILED");
+                status.setErrorMessage(e.getMessage());
+                status.setProcessedAt(LocalDateTime.now());
+
+                return status;
+            }
+        });
+    }
+
+    /**
+     * Persist processing results (chapters + embeddings)
+     * Implements Fluxo_carga_documents.md steps (e) and (g)
+     *
+     * ✅ CORRECTED VERSION: Uses DocEmbeddingJdbcRepository
+     */
+    @Transactional
+    protected void persistProcessingResult(AsyncSplitterService.ProcessingResult result, Documento documento) {
+        log.debug("Persisting processing result for document: {}", documento.getId());
+
+        // 1. Save chapters (using JPA repository - this is fine)
+        List<Chapter> chapters = result.getCapitulos().stream()
+                .map(dto -> toEntity(dto, documento))
+                .collect(Collectors.toList());
+
+        List<Chapter> savedChapters = chapterRepository.saveAll(chapters);
+        log.debug("Saved {} chapters", savedChapters.size());
+
+        // 2. Map chapter DTOs to saved entities for embedding association
+        Map<String, Integer> chapterIdMap = new HashMap<>();
+        for (int i = 0; i < result.getCapitulos().size(); i++) {
+            ChapterDTO dto = result.getCapitulos().get(i);
+            Chapter saved = savedChapters.get(i);
+            chapterIdMap.put(dto.getTitulo(), saved.getId());
+        }
+
+        // 3. Save embeddings - ✅ USE JDBC REPOSITORY ONE BY ONE
+        List<DocumentEmbedding> embeddings = result.getAllEmbeddings().stream()
+                .map(dto -> toEntity(dto, documento, chapterIdMap))
+                .collect(Collectors.toList());
+
+        // ✅ CORRECT WAY: Save using JDBC repository
+        List<Integer> savedIds = new ArrayList<>();
+        for (DocumentEmbedding emb : embeddings) {
+            try {
+                Integer id = embeddingRepository.save(emb);  // Returns generated ID
+                savedIds.add(id);
+            } catch (SQLException e) {
+                log.error("Failed to save embedding: {}", e.getMessage(), e);
+                throw new RuntimeException("Embedding save failed", e);
+            }
+        }
+
+        log.debug("Saved {} embeddings with IDs: {}", savedIds.size(), savedIds);
+
+        // 4. Update document status
+        documento.setTokensTotal(calculateTotalTokens(result));
+        documentoRepository.save(documento);
+
+        log.debug("Document {} fully processed and persisted", documento.getId());
+    }
+
+    /**
+     * Convert DocumentEmbeddingDTO to Entity for embedding
+     */
+    private DocumentEmbedding toEntity(DocumentEmbeddingDTO dto, Documento documento,
+                                      Map<String, Integer> chapterIdMap) {
+        DocumentEmbedding emb = new DocumentEmbedding();
+
+        // Set library and document IDs
+        emb.setLibraryId(documento.getBibliotecaId());
+        emb.setDocumentoId(documento.getId());
+
+        // Try to find chapter ID from metadata
+        if (dto.getMetadados() != null) {
+            Object chapterTitleObj = dto.getMetadados().get("capitulo_titulo");
+            if (chapterTitleObj instanceof String) {
+                String chapterTitle = (String) chapterTitleObj;
+                if (chapterIdMap.containsKey(chapterTitle)) {
+                    emb.setChapterId(chapterIdMap.get(chapterTitle));
+                }
+            }
+        }
+
+        // Set text content (campo 'texto' no banco, não 'trecho_texto')
+        emb.setTexto(dto.getTrechoTexto());
+
+        // Set embedding vector
+        emb.setEmbeddingVector(dto.getEmbeddingVector());
+
+        // Set embedding type
+        emb.setTipoEmbedding(dto.getTipoEmbedding());
+
+        // Set metadata
+        emb.setMetadados(dto.getMetadados());
+
+        // Set order if present
+        if (dto.getMetadados() != null && dto.getMetadados().containsKey("ordem_cap")) {
+            Object ordemObj = dto.getMetadados().get("ordem_cap");
+            if (ordemObj instanceof Integer) {
+                emb.setOrderChapter((Integer) ordemObj);
+            }
+        }
+
+        return emb;
+    }
+
+    /**
+     * Convert ChapterDTO to Entity
+     */
+    private Chapter toEntity(ChapterDTO dto, Documento documento) {
+        return Chapter.builder()
+                .documentoId(documento.getId())
+                .titulo(dto.getTitulo())
+                .conteudo(dto.getConteudo())
+                .ordemDoc(dto.getOrdemDoc())
+               // .tokens(dto.getTokens())
+                .metadados(dto.getMetadados() != null ? dto.getMetadados() : new Metadata())
+                .build();
+    }
+
+    /**
+     * Convert Documento Entity to DTO
+     */
+    private DocumentoDTO toDTO(Documento entity) {
+        return DocumentoDTO.builder()
+                .id(entity.getId())
+                .bibliotecaId(entity.getBibliotecaId())
+                .titulo(entity.getTitulo())
+                .conteudoMarkdown(entity.getConteudoMarkdown())
+                .flagVigente(entity.getFlagVigente())
+                .dataPublicacao(entity.getDataPublicacao())
+                .tokensTotal(entity.getTokensTotal())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * Get document by ID
+     */
+    public Optional<DocumentoDTO> findById(Integer id) {
+        return documentoRepository.findById(id).map(this::toDTO);
+    }
+
+    /**
+     * Get all documents for a library
+     */
+    public List<DocumentoDTO> findByLibraryId(Integer libraryId) {
+        return documentoRepository.findByBibliotecaId(libraryId).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get active documents for a library
+     */
+    public List<DocumentoDTO> findActiveByLibraryId(Integer libraryId) {
+        return documentoRepository.findByBibliotecaIdAndFlagVigenteTrue(libraryId).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Update document status
+     */
+    @Transactional
+    public void updateStatus(Integer documentId, boolean flagVigente) {
+        Documento documento = documentoRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+        documento.setFlagVigente(flagVigente);
+        documentoRepository.save(documento);
+        log.info("Updated document {} status to vigente={}", documentId, flagVigente);
+    }
+
+    /**
+     * Delete document (soft delete by setting flagVigente=false)
+     */
+    @Transactional
+    public void delete(Integer documentId) {
+        updateStatus(documentId, false);
+    }
+
+    /**
+     * Derive title from URL or content
+     */
+    private String deriveTitle(String source, String content) {
+        // Try to extract from filename
+        if (source != null) {
+            String[] parts = source.split("[/\\\\]");
+            String filename = parts[parts.length - 1];
+            // Remove extension
+            int dotIndex = filename.lastIndexOf('.');
+            if (dotIndex > 0) {
+                filename = filename.substring(0, dotIndex);
+            }
+            if (!filename.trim().isEmpty()) {
+                return filename.replace('-', ' ').replace('_', ' ');
+            }
+        }
+
+        // Try to extract from first line of content
+        if (content != null && !content.trim().isEmpty()) {
+            String[] lines = content.split("\\n");
+            for (String line : lines) {
+                line = line.trim().replaceAll("^#+\\s*", ""); // Remove markdown headers
+                if (!line.isEmpty() && line.length() < 200) {
+                    return line;
+                }
+            }
+        }
+
+        return "Untitled Document";
+    }
+
+    /**
+     * Estimate token count for content
+     */
+    private int estimateTokenCount(String content) {
+        if (content == null || content.isEmpty()) {
+            return 0;
+        }
+        // Simple estimation: words / 0.75
+        String[] words = content.split("\\s+");
+        return (int) Math.ceil(words.length / 0.75);
+    }
+
+    /**
+     * Calculate total tokens from processing result
+     */
+    private int calculateTotalTokens(AsyncSplitterService.ProcessingResult result) {
+        if (result.getCapitulos() == null) {
+            return 0;
+        }
+        return result.getCapitulos().stream()
+                .mapToInt(cap -> cap.getTokensTotal() != null ? cap.getTokensTotal() : 0)
+                .sum();
+    }
+
+    /**
+     * Processing status DTO
+     */
+    public static class ProcessingStatus {
+        private Integer documentId;
+        private String status;
+        private Integer chaptersCount;
+        private Integer embeddingsCount;
+        private String errorMessage;
+        private LocalDateTime processedAt;
+
+        // Getters and Setters
+        public Integer getDocumentId() { return documentId; }
+        public void setDocumentId(Integer documentId) { this.documentId = documentId; }
+
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+
+        public Integer getChaptersCount() { return chaptersCount; }
+        public void setChaptersCount(Integer chaptersCount) { this.chaptersCount = chaptersCount; }
+
+        public Integer getEmbeddingsCount() { return embeddingsCount; }
+        public void setEmbeddingsCount(Integer embeddingsCount) { this.embeddingsCount = embeddingsCount; }
+
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+        public LocalDateTime getProcessedAt() { return processedAt; }
+        public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
+    }
+}

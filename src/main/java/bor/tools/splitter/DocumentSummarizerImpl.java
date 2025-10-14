@@ -301,7 +301,7 @@ public class DocumentSummarizerImpl implements DocumentSummarizer {
 
         if (llmService != null) {
             try {
-                stats.put("available_models", llmService.modelNames());
+                stats.put("available_models", llmService.getRegisterdModelNames());
             } catch (LLMException e) {
                 logger.debug("Could not retrieve model names: {}", e.getMessage());
             }

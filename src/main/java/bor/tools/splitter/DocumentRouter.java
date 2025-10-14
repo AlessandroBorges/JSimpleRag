@@ -293,4 +293,19 @@ public class DocumentRouter {
 
         return stats;
     }
+
+    public TipoConteudo detectContentType(String conteudoMarkdown) {
+	LLMService llm = this.llmService;
+	if (llm != null) {
+	    try {
+		String resposta = llm.classifyContent(conteudoMarkdown,
+			TipoConteudo.getAllNames(),
+			TipoConteudo.getAllNamesAndDescriptions());
+		return TipoConteudo.fromName(resposta);
+	    } catch (LLMException e) {
+		logger.warn("Failed to classify content type using LLM: {}", e.getMessage());
+	    }
+	}
+	return TipoConteudo.OUTROS;
+    }
 }
