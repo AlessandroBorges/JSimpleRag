@@ -24,7 +24,7 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
-		<springdoc.version>2.2.0</springdoc.version>
+		<springdoc.version>2.7.0</springdoc.version>
 		<hypersistence.version>3.5.1</hypersistence.version>
 		<junit.jupiter.version>5.10.1</junit.jupiter.version>
 	</properties>
