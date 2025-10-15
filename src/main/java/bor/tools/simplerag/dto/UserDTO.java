@@ -1,5 +1,6 @@
 package bor.tools.simplerag.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import bor.tools.simplerag.entity.User;
@@ -28,16 +29,21 @@ public class UserDTO {
     private String email;
 
     private Boolean ativo;
-    
+
     /**
      *  Plain text password for input only (not stored or output)
      */
     private String password; // Only used for input, not output
-    
+
     /**
      *  IDs of libraries associated with the user
      */
-    private Integer[] libraryIds; //
+    private Integer[] libraryIds;
+
+    // Timestamp fields
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
 
 
     /**
@@ -54,7 +60,10 @@ public class UserDTO {
                 .uuid(src.getUuid())
                 .nome(src.getNome())
                 .email(src.getEmail())
-                .ativo(src.getAtivo())                
+                .ativo(src.getAtivo())
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
                 .build();
     }
 
@@ -68,7 +77,10 @@ public class UserDTO {
                 .uuid(this.uuid)
                 .nome(this.nome)
                 .email(this.email)
-                .ativo(this.ativo)                
+                .ativo(this.ativo)
+                .createdAt(this.createdAt)
+                .updatedAt(this.updatedAt)
+                .deletedAt(this.deletedAt)
                 .build();
     }
 

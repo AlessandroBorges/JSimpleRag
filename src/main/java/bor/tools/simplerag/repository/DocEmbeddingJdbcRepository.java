@@ -171,7 +171,7 @@ public class DocEmbeddingJdbcRepository {
             PGvector.registerTypes(conn);
             conn.close();
 
-            updateMapBibliotecaId2VecLen();
+            updateMapLibraryId2VecLen();
         } catch (Exception e) {
             System.out.println("Error initializing the database with PGVector extensions");
             e.printStackTrace();
@@ -182,10 +182,10 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Atualiza o mapeamento de biblioteca_id para dimensão do vetor
      */
-    private void updateMapBibliotecaId2VecLen() throws SQLException {
+    private void updateMapLibraryId2VecLen() throws SQLException {
         java.sql.Connection conn = jdbcTemplate.getDataSource().getConnection();
 
-        String sql = "SELECT id, metadados FROM biblioteca";
+        String sql = "SELECT id, metadados FROM library";
         PreparedStatement ps = conn.prepareStatement(sql);
         ResultSet rs = ps.executeQuery();
 
@@ -243,7 +243,7 @@ public class DocEmbeddingJdbcRepository {
             }
         }
 
-        updateMapBibliotecaId2VecLen();
+        updateMapLibraryId2VecLen();
         return mapBibliotecaConfig.get(bibliotecaId);
     }
 

@@ -42,7 +42,9 @@ public class LibraryDTO {
 
     private LocalDateTime updatedAt;
 
-    
+    private LocalDateTime deletedAt;
+
+
     /**
      * Create DTO from src
      * @param src - source
@@ -62,8 +64,29 @@ public class LibraryDTO {
 		.metadados(src.getMetadados())
 		.createdAt(src.getCreatedAt())
 		.updatedAt(src.getUpdatedAt())
+		.deletedAt(src.getDeletedAt())
 		.build();
     }
+
+    /**
+     * Convert DTO to entity
+     * @return Library entity
+     */
+    public Library toEntity() {
+        Library entity = new Library();
+        entity.setId(this.id);
+        entity.setUuid(this.uuid);
+        entity.setNome(this.nome);
+        entity.setAreaConhecimento(this.areaConhecimento);
+        entity.setPesoSemantico(this.pesoSemantico);
+        entity.setPesoTextual(this.pesoTextual);
+        entity.setMetadados(this.metadados);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
+        return entity;
+    }
+
     /**
      * Validates that semantic and textual weights sum to 1.0
      */

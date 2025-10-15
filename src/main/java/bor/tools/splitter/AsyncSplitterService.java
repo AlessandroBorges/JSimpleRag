@@ -6,6 +6,7 @@ import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -41,7 +42,7 @@ public class AsyncSplitterService {
     public AsyncSplitterService(SplitterFactory splitterFactory,
                                EmbeddingProcessorImpl embeddingProcessor,
                                DocumentSummarizerImpl documentSummarizer,
-                               Executor taskExecutor) {
+                               @Qualifier("applicationTaskExecutor") Executor taskExecutor) {
         this.splitterFactory = splitterFactory;
         this.embeddingProcessor = embeddingProcessor;
         this.documentSummarizer = documentSummarizer;

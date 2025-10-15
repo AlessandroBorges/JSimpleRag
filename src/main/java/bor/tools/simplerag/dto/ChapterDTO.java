@@ -59,6 +59,9 @@ public class ChapterDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+    
+    private LocalDateTime deletedAt;
+    
 
     /**
      * Child embeddings for this chapter.
@@ -101,19 +104,43 @@ public class ChapterDTO {
                 .conteudo(src.getConteudo())
                 .ordemDoc(src.getOrdemDoc())
                 .tokenInicio(src.getTokenInicio())
-                .tokenFim(src.getTokenFim())             
+                .tokenFim(src.getTokenFim())  
+                .metadados(src.getMetadados())
                 .createdAt(src.getCreatedAt())
                 .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
                 .build();
         
         // Convert metadata if present
         if (src.getMetadados() != null) {
             dto.setMetadados(src.getMetadados());
-        }
+        } else {
+	    dto.setMetadados(new Metadata());
+	}
         
         return dto;
     }
-    
+
+    /**
+     * Convert DTO to entity
+     * @return Chapter entity
+     */
+    public Chapter toEntity() {
+        Chapter entity = new Chapter();
+        entity.setId(this.id);
+        entity.setDocumentoId(this.documentoId);
+        entity.setTitulo(this.titulo);
+        entity.setConteudo(this.conteudo);
+        entity.setOrdemDoc(this.ordemDoc);
+        entity.setTokenInicio(this.tokenInicio);
+        entity.setTokenFim(this.tokenFim);
+        entity.setMetadados(this.metadados);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
+        return entity;
+    }
+
     /**
      * Calculate tokens total if not set.<br>
      * In Chapter context, 1 token = 1 char (utf8).

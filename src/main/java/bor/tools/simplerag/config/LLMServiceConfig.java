@@ -106,7 +106,12 @@ public class LLMServiceConfig {
 	    throw new IllegalArgumentException("Provider name cannot be null or empty");
 	}
 
-	String normalized = name.trim().toUpperCase().replace("-", "_");
+        String normalized = name.trim().toUpperCase()
+        	.replace("-", "_")
+        	.replace(" ", "_");
+        normalized = normalized.replace("LLMSERVICE", "")
+        	.replace(".java", "")
+        	.replace("java", "");
 
 	try {
 	    // Try to parse as enum value directly

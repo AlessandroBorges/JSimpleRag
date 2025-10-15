@@ -94,20 +94,22 @@ public interface DocumentoRepository extends JpaRepository<Documento, Integer> {
     /**
      * Busca documentos com metadados específicos
      */
-    @Query(value = "SELECT * FROM documento WHERE metadados @> :metadados::jsonb", nativeQuery = true)
-    List<Documento> findByMetadados(@Param("metadados") String metadados);
+    @Query(value = "SELECT * FROM documento WHERE metadados @> ?1::jsonb", nativeQuery = true)
+    List<Documento> findByMetadados(String metadados);
 
     /**
-     * Busca documentos que contêm uma chave específica nos metadados
+     * Busca documentos que contêm uma chave específica nos metadados. <br>
+     * Metadados estão formato JSONB no bando de dados. <br>
+     * Exemplo de uso: chave = 'autor' retorna documentos com metadados que possuem a chave 'autor'
      */
-    @Query(value = "SELECT * FROM documento WHERE metadados ? :chave", nativeQuery = true)
-    List<Documento> findByMetadadosContainingKey(@Param("chave") String chave);
+    @Query(value = "SELECT * FROM documento WHERE jsonb_exists(metadados, ?1)", nativeQuery = true)
+    List<Documento> findByMetadadosContainingKey(String chave);
 
     /**
      * Busca documentos com valor específico em metadados
      */
-    @Query(value = "SELECT * FROM documento WHERE metadados->>'key' = :valor", nativeQuery = true)
-    List<Documento> findByMetadadosValue(@Param("key") String key, @Param("valor") String valor);
+    @Query(value = "SELECT * FROM documento WHERE metadados->>?1 = ?2", nativeQuery = true)
+    List<Documento> findByMetadadosValue(String key, String valor);
 
     /**
      * Busca documentos por biblioteca com paginação e ordenação por data

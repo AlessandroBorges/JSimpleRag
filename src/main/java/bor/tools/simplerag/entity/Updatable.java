@@ -37,9 +37,10 @@ public class Updatable {
    
    /**
     * Timestamp when the record was deleted (for soft deletes).
+    * Null means the record is active (not deleted).
     */
-   @Column(name = "deleted_at", updatable = true)
-   private LocalDateTime deletedAt; // For soft deletes, if needed
+   @Column(name = "deleted_at", nullable = true)
+   private LocalDateTime deletedAt;
    
    
    @PrePersist
@@ -51,11 +52,30 @@ public class Updatable {
    @PreUpdate
    protected void onUpdate() {
        updatedAt = LocalDateTime.now();
-   }	
-   
+   }
 
-   protected void onDelete() {
+   /**
+    * Marks this entity as deleted (soft delete).
+    * Sets deletedAt to current timestamp.
+    */
+   public void markAsDeleted() {
        deletedAt = LocalDateTime.now();
+   }
+
+   /**
+    * Restores a soft-deleted entity.
+    * Sets deletedAt back to null.
+    */
+   public void restore() {
+       deletedAt = null;
+   }
+
+   /**
+    * Checks if this entity is soft-deleted.
+    * @return true if deletedAt is not null
+    */
+   public boolean isDeleted() {
+       return deletedAt != null;
    }
    
 }

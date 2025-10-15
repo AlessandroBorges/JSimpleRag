@@ -219,12 +219,12 @@ public class ChatController {
     /**
      * Get user chats ordered by update date
      */
-    @GetMapping("/by-client/{clientUuid}")
+    @GetMapping("/by-client/{userUuid}")
     @Operation(summary = "Get user chats ordered by update date")
-    public ResponseEntity<List<ChatDTO>> getUserChats(@PathVariable UUID clientUuid) {
-        log.debug("Finding chats for client: {}", clientUuid);
+    public ResponseEntity<List<ChatDTO>> getUserChats(@PathVariable UUID userUuid) {
+        log.debug("Finding chats for client: {}", userUuid);
 
-        List<Chat> chats = chatService.loadUserChats(clientUuid);
+        List<Chat> chats = chatService.loadUserChats(userUuid);
 
         List<ChatDTO> response = chats.stream()
                 .map(ChatDTO::from)
@@ -236,14 +236,14 @@ public class ChatController {
     /**
      * Get recent chats for user
      */
-    @GetMapping("/by-client/{clientUuid}/recent")
+    @GetMapping("/by-client/{userUuid}/recent")
     @Operation(summary = "Get recent chats for user",
                description = "Returns most recent chats (default limit: 10)")
-    public ResponseEntity<List<ChatDTO>> getRecentChats(@PathVariable UUID clientUuid,
+    public ResponseEntity<List<ChatDTO>> getRecentChats(@PathVariable UUID userUuid,
                                                          @RequestParam(defaultValue = "10") int limit) {
-        log.debug("Finding recent chats for client: {} (limit={})", clientUuid, limit);
+        log.debug("Finding recent chats for user: {} (limit={})", userUuid, limit);
 
-        List<Chat> chats = chatService.findRecentChats(clientUuid, limit);
+        List<Chat> chats = chatService.findRecentChats(userUuid, limit);
 
         List<ChatDTO> response = chats.stream()
                 .map(ChatDTO::from)
@@ -288,7 +288,7 @@ public class ChatController {
         chat.setUser_uuid(dto.getUserUuid());
         chat.setTitulo(dto.getTitulo());
         chat.setResumo(dto.getResumo());
-        chat.setBiblioteca_privativa(dto.getBibliotecaPrivativa());
+        chat.setBiblioteca_privativa(dto.getBiblioteca_privativa());
         return chat;
     }
 }

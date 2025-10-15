@@ -1,5 +1,7 @@
 package bor.tools.simplerag.dto;
 
+import java.time.LocalDateTime;
+
 import bor.tools.simplerag.entity.UserLibrary;
 import bor.tools.simplerag.entity.enums.TipoAssociacao;
 import lombok.AllArgsConstructor;
@@ -30,10 +32,15 @@ public class UserLibraryDTO {
 
     /**
      * Library ID
-     */	
+     */
     private Integer libraryId;
 
     private TipoAssociacao tipoAssociacao;
+
+    // Timestamp fields
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
 
     /**
      * Create DTO from entity
@@ -49,6 +56,9 @@ public class UserLibraryDTO {
                 .userId(src.getUserId())
                 .libraryId(src.getLibraryId())
                 .tipoAssociacao(src.getTipoAssociacao())
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
                 .build();
     }
 
@@ -62,6 +72,9 @@ public class UserLibraryDTO {
         entity.setUserId(this.userId);
         entity.setLibraryId(this.libraryId);
         entity.setTipoAssociacao(this.tipoAssociacao);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
         return entity;
     }
 

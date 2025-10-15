@@ -7,17 +7,19 @@
 
 ## 📋 Índice
 
-1. [Visão Geral](#visão-geral)
+1. [Visão Geral](#visao-geral)
 2. [Conceitos Importantes](#conceitos-importantes)
-3. [Método 1: Instalação Manual (Recomendado)](#método-1-instalação-manual-recomendado)
-4. [Método 2: Build do Projeto Dependente](#método-2-build-do-projeto-dependente)
-5. [Método 3: Multi-Module Maven (Avançado)](#método-3-multi-module-maven-avançado)
+3. [Método 1: Instalação Manual (Recomendado)](#metodo-1-instalacao-manual-recomendado)
+4. [Método 2: Build do Projeto Dependente](#metodo-2-build-do-projeto-dependente)
+5. [Método 3: Multi-Module Maven (Avançado)](#metodo-3-multi-module-maven-avancado)
 6. [Troubleshooting](#troubleshooting)
-7. [Checklist de Verificação](#checklist-de-verificação)
+7. [Checklist de Verificação](#checklist-de-verificacao)
 
 ---
 
 ## Visão Geral
+
+### Visao Geral
 
 Este guia documenta como integrar **JSimpleLLM** (biblioteca local) com **JSimpleRag** (projeto principal) usando Maven.
 
@@ -64,6 +66,8 @@ Todo artefato Maven é identificado por:
 
 ## Método 1: Instalação Manual (Recomendado)
 
+## Metodo 1: Instalacao Manual (Recomendado)
+
 Este é o método usado para resolver o problema original.
 
 ### Passo 1: Verificar o JAR compilado
@@ -77,6 +81,7 @@ ls -lh target/JSimpleLLM-0.0.1-SNAPSHOT.jar
 ```
 
 **Saída esperada**:
+
 ```
 -rw-r--r-- 1 user user 123K Oct 14 17:00 target/JSimpleLLM-0.0.1-SNAPSHOT.jar
 ```
@@ -96,6 +101,7 @@ mvn install:install-file \
 - ✅ Funciona com profiles e properties do Maven
 
 **Alternativa (NÃO RECOMENDADA)**:
+
 ```bash
 # Sem o POM - cria POM mínimo SEM dependências transitivas
 mvn install:install-file \
@@ -108,6 +114,7 @@ mvn install:install-file \
 ```
 
 **Saída esperada**:
+
 ```
 [INFO] Installing .../JSimpleLLM-0.0.1-SNAPSHOT.jar to ~/.m2/repository/bor/tools/JSimpleLLM/0.0.1-SNAPSHOT/JSimpleLLM-0.0.1-SNAPSHOT.jar
 [INFO] Installing .../pom.xml to ~/.m2/repository/bor/tools/JSimpleLLM/0.0.1-SNAPSHOT/JSimpleLLM-0.0.1-SNAPSHOT.pom
@@ -147,6 +154,7 @@ mvn test
 ```
 
 **Saída esperada**:
+
 ```
 [INFO] BUILD SUCCESS
 [INFO] Tests run: X, Failures: 0, Errors: 0, Skipped: 0
@@ -155,6 +163,7 @@ mvn test
 ---
 
 ## Método 2: Build do Projeto Dependente
+## Metodo 2: Build do Projeto Dependente
 
 Este método usa o ciclo de vida Maven completo.
 
@@ -175,6 +184,7 @@ Este comando:
 5. Instala JAR + POM no `~/.m2/repository`
 
 **Se houver erro "Failed to delete target"**:
+
 ```bash
 # Feche o Eclipse/IDE primeiro, ou:
 mvn install -DskipTests  # Sem clean
@@ -187,6 +197,7 @@ Igual ao Método 1 - Passo 3 e 4.
 ---
 
 ## Método 3: Multi-Module Maven (Avançado)
+## Metodo 3: Multi-Module Maven (Avancado)
 
 Para projetos que sempre evoluem juntos, considere um projeto multi-módulo.
 
@@ -245,6 +256,7 @@ Caused by: java.lang.ClassNotFoundException: com.knuddels.jtokkit.api.Encoding
 **Causa**: JAR instalado sem o POM (dependências transitivas faltando)
 
 **Solução**:
+
 ```bash
 # Reinstale COM o POM
 mvn install:install-file \
@@ -257,17 +269,20 @@ mvn install:install-file \
 ### Problema 2: Could not find artifact
 
 **Erro**:
+
 ```
 Could not find artifact bor.tools:JSimpleLLM:jar:0.0.1-SNAPSHOT
 ```
 
 **Diagnóstico**:
+
 ```bash
 # Verifique se está instalado
 ls ~/.m2/repository/bor/tools/JSimpleLLM/0.0.1-SNAPSHOT/
 ```
 
 **Esperado**:
+
 ```
 JSimpleLLM-0.0.1-SNAPSHOT.jar
 JSimpleLLM-0.0.1-SNAPSHOT.pom
@@ -275,6 +290,7 @@ _remote.repositories
 ```
 
 **Solução**:
+
 ```bash
 # Instale novamente
 mvn install:install-file -Dfile=... -DpomFile=...
@@ -285,6 +301,7 @@ mvn install:install-file -Dfile=... -DpomFile=...
 ### Problema 3: Wrong Version
 
 **Erro**:
+
 ```
 Could not find artifact bor.tools:JSimpleLLM:jar:1.0.0
 ```
@@ -292,11 +309,13 @@ Could not find artifact bor.tools:JSimpleLLM:jar:1.0.0
 **Causa**: Versão no pom.xml do JSimpleRag não corresponde à versão instalada
 
 **Verificar versão instalada**:
+
 ```bash
 ls ~/.m2/repository/bor/tools/JSimpleLLM/
 ```
 
-**Solução**: Ajuste a versão no `pom.xml`:
+**Solução**: Ajuste a versão no `pom.xml`: 
+
 ```xml
 <dependency>
     <groupId>bor.tools</groupId>
@@ -310,6 +329,7 @@ ls ~/.m2/repository/bor/tools/JSimpleLLM/
 ### Problema 4: Dependência Circular Liquibase
 
 **Erro**:
+
 ```
 Circular depends-on relationship between 'liquibase' and 'entityManagerFactory'
 ```
@@ -346,6 +366,7 @@ class LLMServiceConfigTest {
 **Causa**: Precisa reinstalar após cada mudança
 
 **Solução**:
+
 ```bash
 # No JSimpleLLM
 cd /mnt/f/1-ProjetosIA/github/JSimpleLLM
@@ -361,6 +382,7 @@ mvn clean compile  # Força recompilação
 ---
 
 ## Checklist de Verificação
+## Checklist de Verificacao
 
 ### ✅ Antes de Instalar
 
@@ -510,6 +532,7 @@ echo "  mvn clean compile"
 ```
 
 **Usar**:
+
 ```bash
 chmod +x reinstall-jsimplellm.sh
 ./reinstall-jsimplellm.sh
@@ -522,6 +545,7 @@ chmod +x reinstall-jsimplellm.sh
 ### 1. Versionamento
 
 **Sempre use SNAPSHOT para desenvolvimento**:
+
 ```xml
 <version>0.0.1-SNAPSHOT</version>
 ```
@@ -554,23 +578,27 @@ Este projeto depende de **JSimpleLLM**, um projeto Maven local.
 ### Setup Inicial
 
 1. Clone o JSimpleLLM:
+
    ```bash
    git clone https://github.com/your-org/JSimpleLLM
    ```
 
 2. Instale no repositório Maven local:
+
    ```bash
    cd JSimpleLLM
    mvn clean install -DskipTests
    ```
 
 3. Compile o JSimpleRag:
+
    ```bash
    cd JSimpleRag
    mvn clean compile
    ```
 
 Veja [LOCAL_MAVEN_DEPENDENCY_GUIDE.md](LOCAL_MAVEN_DEPENDENCY_GUIDE.md) para mais detalhes.
+
 ```
 
 ### 4. CI/CD
@@ -655,6 +683,7 @@ cat ~/.m2/repository/bor/tools/JSimpleLLM/0.0.1-SNAPSHOT/JSimpleLLM-0.0.1-SNAPSH
 ### Q: E se o JSimpleLLM tiver testes falhando?
 
 **R**: Use `-DskipTests`:
+
 ```bash
 mvn clean install -DskipTests
 ```

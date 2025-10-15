@@ -48,6 +48,57 @@ public class DocumentEmbeddingDTO {
     private Float scoreSemantico;
     private Float scoreTextual;
     private Float score;
+    
+    // campos declarados
+ 
+    private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
+
+    /**
+     * Create DTO from entity
+     * @param src - source entity
+     * @return DTO instance
+     */
+    public static DocumentEmbeddingDTO from(bor.tools.simplerag.entity.DocumentEmbedding src) {
+        if (src == null) {
+            return null;
+        }
+        return DocumentEmbeddingDTO.builder()
+                .id(src.getId())
+                .bibliotecaId(src.getLibraryId())
+                .documentoId(src.getDocumentoId())
+                .capituloId(src.getChapterId())
+                .tipoEmbedding(src.getTipoEmbedding())
+                .trechoTexto(src.getTexto())
+                .ordemCap(src.getOrderChapter())
+                .embeddingVector(src.getEmbeddingVector())
+                .metadados(src.getMetadados() != null ? new Metadata(src.getMetadados()) : null)
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
+                .build();
+    }
+
+    /**
+     * Convert DTO to entity
+     * @return DocumentEmbedding entity
+     */
+    public bor.tools.simplerag.entity.DocumentEmbedding toEntity() {
+        bor.tools.simplerag.entity.DocumentEmbedding entity = new bor.tools.simplerag.entity.DocumentEmbedding();
+        entity.setId(this.id);
+        entity.setLibraryId(this.bibliotecaId);
+        entity.setDocumentoId(this.documentoId);
+        entity.setChapterId(this.capituloId);
+        entity.setTipoEmbedding(this.tipoEmbedding);
+        entity.setTexto(this.trechoTexto);
+        entity.setOrderChapter(this.ordemCap);
+        entity.setEmbeddingVector(this.embeddingVector);
+        entity.setMetadados(this.metadados);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
+        return entity;
+    }
 
     /**
      * Check if this embedding has a vector

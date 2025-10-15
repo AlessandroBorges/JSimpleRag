@@ -333,8 +333,10 @@ public class DocumentoService {
     /**
      * Convert DocumentEmbeddingDTO to Entity for embedding
      */
-    private DocumentEmbedding toEntity(DocumentEmbeddingDTO dto, Documento documento,
-                                      Map<String, Integer> chapterIdMap) {
+    private DocumentEmbedding toEntity(DocumentEmbeddingDTO dto, 
+	    				Documento documento,
+	    				Map<String, Integer> chapterIdMap) 
+    {
         DocumentEmbedding emb = new DocumentEmbedding();
 
         // Set library and document IDs
@@ -371,6 +373,10 @@ public class DocumentoService {
                 emb.setOrderChapter((Integer) ordemObj);
             }
         }
+        
+        emb.setCreatedAt(LocalDateTime.now());	
+        emb.setUpdatedAt(LocalDateTime.now());
+        emb.setDeletedAt(null);
 
         return emb;
     }

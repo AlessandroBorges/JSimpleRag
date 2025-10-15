@@ -240,7 +240,7 @@ public class ChatProjectService {
      * @param titulo - project title
      * @return Optional project
      */
-    public Optional<ChatProject> findByUserIdAndTitulo(UUID userId, String titulo) {
+    public List<ChatProject> findByUserIdAndTitulo(UUID userId, String titulo) {
         return projectRepository.findByUserIdAndTitulo(userId, titulo);
     }
 
@@ -249,8 +249,16 @@ public class ChatProjectService {
      * @param userId - user UUID
      * @return project count
      */
-    public long countUserProjects(UUID userId) {
+    public long countUserProjects(UUID userUuid) {
+        return projectRepository.countByUserUuid(userUuid);
+    }
+    
+    public long countUserProjectsByUserId(Integer userId) {
         return projectRepository.countByUserId(userId);
+    }
+    
+    public long countUserProjectsByUserId(UUID userUuid) {
+        return projectRepository.countByUserUuid(userUuid);
     }
 
     /**

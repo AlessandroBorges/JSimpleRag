@@ -40,13 +40,13 @@ public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
     /**
      * Busca capítulos por número mínimo de tokens
      */
-    @Query("SELECT c FROM Chapter c WHERE c.tokensTotal >= :tokensMinimo ORDER BY c.tokensTotal DESC")
+    @Query("SELECT c FROM Chapter c WHERE (c.tokenFim - c.tokenInicio) >= :tokensMinimo ORDER BY c.tokenInicio DESC")
     List<Chapter> findByTokensTotalGreaterThanEqual(@Param("tokensMinimo") Integer tokensMinimo);
 
     /**
      * Busca capítulos com tokens entre intervalo
      */
-    @Query("SELECT c FROM Chapter c WHERE c.tokensTotal BETWEEN :tokensMin AND :tokensMax ORDER BY c.tokensTotal")
+    @Query("SELECT c FROM Chapter c WHERE (c.tokenFim - c.tokenInicio) BETWEEN :tokensMin AND :tokensMax ORDER BY c.ordemDoc ASC")
     List<Chapter> findByTokensTotalBetween(@Param("tokensMin") Integer tokensMin, @Param("tokensMax") Integer tokensMax);
 
     /**
@@ -65,7 +65,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
      * Conta capítulos por documento
      */
     @Query("SELECT COUNT(c) FROM Chapter c WHERE c.documentoId = :documentoId")
-    Long countByDocumento(@Param("documentoId") Integer documentoId);
+    Integer countByDocumento(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca primeiro capítulo do documento
@@ -94,26 +94,26 @@ public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
     /**
      * Busca capítulos com metadados específicos
      */
-    @Query(value = "SELECT * FROM capitulo WHERE metadados @> :metadados::jsonb", nativeQuery = true)
-    List<Chapter> findByMetadados(@Param("metadados") String metadados);
+    @Query(value = "SELECT * FROM capitulo WHERE metadados @> ?1::jsonb", nativeQuery = true)
+    List<Chapter> findByMetadados(String metadados);
 
     /**
      * Busca capítulos que contêm uma chave específica nos metadados
      */
-    @Query(value = "SELECT * FROM capitulo WHERE metadados ? :chave", nativeQuery = true)
-    List<Chapter> findByMetadadosContainingKey(@Param("chave") String chave);
+    @Query(value = "SELECT * FROM capitulo WHERE jsonb_exists(metadados, ?1)", nativeQuery = true)
+    List<Chapter> findByMetadadosContainingKey(String chave);
 
     /**
      * Estatísticas de tokens por documento
      */
-    @Query("SELECT SUM(c.tokensTotal), AVG(c.tokensTotal), MAX(c.tokensTotal), MIN(c.tokensTotal) " +
+    @Query("SELECT SUM(c.tokenFim - c.tokenInicio), AVG(c.tokenFim - c.tokenInicio), MAX(c.tokenFim - c.tokenInicio), MIN(c.tokenFim - c.tokenInicio) " +
            "FROM Chapter c WHERE c.documentoId = :documentoId")
     Object[] getTokenStatsByDocumento(@Param("documentoId") Integer documentoId);
 
     /**
      * Busca capítulos sem tokens calculados
      */
-    @Query("SELECT c FROM Chapter c WHERE c.tokensTotal IS NULL")
+    @Query("SELECT c FROM Chapter c WHERE c.tokenFim IS NULL OR c.tokenInicio IS NULL")
     List<Chapter> findSemTokensCalculados();
 
     /**
@@ -168,9 +168,5 @@ public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
         """, nativeQuery = true)
     List<Chapter> findByBiblioteca(@Param("bibliotecaId") Integer bibliotecaId);
 
-    /**
-     * Conta capítulos por documento
-     */
-    @Query("SELECT COUNT(c) FROM Chapter c WHERE c.documentoId = :id")
-    long countByDocumentoId(Integer id);
+
 }

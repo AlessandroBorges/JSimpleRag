@@ -21,64 +21,78 @@ public interface UserLibraryRepository extends JpaRepository<UserLibrary, Intege
     /**
      * Busca todas as associações de um usuário
      */
-    List<UserLibrary> findByUsuarioId(Integer usuarioId);
+    @Query("SELECT ul FROM UserLibrary ul WHERE ul.userId = :userId")
+    List<UserLibrary> findByUserId(Integer userId);
 
     /**
      * Busca todas as associações de uma biblioteca
      */
-    List<UserLibrary> findByBibliotecaId(Integer bibliotecaId);
+    @Query("SELECT ul FROM UserLibrary ul WHERE ul.libraryId = :libraryId")
+    List<UserLibrary> findByLibraryId(Integer libraryId);
 
     /**
      * Busca associação específica entre usuário e biblioteca
      */
-    Optional<UserLibrary> findByUsuarioIdAndBibliotecaId(Integer usuarioId, Integer bibliotecaId);
+    @Query("SELECT ul FROM UserLibrary ul WHERE ul.userId = :userId AND ul.libraryId = :libraryId")
+    Optional<UserLibrary> findByUserIdAndLibraryId(Integer userId, Integer libraryId);
 
     /**
      * Busca associações de um usuário por tipo
      */
-    List<UserLibrary> findByUsuarioIdAndTipoAssociacao(Integer usuarioId, TipoAssociacao tipoAssociacao);
+    @Query("SELECT ul FROM UserLibrary ul WHERE ul.userId = :userId AND ul.tipoAssociacao = :tipoAssociacao")
+    List<UserLibrary> findByUserIdAndTipoAssociacao(Integer userId, TipoAssociacao tipoAssociacao);
 
     /**
      * Busca associações de uma biblioteca por tipo
      */
-    List<UserLibrary> findByBibliotecaIdAndTipoAssociacao(Integer bibliotecaId, TipoAssociacao tipoAssociacao);
+    @Query("SELECT ul FROM UserLibrary ul WHERE ul.libraryId = :libraryId AND ul.tipoAssociacao = :tipoAssociacao")
+    List<UserLibrary> findByLibraryIdAndTipoAssociacao(Integer libraryId, TipoAssociacao tipoAssociacao);
 
     /**
      * Verifica se existe associação entre usuário e biblioteca
      */
-    boolean existsByUsuarioIdAndBibliotecaId(Integer usuarioId, Integer bibliotecaId);
+    @Query("SELECT CASE WHEN COUNT(ub) > 0 THEN true ELSE false END FROM UserLibrary ub WHERE ub.userId = :userId AND ub.libraryId = :libraryId")
+    boolean existsByUserIdAndBibliotecaId(Integer userId, Integer libraryId);
 
     /**
      * Busca todos os proprietários de uma biblioteca
      */
-    @Query("SELECT ub FROM UserLibrary ub WHERE ub.bibliotecaId = :bibliotecaId AND ub.tipoAssociacao = 'PROPRIETARIO'")
-    List<UserLibrary> findProprietariosByBibliotecaId(@Param("bibliotecaId") Integer bibliotecaId);
+    @Query("SELECT ub FROM UserLibrary ub WHERE ub.libraryId = :libraryId AND ub.tipoAssociacao = 'PROPRIETARIO'")
+    List<UserLibrary> findProprietariosByBibliotecaId(@Param("libraryId") Integer libraryId);
 
     /**
      * Busca todas as bibliotecas que um usuário é proprietário
      */
-    @Query("SELECT ub FROM UserLibrary ub WHERE ub.usuarioId = :usuarioId AND ub.tipoAssociacao = 'PROPRIETARIO'")
-    List<UserLibrary> findBibliotecasPropriedadeByUsuarioId(@Param("usuarioId") Integer usuarioId);
+    @Query("SELECT ub FROM UserLibrary ub WHERE ub.userId = :userId AND ub.tipoAssociacao = 'PROPRIETARIO'")
+    List<UserLibrary> findBibliotecasPropriedadeByUserId(@Param("userId") Integer userId);
 
     /**
      * Conta quantas bibliotecas um usuário possui
      */
-    @Query("SELECT COUNT(ub) FROM UserLibrary ub WHERE ub.usuarioId = :usuarioId")
-    long countByUsuarioId(@Param("usuarioId") Integer usuarioId);
+    @Query("SELECT COUNT(ub) FROM UserLibrary ub WHERE ub.userId = :userId")
+    long countByUserId(@Param("userId") Integer userId);
 
     /**
      * Conta quantos usuários uma biblioteca possui
-     */
-    @Query("SELECT COUNT(ub) FROM UserLibrary ub WHERE ub.bibliotecaId = :bibliotecaId")
-    long countByBibliotecaId(@Param("bibliotecaId") Integer bibliotecaId);
+     */    
+    @Query("SELECT COUNT(ub) FROM UserLibrary ub WHERE ub.libraryId = :libraryId")
+    long countByBibliotecaId(@Param("libraryId") Integer libraryId);
 
     /**
      * Remove todas as associações de um usuário
      */
-    void deleteByUsuarioId(Integer usuarioId);
+    @Query("DELETE FROM UserLibrary ul WHERE ul.userId = :userId")    
+    void deleteByUserId(Integer userId);
 
     /**
      * Remove todas as associações de uma biblioteca
      */
-    void deleteByBibliotecaId(Integer bibliotecaId);
+    @Query("DELETE FROM UserLibrary ul WHERE ul.libraryId = :libraryId")
+    void deleteByBibliotecaId(Integer libraryId);
+
+    /**
+     * Remove associação específica entre usuário e biblioteca
+     */
+    @Query("DELETE FROM UserLibrary ul WHERE ul.libraryId = :libraryId AND ul.userId = :userId")
+    void deletebyLibraryIdAndUserId(Integer libraryId, Integer userId); 
 }

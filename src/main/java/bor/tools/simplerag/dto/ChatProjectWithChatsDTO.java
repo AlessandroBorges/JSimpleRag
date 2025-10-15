@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -33,6 +34,11 @@ public class ChatProjectWithChatsDTO {
      * Total chat count
      */
     private Integer chatCount;
+    
+	// campos declarados
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;    
+    private LocalDateTime deletedAt;
 
     /**
      * Get total chat count

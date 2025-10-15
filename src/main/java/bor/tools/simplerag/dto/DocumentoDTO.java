@@ -47,6 +47,8 @@ public class DocumentoDTO {
 
     private LocalDateTime updatedAt;
 
+    private LocalDateTime deletedAt;
+
     /**
      * Parent biblioteca reference for full context
      */
@@ -63,6 +65,50 @@ public class DocumentoDTO {
      */
     @Builder.Default
     private List<ChapterDTO> capitulos = new ArrayList<>();
+
+    /**
+     * Create DTO from entity
+     * @param src - source entity
+     * @return DTO instance
+     */
+    public static DocumentoDTO from(bor.tools.simplerag.entity.Documento src) {
+        if (src == null) {
+            return null;
+        }
+        return DocumentoDTO.builder()
+                .id(src.getId())
+                .bibliotecaId(src.getBibliotecaId())
+                .titulo(src.getTitulo())
+                .conteudoMarkdown(src.getConteudoMarkdown())
+                .flagVigente(src.getFlagVigente())
+                .dataPublicacao(src.getDataPublicacao())
+                .tokensTotal(src.getTokensTotal())
+                .metadados(src.getMetadados() != null ? new Metadata(src.getMetadados()) : null)
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
+                .build();
+    }
+
+    /**
+     * Convert DTO to entity
+     * @return Documento entity
+     */
+    public bor.tools.simplerag.entity.Documento toEntity() {
+        bor.tools.simplerag.entity.Documento entity = new bor.tools.simplerag.entity.Documento();
+        entity.setId(this.id);
+        entity.setBibliotecaId(this.bibliotecaId);
+        entity.setTitulo(this.titulo);
+        entity.setConteudoMarkdown(this.conteudoMarkdown);
+        entity.setFlagVigente(this.flagVigente);
+        entity.setDataPublicacao(this.dataPublicacao);
+        entity.setTokensTotal(this.tokensTotal);
+        entity.setMetadados(this.metadados);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
+        return entity;
+    }
 
     /**
      * Convenience method to check if document is active

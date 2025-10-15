@@ -78,7 +78,7 @@ public class UserLibraryService {
      * @return Optional association
      */
     public Optional<UserLibrary> findByUserIdAndLibraryId(Integer userId, Integer libraryId) {
-        return userLibraryRepository.findByUsuarioIdAndBibliotecaId(userId, libraryId);
+        return userLibraryRepository.findByUserIdAndLibraryId(userId, libraryId);
     }
 
     /**
@@ -88,7 +88,7 @@ public class UserLibraryService {
      * @return true if association exists
      */
     public boolean existsAssociation(Integer userId, Integer libraryId) {
-        return userLibraryRepository.existsByUsuarioIdAndBibliotecaId(userId, libraryId);
+        return userLibraryRepository.existsByUserIdAndBibliotecaId(userId, libraryId);
     }
 
     /**
@@ -98,7 +98,7 @@ public class UserLibraryService {
      */
     @Transactional(readOnly = true)
     public List<UserLibraryWithDetails> loadUserLibrariesWithDetails(Integer userId) {
-        List<UserLibrary> associations = userLibraryRepository.findByUsuarioId(userId);
+        List<UserLibrary> associations = userLibraryRepository.findByUserId(userId);
 
         if (associations.isEmpty()) {
             return Collections.emptyList();
@@ -127,7 +127,7 @@ public class UserLibraryService {
      */
     @Transactional(readOnly = true)
     public List<UserLibraryWithDetails> loadLibraryUsersWithDetails(Integer libraryId) {
-        List<UserLibrary> associations = userLibraryRepository.findByBibliotecaId(libraryId);
+        List<UserLibrary> associations = userLibraryRepository.findByLibraryId(libraryId);
 
         if (associations.isEmpty()) {
             return Collections.emptyList();
@@ -156,7 +156,7 @@ public class UserLibraryService {
      * @return List of associations
      */
     public List<UserLibrary> findByTipoAssociacao(Integer userId, TipoAssociacao tipoAssociacao) {
-        return userLibraryRepository.findByUsuarioIdAndTipoAssociacao(userId, tipoAssociacao);
+        return userLibraryRepository.findByUserIdAndTipoAssociacao(userId, tipoAssociacao);
     }
 
     /**
@@ -165,7 +165,7 @@ public class UserLibraryService {
      * @return List of associations
      */
     public List<UserLibrary> findUserOwnedLibraries(Integer userId) {
-        return userLibraryRepository.findBibliotecasPropriedadeByUsuarioId(userId);
+        return userLibraryRepository.findByUserId(userId);
     }
 
     /**
@@ -183,7 +183,7 @@ public class UserLibraryService {
      * @return count of associations
      */
     public long countUserLibraries(Integer userId) {
-        return userLibraryRepository.countByUsuarioId(userId);
+        return userLibraryRepository.countByUserId(userId);
     }
 
     /**

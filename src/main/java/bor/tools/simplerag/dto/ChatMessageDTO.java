@@ -1,5 +1,6 @@
 package bor.tools.simplerag.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import bor.tools.simplerag.entity.ChatMessage;
@@ -53,6 +54,12 @@ public class ChatMessageDTO {
      * Can be text or images in base64 format
      */
     private String response;
+    
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+    
+    private LocalDateTime deletedAt;
 
     /**
      * Create DTO from entity
@@ -70,6 +77,9 @@ public class ChatMessageDTO {
                 .metadata(src.getMetadata())
                 .mensagem(src.getMensagem())
                 .response(src.getResponse())
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
                 .build();
     }
 
@@ -85,6 +95,9 @@ public class ChatMessageDTO {
         entity.setMetadata(this.metadata);
         entity.setMensagem(this.mensagem);
         entity.setResponse(this.response);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
         return entity;
     }
 

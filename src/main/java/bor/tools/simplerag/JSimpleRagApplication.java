@@ -2,6 +2,7 @@ package bor.tools.simplerag;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -22,6 +23,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
+@ComponentScan(basePackages = {
+    "bor.tools.simplerag",  // Main application package
+    "bor.tools.utils",       // Utility classes (DocumentConverter, RAGConverter, etc.)
+    "bor.tools.splitter"     // Document splitter services
+})
 public class JSimpleRagApplication {
 
     public static void main(String[] args) {

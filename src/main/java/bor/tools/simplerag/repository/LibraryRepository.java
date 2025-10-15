@@ -20,21 +20,25 @@ public interface LibraryRepository extends JpaRepository<Library, Integer> {
     /**
      * Busca biblioteca por nome (case-insensitive)
      */
+    @Query("SELECT b FROM Library b WHERE LOWER(b.nome) = LOWER(:nome)")
     Optional<Library> findByNomeIgnoreCase(String nome);
 
     /**
      * Busca bibliotecas por área de conhecimento
      */
+    @Query("SELECT b FROM Library b WHERE LOWER(b.areaConhecimento) = LOWER(:areaConhecimento)")
     List<Library> findByAreaConhecimentoIgnoreCase(String areaConhecimento);
 
     /**
      * Busca bibliotecas por área de conhecimento contendo texto
      */
+    @Query("SELECT b FROM Library b WHERE LOWER(b.areaConhecimento) LIKE LOWER(CONCAT('%', :areaConhecimento, '%'))")
     List<Library> findByAreaConhecimentoContainingIgnoreCase(String areaConhecimento);
 
     /**
      * Verifica se existe biblioteca com o nome especificado
      */
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM Library b WHERE LOWER(b.nome) = LOWER(:nome)")
     boolean existsByNomeIgnoreCase(String nome);
 
     /**
@@ -78,4 +82,22 @@ public interface LibraryRepository extends JpaRepository<Library, Integer> {
      */
     @Query("SELECT b.areaConhecimento, COUNT(b) FROM Library b GROUP BY b.areaConhecimento ORDER BY COUNT(b) DESC")
     List<Object[]> countByAreaConhecimento();
+    
+    /**
+     * Busca bibliotecas que contêm uma chave específica nos metadados.
+     */
+    @Query(value = "SELECT * FROM biblioteca WHERE metadados @?1::jsonb", nativeQuery = true)
+    List<Library> findByMetadadosContaining(String chave);
+    
+    /**
+     * Busca bibliotecas que contêm uma chave e valor específicos nos metadados.
+     */
+    @Query(value = "SELECT * FROM biblioteca WHERE metadados->>?1 = ?2", nativeQuery = true)
+    List<Library> findByMetadadosContainingKeyAndValue(String chave , String valor);
+    
+    /**
+     * Busca todas as bibliotecas associadas a um usuário
+     */
+    @Query("SELECT l FROM Library l JOIN UserLibrary ul ON l.id = ul.libraryId WHERE ul.userId = :id")
+    List<Library> findByUsuarioId(Integer id);
 }

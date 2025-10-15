@@ -65,7 +65,7 @@ public class UserService {
 
         if (isHardDelete) {
             // Remove all user-library associations first
-            userLibraryRepository.deleteByUsuarioId(user.getId());
+            userLibraryRepository.deleteByUserId(user.getId());
             userRepository.delete(user);
             log.info("User hard deleted: {}", user.getEmail());
         } else {
@@ -126,7 +126,7 @@ public class UserService {
         User user = userOpt.get();
 
         // Load user-library associations
-        List<UserLibrary> associations = userLibraryRepository.findByUsuarioId(user.getId());
+        List<UserLibrary> associations = userLibraryRepository.findByUserId(user.getId());
 
         // Load libraries
         Set<Integer> libraryIds = associations.stream()
@@ -155,7 +155,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<UserLibrary> loadUserLibraries(UUID userUuid) {
         Optional<User> userOpt = findByUuid(userUuid);
-        return userOpt.map(user -> userLibraryRepository.findByUsuarioId(user.getId()))
+        return userOpt.map(user -> userLibraryRepository.findByUserId(user.getId()))
                 .orElse(Collections.emptyList());
     }
 

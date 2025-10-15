@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Changeset: Add deleted_at column to tables for soft delete support
+        Author: Claude Code
+        Date: 2025-10-14
+
+        Description:
+        Adds deleted_at timestamp column to multiple tables to enable soft delete functionality.
+        All entities that extend the Updatable MappedSuperclass will have this column.
+
+        Tables affected:
+        - chat
+        - chat_message
+        - chat_project
+        - chapter
+        - doc_embedding
+        - documento
+        - library
+        - user
+        - user_library
+
+        Business Rules:
+        - deleted_at NULL = record is active (not deleted)
+        - deleted_at NOT NULL = record is soft-deleted with deletion timestamp
+    -->
+
+    <changeSet id="009-add-deleted-at-to-all-tables" author="claude_code">
+        <comment>
+            Add deleted_at column to all tables for soft delete support
+        </comment>
+
+        <!-- Add deleted_at to chat table -->
+        <addColumn tableName="chat">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to chat_message table -->
+        <addColumn tableName="chat_message">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to chat_project table -->
+        <addColumn tableName="chat_project">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to chapter table -->
+        <addColumn tableName="chapter">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to doc_embedding table -->
+        <addColumn tableName="doc_embedding">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to documento table -->
+        <addColumn tableName="documento">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to library table -->
+        <addColumn tableName="library">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to user table -->
+        <addColumn tableName="user">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Add deleted_at to user_library table -->
+        <addColumn tableName="user_library">
+            <column name="deleted_at" type="timestamp" remarks="Timestamp when record was soft-deleted (NULL = active)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <!-- Rollback: remove deleted_at columns from all tables -->
+            <dropColumn tableName="chat" columnName="deleted_at"/>
+            <dropColumn tableName="chat_message" columnName="deleted_at"/>
+            <dropColumn tableName="chat_project" columnName="deleted_at"/>
+            <dropColumn tableName="chapter" columnName="deleted_at"/>
+            <dropColumn tableName="doc_embedding" columnName="deleted_at"/>
+            <dropColumn tableName="documento" columnName="deleted_at"/>
+            <dropColumn tableName="library" columnName="deleted_at"/>
+            <dropColumn tableName="user" columnName="deleted_at"/>
+            <dropColumn tableName="user_library" columnName="deleted_at"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

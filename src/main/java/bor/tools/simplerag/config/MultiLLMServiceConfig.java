@@ -279,7 +279,12 @@ public class MultiLLMServiceConfig {
             throw new IllegalArgumentException("Provider name cannot be null or empty");
         }
 
-        String normalized = name.trim().toUpperCase().replace("-", "_");
+        String normalized = name.trim().toUpperCase()
+        	.replace("-", "_")
+        	.replace(" ", "_");
+        normalized = normalized.replace("LLMSERVICE", "")
+        	.replace(".java", "")
+        	.replace("java", "");
 
         try {
             return SERVICE_PROVIDER.fromString	(normalized);
@@ -287,7 +292,7 @@ public class MultiLLMServiceConfig {
             // Handle common aliases
             switch (normalized) {
                 case "LMSTUDIO":
-                case "LM_STUDIO":
+                case "LM_STUDIO":                    
                     return SERVICE_PROVIDER.LM_STUDIO;
                 case "OPENAI":
                 case "GPT":

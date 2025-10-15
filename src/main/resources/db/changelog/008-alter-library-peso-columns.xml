@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Changeset: Alter peso columns in library table to float4
+        Author: Claude Code
+        Date: 2025-10-14
+
+        Description:
+        Changes the data type of peso_semantico and peso_textual columns
+        from their current type to float4 (REAL in PostgreSQL).
+
+        Reason:
+        - float4 is more appropriate for weight values (0.0 to 1.0)
+        - Uses less storage than float8 (DOUBLE PRECISION)
+        - Sufficient precision for weight calculations
+    -->
+
+    <changeSet id="008-alter-library-peso-columns-to-float4" author="claude_code">
+        <comment>
+            Alter peso_semantico and peso_textual columns in library table to float4 type
+        </comment>
+
+        <!-- Modify peso_semantico column -->
+        <modifyDataType
+            tableName="library"
+            columnName="peso_semantico"
+            newDataType="float4"/>
+
+        <!-- Modify peso_textual column -->
+        <modifyDataType
+            tableName="library"
+            columnName="peso_textual"
+            newDataType="float4"/>
+
+        <rollback>
+            <!-- Rollback: revert to previous data type -->
+            <!-- Note: Adjust the data type below to match what it was before -->
+            <modifyDataType
+                tableName="library"
+                columnName="peso_semantico"
+                newDataType="float8"/>
+
+            <modifyDataType
+                tableName="library"
+                columnName="peso_textual"
+                newDataType="float8"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

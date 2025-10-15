@@ -57,18 +57,21 @@ Biblioteca (área de conhecimento)
 ### Instalação Rápida com Docker
 
 1. **Clone o repositório**:
+
 ```bash
 git clone https://github.com/seu-usuario/JSimpleRag.git
 cd JSimpleRag
 ```
 
 2. **Configure as variáveis de ambiente**:
+
 ```bash
 cp .env.example .env
 # Edite o arquivo .env com suas configurações
 ```
 
 3. **Execute com Docker Compose**:
+
 ```bash
 docker-compose up -d
 ```
@@ -81,6 +84,7 @@ docker-compose up -d
 ### Configuração Manual
 
 1. **Banco PostgreSQL com PGVector**:
+
 ```sql
 CREATE DATABASE rag_db;
 CREATE USER rag_user WITH PASSWORD 'rag_pass';
@@ -91,6 +95,7 @@ CREATE EXTENSION vector;
 ```
 
 2. **Configurar application.yml**:
+
 ```yaml
 spring:
   datasource:
@@ -105,6 +110,7 @@ rag:
 ```
 
 3. **Executar aplicação**:
+
 ```bash
 ./mvnw spring-boot:run
 ```
@@ -180,6 +186,7 @@ O JSimpleRag suporta queries em linguagem natural com sintaxe poderosa para pesq
 ### Exemplos de API
 
 #### Busca Híbrida (Recomendada)
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/search/hybrid \
   -H "Content-Type: application/json" \
@@ -193,6 +200,7 @@ curl -X POST http://localhost:8080/api/v1/search/hybrid \
 ```
 
 #### Busca Textual Apenas
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/search/textual \
   -H "Content-Type: application/json" \
@@ -204,6 +212,7 @@ curl -X POST http://localhost:8080/api/v1/search/textual \
 ```
 
 #### Busca Semântica Apenas
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/search/semantic \
   -H "Content-Type: application/json" \
@@ -289,6 +298,7 @@ src/
 ## 🔧 Configurações Avançadas
 
 ### Parâmetros de Embedding
+
 ```yaml
 rag:
   embedding:
@@ -368,6 +378,7 @@ mvn verify -P integration-tests
 ### 📦 Requisitos para Integration Tests
 
 **Opção 1: Ollama apenas (mínimo, recomendado para CI/CD)**
+
 ```bash
 # Instalar Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -384,6 +395,7 @@ ollama list
 ```
 
 **Opção 2: Ollama + LM Studio (completo, melhor para dev local)**
+
 ```bash
 # 1. Setup Ollama (veja acima)
 
@@ -402,6 +414,7 @@ ollama list
 ### 🎮 Comandos de Teste
 
 #### Unit Tests
+
 ```bash
 # Executar todos unit tests
 mvn test
@@ -414,6 +427,7 @@ mvn test jacoco:report
 ```
 
 #### Integration Tests
+
 ```bash
 # Ollama apenas (CI/CD friendly)
 mvn verify -P integration-tests-ollama
@@ -432,6 +446,7 @@ mvn verify -P integration-tests -X
 ```
 
 #### E2E Tests
+
 ```bash
 # Requer ambiente staging configurado
 mvn verify -P e2e-tests
@@ -440,6 +455,7 @@ mvn verify -P e2e-tests
 ### 📊 Cobertura de Testes
 
 **Estrutura Atual:**
+
 ```
 src/test/java/
 ├── unit/                        → 27 testes (lógica pura)
@@ -479,6 +495,7 @@ O projeto inclui scripts bash para facilitar o setup:
 | `scripts/check-providers.sh` | Verifica status e testa conectividade |
 
 **Exemplo de uso:**
+
 ```bash
 # Setup completo automatizado
 ./scripts/setup-ollama.sh
@@ -516,6 +533,7 @@ Para informações detalhadas sobre testes, consulte:
 ### 🐛 Troubleshooting
 
 **Problema: "Connection refused" para Ollama**
+
 ```bash
 # Verificar se está rodando
 curl http://localhost:11434/api/tags
@@ -528,6 +546,7 @@ tail -f /tmp/ollama.log
 ```
 
 **Problema: "Connection refused" para LM Studio**
+
 ```bash
 # 1. Abrir LM Studio
 # 2. Ir em "Local Server" (ícone ↔)
@@ -536,6 +555,7 @@ tail -f /tmp/ollama.log
 ```
 
 **Problema: Testes lentos**
+
 ```bash
 # Usar modelos menores
 ollama pull tinyllama  # Em vez de llama2
@@ -544,9 +564,43 @@ ollama pull tinyllama  # Em vez de llama2
 mvn verify -P integration-tests -Dgroups="integration & !slow"
 ```
 
+**Problema: Class Not Found Exception para LLMService**
+
+ Veja **Dependencias Locais** 
+
+
+## Dependências Locais
+
+Este projeto depende de **JSimpleLLM**, um projeto Maven local.
+
+### Setup Inicial
+
+1. Clone o JSimpleLLM:
+
+```bash
+git clone https://github.com/your-org/JSimpleLLM
+```
+
+2. Instale no repositório Maven local:
+
+  ```bash
+   cd JSimpleLLM
+   mvn clean install -DskipTests
+  ```
+
+3. Compile o JSimpleRag:
+
+  ```bash
+   cd JSimpleRag
+   mvn clean compile
+  ```
+
+Veja [LOCAL_MAVEN_DEPENDENCY_GUIDE.md](./doc/LOCAL_MAVEN_DEPENDENCY_GUIDE.md) para mais detalhes.
+
 ### 🎯 CI/CD Integration
 
 **GitHub Actions exemplo:**
+
 ```yaml
 name: Tests
 on: [push, pull_request]
@@ -588,6 +642,7 @@ Antes de criar um PR:
 ## 🚀 Deploy e Produção
 
 ### Docker Compose (Recomendado)
+
 ```bash
 # Produção
 docker-compose -f docker-compose.prod.yml up -d
@@ -597,6 +652,7 @@ docker-compose logs -f rag-api
 ```
 
 ### Variáveis de Ambiente Importantes
+
 ```bash
 DB_HOST=postgres
 DB_PORT=5432

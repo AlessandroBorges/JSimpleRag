@@ -80,5 +80,5 @@ public class ChatMessage extends Updatable{
     @Column(columnDefinition = "TEXT")
     private String response;
         
-
+   
 }

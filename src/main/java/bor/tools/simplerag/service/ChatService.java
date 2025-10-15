@@ -81,11 +81,11 @@ public class ChatService {
 
     /**
      * Load user chats ordered by update date
-     * @param clientUuid - client/user UUID
+     * @param userUuid - client/user UUID
      * @return List of chats
      */
-    public List<Chat> loadUserChats(UUID clientUuid) {
-        return chatRepository.findByClientUuidOrderByUpdatedAtDesc(clientUuid);
+    public List<Chat> loadUserChats(UUID userUuid) {
+        return chatRepository.findByUserUuidOrderByUpdatedAtDesc(userUuid);
     }
 
     /**
@@ -148,12 +148,12 @@ public class ChatService {
 
     /**
      * Find recent chats for user
-     * @param clientUuid - client/user UUID
+     * @param userUuid - client/user UUID
      * @param limit - number of chats to return
      * @return List of recent chats
      */
-    public List<Chat> findRecentChats(UUID clientUuid, int limit) {
-        return chatRepository.findTopNRecentChats(clientUuid, limit);
+    public List<Chat> findRecentChats(UUID userUuid, int limit) {
+        return chatRepository.findTopNRecentChats(userUuid, limit);
     }
 
     /**
@@ -189,21 +189,21 @@ public class ChatService {
 
     /**
      * Count user's chats
-     * @param clientUuid - client/user UUID
+     * @param userUuid - client/user UUID
      * @return chat count
      */
-    public long countUserChats(UUID clientUuid) {
-        return chatRepository.countByClientUuid(clientUuid);
+    public long countUserChats(UUID userUuid) {
+        return chatRepository.countByUserUuid(userUuid);
     }
 
     /**
      * Search chats by title
-     * @param clientUuid - client/user UUID
+     * @param userUuid - client/user UUID
      * @param titulo - title search text
      * @return List of matching chats
      */
-    public List<Chat> searchByTitulo(UUID clientUuid, String titulo) {
-        return chatRepository.findByClientUuid(clientUuid).stream()
+    public List<Chat> searchByTitulo(UUID userUuid, String titulo) {
+        return chatRepository.findByUserUuid(userUuid).stream()
                 .filter(chat -> chat.getTitulo() != null &&
                         chat.getTitulo().toLowerCase().contains(titulo.toLowerCase()))
                 .toList();
@@ -211,12 +211,12 @@ public class ChatService {
 
     /**
      * Check if chat exists
-     * @param clientUuid - client/user UUID
+     * @param userUuid - client/user UUID
      * @param titulo - chat title
      * @return true if exists
      */
-    public boolean existsByClientUuidAndTitulo(UUID clientUuid, String titulo) {
-        return chatRepository.existsByClientUuidAndTitulo(clientUuid, titulo);
+    public boolean existsByUserUuidAndTitulo(UUID userUuid, String titulo) {
+        return chatRepository.existsByUserUuidAndTitulo (userUuid, titulo);
     }
 
     /**

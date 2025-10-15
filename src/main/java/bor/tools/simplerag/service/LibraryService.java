@@ -243,7 +243,7 @@ public class LibraryService {
         LibraryDTO library = libraryOpt.get();
 
         // Load user-library associations
-        List<UserLibraryDTO> associations = toListUserLibs(userLibraryRepository.findByBibliotecaId(library.getId()));
+        List<UserLibraryDTO> associations = toListUserLibs(userLibraryRepository.findByLibraryId(library.getId()));
 
         // Load users
         Set<Integer> userIds = associations.stream()

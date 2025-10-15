@@ -1,5 +1,6 @@
 package bor.tools.simplerag.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import bor.tools.simplerag.entity.Chat;
@@ -34,7 +35,7 @@ public class ChatDTO {
      * UUID of the privative Library associated with this chat
      * Can be null if the chat does not use a privative Library
      */
-    private UUID bibliotecaPrivativa;
+    private UUID biblioteca_privativa;
 
     /**
      * Arbitrary metadata stored as JSONB
@@ -50,6 +51,13 @@ public class ChatDTO {
      * Title of the chat
      */
     private String titulo;
+    
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+    
+    private LocalDateTime deletedAt;
+    
 
     /**
      * Create DTO from entity
@@ -63,10 +71,13 @@ public class ChatDTO {
         return ChatDTO.builder()
                 .id(src.getId())
                 .userUuid(src.getUser_uuid())
-                .bibliotecaPrivativa(src.getBiblioteca_privativa())
+                .biblioteca_privativa(src.getBiblioteca_privativa())
                 .metadata(src.getMetadata())
                 .resumo(src.getResumo())
                 .titulo(src.getTitulo())
+                .createdAt(src.getCreatedAt())
+                .updatedAt(src.getUpdatedAt())
+                .deletedAt(src.getDeletedAt())
                 .build();
     }
 
@@ -78,10 +89,13 @@ public class ChatDTO {
         Chat entity = new Chat();
         entity.setId(this.id);
         entity.setUser_uuid(this.userUuid);
-        entity.setBiblioteca_privativa(this.bibliotecaPrivativa);
+        entity.setBiblioteca_privativa(this.biblioteca_privativa);
         entity.setMetadata(this.metadata);
         entity.setResumo(this.resumo);
         entity.setTitulo(this.titulo);
+        entity.setCreatedAt(this.createdAt);
+        entity.setUpdatedAt(this.updatedAt);
+        entity.setDeletedAt(this.deletedAt);
         return entity;
     }
 
@@ -97,7 +111,7 @@ public class ChatDTO {
      * Check if chat has a privative library
      */
     public boolean hasPrivativeLibrary() {
-        return bibliotecaPrivativa != null;
+        return biblioteca_privativa != null;
     }
 
     /**

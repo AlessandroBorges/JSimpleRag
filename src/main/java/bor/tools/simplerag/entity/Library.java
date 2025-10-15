@@ -64,7 +64,7 @@ public class Library extends Updatable {
      * Weight for semantic search (e.g., embeddings).
      * The sum of semantic and textual weights must equal 1.0.
      */
-    @Column(name = "peso_semantico", precision = 3, scale = 2)
+    @Column(name = "peso_semantico")
     @Builder.Default
     private Float pesoSemantico = 0.60f;
 
@@ -72,7 +72,7 @@ public class Library extends Updatable {
      * Weight for textual search (e.g., BM25).
      * The sum of semantic and textual weights must equal 1.0.
      */
-    @Column(name = "peso_textual", precision = 3, scale = 2)
+    @Column(name = "peso_textual")
     @Builder.Default
     private Float pesoTextual = 0.40f;
        
@@ -99,9 +99,9 @@ public class Library extends Updatable {
     @PreUpdate
     private void validateWeights() {
         if (pesoSemantico != null && pesoTextual != null) {
-            float sum = pesoSemantico + pesoTextual;
+            Float sum = pesoSemantico + pesoTextual;
             if (Math.abs(sum - 1.0f) > 0.001f)
-		throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
+                throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
         }
     }
     

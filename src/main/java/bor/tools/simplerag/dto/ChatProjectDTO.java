@@ -1,6 +1,7 @@
 
 package bor.tools.simplerag.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import bor.tools.simplerag.entity.MetaProject;
@@ -31,7 +32,7 @@ public class ChatProjectDTO {
      * UUID of the privative Library associated with this project
      * Can be null if the project does not use a privative Library
      */
-    private UUID bibliotecaPrivativa;
+    private UUID biblioteca_privativa;
 
     /**
      * Title of the project
@@ -58,6 +59,11 @@ public class ChatProjectDTO {
      * Order/sequence number for organizing projects
      */
     private Integer ordem;
+    
+	// campos declarados
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;    
+    private LocalDateTime deletedAt;
 
     /**
      * Create DTO from entity
@@ -70,12 +76,15 @@ public class ChatProjectDTO {
         }
         return ChatProjectDTO.builder()
                 .id(src.getId())
-                .bibliotecaPrivativa(src.getBiblioteca_privativa())
+                .biblioteca_privativa(src.getBiblioteca_privativa())
                 .titulo(src.getTitulo())
                 .descricao(src.getDescricao())
                 .metadata(src.getMetadata())
                 .userUuid(src.getUser_uuid())
                 .ordem(src.getOrdem())
+        	.createdAt(src.getCreatedAt())
+        	.updatedAt(src.getUpdatedAt())
+        	.deletedAt(src.getDeletedAt())
                 .build();
     }
 
@@ -86,12 +95,15 @@ public class ChatProjectDTO {
     public ChatProject toEntity() {
         ChatProject entity = new ChatProject();
         entity.setId(this.id);
-        entity.setBiblioteca_privativa(this.bibliotecaPrivativa);
+        entity.setBiblioteca_privativa(this.biblioteca_privativa);
         entity.setTitulo(this.titulo);
         entity.setDescricao(this.descricao);
         entity.setMetadata(this.metadata);
         entity.setUser_uuid(this.userUuid);
         entity.setOrdem(this.ordem);
+	entity.setCreatedAt(this.createdAt);
+	entity.setUpdatedAt(this.updatedAt);
+	entity.setDeletedAt(this.deletedAt);
         return entity;
     }
 
@@ -107,7 +119,7 @@ public class ChatProjectDTO {
      * Check if project has a privative library
      */
     public boolean hasPrivativeLibrary() {
-        return bibliotecaPrivativa != null;
+        return biblioteca_privativa != null;
     }
 
     /**

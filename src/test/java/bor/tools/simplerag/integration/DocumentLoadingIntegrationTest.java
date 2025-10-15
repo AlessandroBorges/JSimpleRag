@@ -166,7 +166,7 @@ class DocumentLoadingIntegrationTest {
         assertNotNull(status.getEmbeddingsCount());
 
         // Verify chapters were saved
-        long chapterCount = chapterRepository.countByDocumentoId(uploadedDoc.getId());
+        long chapterCount = chapterRepository.countByDocumento(uploadedDoc.getId());
         assertTrue(chapterCount > 0, "Should have created chapters");
 
         // Verify document was updated
