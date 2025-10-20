@@ -1,7 +1,0 @@
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/simplerag/config/LLMServiceConfigTest.java
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/simplerag/controller/DocumentControllerTest.java
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/simplerag/integration/DocumentLoadingIntegrationTest.java
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/simplerag/repository/DocEmbeddingJdbcRepositoryTest.java
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/simplerag/service/DocumentoServiceTest.java
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/simplerag/service/llm/LLMServiceManagerTest.java
-/mnt/f/1-ProjetosIA/github/JSimpleRag/src/test/java/bor/tools/utils/TikaDocumentConverterTest.java
