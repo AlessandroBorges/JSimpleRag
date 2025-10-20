@@ -7,6 +7,7 @@ import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
@@ -98,7 +99,7 @@ class DocumentoServiceTest {
                 "Test Document",
                 "# Test\nContent",
                 1,
-                new HashMap<>()
+                new MetaDoc()
         );
 
         // Then
@@ -128,7 +129,7 @@ class DocumentoServiceTest {
     @Test
     void testUploadFromText_WithMetadata() {
         // Given
-        Map<String, Object> metadata = new HashMap<>();
+        MetaDoc metadata = new MetaDoc();
         metadata.put("autor", "Test Author");
         metadata.put("area", "Test Area");
 

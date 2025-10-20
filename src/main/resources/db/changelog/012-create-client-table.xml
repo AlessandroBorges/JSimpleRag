@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="012-create-client-table" author="jsimplerag">
+        <comment>Create client table for API clients with authentication and authorization</comment>
+
+        <createTable tableName="client">
+            <!-- Primary Key -->
+            <column name="id" type="SERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- UUID for external API access -->
+            <column name="uuid" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <!-- Client identification -->
+            <column name="nome" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <!-- Metadata (JSONB) -->
+            <column name="metadata" type="JSONB" defaultValueComputed="'{}'::jsonb">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Association type (enum as VARCHAR) -->
+            <column name="tipo_associacao" type="VARCHAR(50)" defaultValue="LEITOR">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- API Key for authentication -->
+            <column name="api_key" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="api_key_expires_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Password hash -->
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Active status -->
+            <column name="ativo" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Audit fields (from Updatable) -->
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="deleted_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex indexName="idx_client_uuid" tableName="client">
+            <column name="uuid"/>
+        </createIndex>
+
+        <createIndex indexName="idx_client_email" tableName="client">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex indexName="idx_client_api_key" tableName="client">
+            <column name="api_key"/>
+        </createIndex>
+
+        <createIndex indexName="idx_client_nome" tableName="client">
+            <column name="nome"/>
+        </createIndex>
+
+        <!-- Index for soft delete filtering -->
+        <createIndex indexName="idx_client_deleted_at" tableName="client">
+            <column name="deleted_at"/>
+        </createIndex>
+
+        <!--
+        NOTE: Trigger for updated_at is NOT needed here.
+
+        The updated_at field is automatically managed by JPA @PreUpdate callback
+        in the Updatable superclass. See:
+        - src/main/java/bor/tools/simplerag/entity/Updatable.java
+
+        Using both JPA callbacks and database triggers would be redundant and
+        could potentially cause conflicts or double-updates.
+
+        If database triggers already exist from previous migrations, they will be
+        removed by changeset 013-remove-update-triggers.xml
+        -->
+
+        <rollback>
+            <dropTable tableName="client"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

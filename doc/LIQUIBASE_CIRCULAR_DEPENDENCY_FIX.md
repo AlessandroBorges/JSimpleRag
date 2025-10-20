@@ -1,7 +1,9 @@
 # Fix: Liquibase Circular Dependency Error
 
 **Data**: 2025-10-14
+
 **Erro**: `Circular depends-on relationship between 'liquibase' and 'entityManagerFactory'`
+
 **Status**: ✅ RESOLVIDO
 
 ---

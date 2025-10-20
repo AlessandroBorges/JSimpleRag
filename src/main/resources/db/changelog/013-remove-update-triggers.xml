@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!--
+    This changeset removes all database triggers that auto-update the updated_at column.
+
+    RATIONALE:
+    - The updated_at field is managed by JPA @PreUpdate callback in Updatable superclass
+    - Database triggers are redundant and could cause conflicts
+    - JPA provides better control and consistency across all entities
+
+    TECHNICAL DETAILS:
+    - Updatable.java uses @PreUpdate to set updated_at = LocalDateTime.now()
+    - This happens automatically before any entity update via JPA
+    - Database triggers would execute AFTER JPA sets the value, potentially overwriting it
+    - JPA callbacks are more portable across different database systems
+
+    See: src/main/java/bor/tools/simplerag/entity/Updatable.java
+    -->
+
+    <changeSet id="013-001-drop-client-update-trigger" author="jsimplerag">
+        <comment>Remove client table updated_at trigger (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_client_updated_at ON client;
+        </sql>
+
+        <rollback>
+            <!-- Recreate trigger if needed for rollback -->
+            <sql>
+                CREATE OR REPLACE FUNCTION update_updated_at_column()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    NEW.updated_at = CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+
+                CREATE TRIGGER update_client_updated_at
+                BEFORE UPDATE ON client
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-002-drop-biblioteca-update-trigger" author="jsimplerag">
+        <comment>Remove library table updated_at trigger if exists (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_biblioteca_updated_at ON biblioteca;
+            DROP TRIGGER IF EXISTS update_library_updated_at ON library;
+        </sql>
+
+        <rollback>
+            <sql>
+                CREATE TRIGGER update_library_updated_at
+                BEFORE UPDATE ON library
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-003-drop-documento-update-trigger" author="jsimplerag">
+        <comment>Remove documento table updated_at trigger if exists (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_documento_updated_at ON documento;
+        </sql>
+
+        <rollback>
+            <sql>
+                CREATE TRIGGER update_documento_updated_at
+                BEFORE UPDATE ON documento
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-004-drop-user-update-trigger" author="jsimplerag">
+        <comment>Remove user table updated_at trigger if exists (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_user_updated_at ON "user";
+        </sql>
+
+        <rollback>
+            <sql>
+                CREATE TRIGGER update_user_updated_at
+                BEFORE UPDATE ON "user"
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-005-drop-user-library-update-trigger" author="jsimplerag">
+        <comment>Remove user_library table updated_at trigger if exists (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_user_library_updated_at ON user_library;
+        </sql>
+
+        <rollback>
+            <sql>
+                CREATE TRIGGER update_user_library_updated_at
+                BEFORE UPDATE ON user_library
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-006-drop-chat-update-triggers" author="jsimplerag">
+        <comment>Remove chat-related tables updated_at triggers if exist (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_chat_project_updated_at ON chat_project;
+            DROP TRIGGER IF EXISTS update_chat_updated_at ON chat;
+            DROP TRIGGER IF EXISTS update_chat_message_updated_at ON chat_message;
+        </sql>
+
+        <rollback>
+            <sql>
+                CREATE TRIGGER update_chat_project_updated_at
+                BEFORE UPDATE ON chat_project
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+
+                CREATE TRIGGER update_chat_updated_at
+                BEFORE UPDATE ON chat
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+
+                CREATE TRIGGER update_chat_message_updated_at
+                BEFORE UPDATE ON chat_message
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-007-drop-other-update-triggers" author="jsimplerag">
+        <comment>Remove other table updated_at triggers if exist (managed by JPA @PreUpdate)</comment>
+
+        <sql>
+            DROP TRIGGER IF EXISTS update_chapter_updated_at ON chapter;
+            DROP TRIGGER IF EXISTS update_doc_embedding_updated_at ON doc_embedding;
+        </sql>
+
+        <rollback>
+            <sql>
+                CREATE TRIGGER update_chapter_updated_at
+                BEFORE UPDATE ON chapter
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+
+                CREATE TRIGGER update_doc_embedding_updated_at
+                BEFORE UPDATE ON doc_embedding
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-008-drop-update-function-if-unused" author="jsimplerag" runOnChange="false">
+        <comment>
+            Optionally drop the update_updated_at_column() function if no triggers use it.
+            This is safe because JPA manages updated_at directly.
+            Keep the function only if you have custom triggers that need it.
+        </comment>
+
+        <sql>
+            -- Check if function exists and drop it
+            -- Note: This will fail silently if other triggers still use it
+            DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
+        </sql>
+
+        <rollback>
+            <sql>
+                -- Recreate the function for rollback
+                CREATE OR REPLACE FUNCTION update_updated_at_column()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    NEW.updated_at = CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

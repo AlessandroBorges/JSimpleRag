@@ -6,6 +6,7 @@ import bor.tools.simplerag.dto.UserDTO;
 import bor.tools.simplerag.dto.UserWithLibrariesDTO;
 import bor.tools.simplerag.entity.User;
 import bor.tools.simplerag.service.UserService;
+import bor.tools.simplerag.service.UserWithLibraries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,14 +43,12 @@ public class UserController {
         log.info("Saving user: {}", dto.getEmail());
 
         try {
-            // Convert DTO to Entity
-            User user = toEntity(dto);
-
+           
             // Save
-            User saved = userService.save(user);
+            User saved = userService.save(dto);
 
             // Convert back to DTO
-            UserDTO response = UserDTO.from(saved);
+            UserDTO response = dto;
 
             log.info("User saved: id={}, uuid={}", saved.getId(), saved.getUuid());
 
@@ -62,6 +61,35 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error saving user: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao salvar usuário: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get all users
+     */
+    @GetMapping
+    @Operation(summary = "Get all users",
+               description = "Returns all active users (not soft-deleted). Use pagination parameters if needed.")
+    public ResponseEntity<List<UserDTO>> findAll() {
+        log.debug("Finding all users");
+
+        try {
+            List<User> users = userService.findAllAtivos();
+
+            List<UserDTO> userDTOs = users.stream()
+                    .map(UserDTO::from)
+                    .collect(Collectors.toList());
+
+            // hide password
+	    userDTOs.forEach(u -> u.setPassword(null));
+            
+            log.info("Found {} users", userDTOs.size());
+
+            return ResponseEntity.ok(userDTOs);
+
+        } catch (Exception e) {
+            log.error("Error finding all users: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar usuários: " + e.getMessage(), e);
         }
     }
 
@@ -118,7 +146,7 @@ public class UserController {
         log.debug("Finding user with libraries: uuid={}", uuid);
 
         try {
-            UserService.UserWithLibraries userWithLibraries = userService.loadUserWithLibraries(uuid)
+            UserWithLibraries userWithLibraries = userService.loadUserWithLibraries(uuid)
                     .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado: " + uuid));
 
             // Convert to DTO

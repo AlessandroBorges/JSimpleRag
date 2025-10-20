@@ -1,7 +1,9 @@
 package bor.tools.simplerag.controller;
 
 import bor.tools.simplerag.dto.DocumentoDTO;
-import bor.tools.simplerag.service.DocumentoService;
+import bor.tools.simplerag.dto.UploadTextRequest;
+import bor.tools.simplerag.dto.UploadUrlRequest;
+import bor.tools.simplerag.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +61,7 @@ class DocumentControllerTest {
     @Test
     void testUploadFromText_Success() throws Exception {
         // Given
-        DocumentController.UploadTextRequest request = new DocumentController.UploadTextRequest();
+        UploadTextRequest request = new UploadTextRequest();
         request.setTitulo("Test Document");
         request.setConteudo("# Test\nContent");
         request.setLibraryId(1);
@@ -86,7 +88,7 @@ class DocumentControllerTest {
     @Test
     void testUploadFromText_WithMetadata() throws Exception {
         // Given
-        DocumentController.UploadTextRequest request = new DocumentController.UploadTextRequest();
+        UploadTextRequest request = new UploadTextRequest();
         request.setTitulo("Test");
         request.setConteudo("Content");
         request.setLibraryId(1);
@@ -118,7 +120,7 @@ class DocumentControllerTest {
         when(documentoService.uploadFromText(anyString(), anyString(), anyInt(), any()))
                 .thenThrow(new IllegalArgumentException("Library not found"));
 
-        DocumentController.UploadTextRequest request = new DocumentController.UploadTextRequest();
+        UploadTextRequest request = new UploadTextRequest();
         request.setTitulo("Test");
         request.setConteudo("Content");
         request.setLibraryId(999);
@@ -135,7 +137,7 @@ class DocumentControllerTest {
     @Test
     void testUploadFromUrl_Success() throws Exception {
         // Given
-        DocumentController.UploadUrlRequest request = new DocumentController.UploadUrlRequest();
+         UploadUrlRequest request = new  UploadUrlRequest();
         request.setUrl("https://example.com/doc.pdf");
         request.setLibraryId(1);
         request.setTitulo("Test Document");
@@ -161,7 +163,7 @@ class DocumentControllerTest {
     @Test
     void testUploadFromUrl_NoTitle() throws Exception {
         // Given
-        DocumentController.UploadUrlRequest request = new DocumentController.UploadUrlRequest();
+         UploadUrlRequest request = new  UploadUrlRequest();
         request.setUrl("https://example.com/document.pdf");
         request.setLibraryId(1);
 
@@ -462,7 +464,7 @@ class DocumentControllerTest {
     @Test
     void testUploadTextRequest_Serialization() throws Exception {
         // Test that request DTO can be properly serialized/deserialized
-        DocumentController.UploadTextRequest request = new DocumentController.UploadTextRequest();
+        UploadTextRequest request = new UploadTextRequest();
         request.setTitulo("Test");
         request.setConteudo("Content");
         request.setLibraryId(1);
@@ -472,8 +474,8 @@ class DocumentControllerTest {
         request.setMetadados(metadata);
 
         String json = objectMapper.writeValueAsString(request);
-        DocumentController.UploadTextRequest deserialized =
-                objectMapper.readValue(json, DocumentController.UploadTextRequest.class);
+        UploadTextRequest deserialized =
+                objectMapper.readValue(json, UploadTextRequest.class);
 
         assertEquals(request.getTitulo(), deserialized.getTitulo());
         assertEquals(request.getConteudo(), deserialized.getConteudo());
@@ -483,14 +485,14 @@ class DocumentControllerTest {
 
     @Test
     void testUploadUrlRequest_Serialization() throws Exception {
-        DocumentController.UploadUrlRequest request = new DocumentController.UploadUrlRequest();
+         UploadUrlRequest request = new  UploadUrlRequest();
         request.setUrl("https://example.com");
         request.setLibraryId(1);
         request.setTitulo("Test");
 
         String json = objectMapper.writeValueAsString(request);
-        DocumentController.UploadUrlRequest deserialized =
-                objectMapper.readValue(json, DocumentController.UploadUrlRequest.class);
+         UploadUrlRequest deserialized =
+                objectMapper.readValue(json,  UploadUrlRequest.class);
 
         assertEquals(request.getUrl(), deserialized.getUrl());
         assertEquals(request.getLibraryId(), deserialized.getLibraryId());
@@ -502,7 +504,7 @@ class DocumentControllerTest {
     @Test
     void testUploadFromText_InternalServerError() throws Exception {
         // Given
-        DocumentController.UploadTextRequest request = new DocumentController.UploadTextRequest();
+        UploadTextRequest request = new UploadTextRequest();
         request.setTitulo("Test");
         request.setConteudo("Content");
         request.setLibraryId(1);
@@ -520,7 +522,7 @@ class DocumentControllerTest {
     @Test
     void testUploadFromUrl_ConversionError() throws Exception {
         // Given
-        DocumentController.UploadUrlRequest request = new DocumentController.UploadUrlRequest();
+         UploadUrlRequest request = new  UploadUrlRequest();
         request.setUrl("https://example.com/doc.pdf");
         request.setLibraryId(1);
 

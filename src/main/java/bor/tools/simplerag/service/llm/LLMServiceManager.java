@@ -510,7 +510,7 @@ public class LLMServiceManager {
         for (int i = 0; i < services.size(); i++) {
             try {
                 LLMService service = services.get(i);
-                java.util.List<String> models = service.getRegisterdModelNames();
+                java.util.List<String> models = service.getRegisteredModelNames();
                 if (models != null && !models.isEmpty()) {
                     modelsByProvider.put(i, new java.util.ArrayList<>(models));
                 }
@@ -533,7 +533,7 @@ public class LLMServiceManager {
 
         for (LLMService service : services) {
             try {
-                java.util.List<String> models = service.getRegisterdModelNames();
+                java.util.List<String> models = service.getRegisteredModelNames();
                 if (models != null) {
                     allModels.addAll(models);
                 }

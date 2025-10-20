@@ -7,17 +7,17 @@
 
 ## 📋 Índice
 
-1. [O que é um Changeset](#o-que-é-um-changeset)
+1. [O que é um Changeset](#o-que-e-um-changeset)
 2. [Estrutura de Arquivos](#estrutura-de-arquivos)
 3. [Como Criar um Novo Changeset](#como-criar-um-novo-changeset)
 4. [Exemplo: Alterar Tipo de Coluna](#exemplo-alterar-tipo-de-coluna)
 5. [Comandos Maven Liquibase](#comandos-maven-liquibase)
-6. [Boas Práticas](#boas-práticas)
+6. [Boas Práticas](#boas-praticas)
 7. [Troubleshooting](#troubleshooting)
 
 ---
 
-## O que é um Changeset?
+## O que e um Changeset?
 
 Um **changeset** é uma unidade atômica de mudança no banco de dados. Pense nele como um "commit" para o schema do banco.
 
@@ -160,6 +160,7 @@ mvn liquibase:status
 ```
 
 **Saída esperada**:
+
 ```
 1 change sets have not been applied to rag_rw@jdbc:postgresql://alessandro-X99:5432/db_rag
      db/changelog/008-alter-library-peso-columns.xml::008-alter-library-peso-columns-to-float4::claude_code
@@ -212,11 +213,12 @@ mvn liquibase:clearCheckSums
 
 ---
 
-## Boas Práticas
+## Boas Praticas
 
 ### 1. ✅ Nunca Modifique Changesets Já Aplicados
 
 **❌ ERRADO**:
+
 ```xml
 <!-- Este changeset já foi aplicado em produção -->
 <changeSet id="001-create-table-user">
@@ -228,6 +230,7 @@ mvn liquibase:clearCheckSums
 ```
 
 **✅ CORRETO**:
+
 ```xml
 <!-- Criar novo changeset para a mudança -->
 <changeSet id="009-alter-user-email-length">
@@ -238,11 +241,13 @@ mvn liquibase:clearCheckSums
 ### 2. ✅ Use IDs Descritivos
 
 **❌ RUIM**:
+
 ```xml
 <changeSet id="1" author="dev">
 ```
 
 **✅ BOM**:
+
 ```xml
 <changeSet id="008-alter-library-peso-columns-to-float4" author="claude_code">
 ```
@@ -286,6 +291,7 @@ mvn liquibase:clearCheckSums
 ### 6. ✅ Separe Changesets por Funcionalidade
 
 **❌ EVITE**:
+
 ```xml
 <!-- Um changeset fazendo muitas coisas diferentes -->
 <changeSet id="008-big-changes">
@@ -297,6 +303,7 @@ mvn liquibase:clearCheckSums
 ```
 
 **✅ PREFIRA**:
+
 ```xml
 <!-- Changesets pequenos e focados -->
 <changeSet id="008-alter-library-peso-columns">
@@ -458,6 +465,7 @@ mvn liquibase:clearCheckSums
 **Causa**: Você modificou um changeset que já foi aplicado
 
 **Solução 1** (Desenvolvimento):
+
 ```bash
 mvn liquibase:clearCheckSums
 ```
@@ -473,6 +481,7 @@ mvn liquibase:clearCheckSums
 **Causa**: Uma precondição não foi satisfeita
 
 **Exemplo**:
+
 ```xml
 <preConditions onFail="HALT">
     <tableExists tableName="library"/>
@@ -488,6 +497,7 @@ mvn liquibase:clearCheckSums
 **Causa**: Changeset já foi executado
 
 **Verificar**:
+
 ```sql
 SELECT * FROM databasechangelog WHERE id = '008-alter-library-peso-columns-to-float4';
 ```

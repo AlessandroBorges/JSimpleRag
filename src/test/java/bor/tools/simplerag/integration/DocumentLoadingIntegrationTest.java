@@ -4,6 +4,7 @@ import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
@@ -111,7 +112,7 @@ class DocumentLoadingIntegrationTest {
                 titulo,
                 conteudo,
                 testLibrary.getId(),
-                metadata
+                new MetaDoc(metadata)
         );
 
         // Then - Verify document was saved
@@ -357,7 +358,7 @@ class DocumentLoadingIntegrationTest {
                 "Metadata Test",
                 "Content",
                 testLibrary.getId(),
-                metadata
+                new MetaDoc(metadata)
         );
 
         // Then - Verify all metadata was preserved

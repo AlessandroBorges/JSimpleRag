@@ -5,9 +5,15 @@ package bor.tools.simplerag.entity;
 
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * Metadados específicos para "Projeto".
  */
+	
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MetaProject extends MetaBiblioteca {
 
     /**

@@ -64,8 +64,8 @@ class LLMServiceManagerTest {
 
 	// Configure model names for MODEL_BASED strategy (will be overridden in
 	// specific tests)
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("default-model"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("default-model"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("default-model"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("default-model"));
     }
 
     // ============ PRIMARY_ONLY Strategy Tests ============
@@ -366,8 +366,8 @@ class LLMServiceManagerTest {
     @Test
     void testModelBasedStrategy_FindsModelInPrimary() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2", "mistral", "qwen"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral", "qwen"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -387,8 +387,8 @@ class LLMServiceManagerTest {
     @Test
     void testModelBasedStrategy_FindsModelInSecondary() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -408,8 +408,8 @@ class LLMServiceManagerTest {
     @Test
     void testModelBasedStrategy_ModelNotFound_FallbackToPrimary() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -427,8 +427,8 @@ class LLMServiceManagerTest {
     @Test
     void testModelBasedStrategy_PartialMatch() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2-7b", "mistral-7b"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-4-turbo"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2-7b", "mistral-7b"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-4-turbo"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -446,8 +446,8 @@ class LLMServiceManagerTest {
     @Test
     void testModelBasedStrategy_CaseInsensitive() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("Llama2", "Mistral"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("GPT-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("Llama2", "Mistral"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("GPT-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -465,8 +465,8 @@ class LLMServiceManagerTest {
     @Test
     void testModelBasedStrategy_Completion() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -488,8 +488,8 @@ class LLMServiceManagerTest {
     @Test
     void testGetAllModels_ReturnsCombinedList() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -509,8 +509,8 @@ class LLMServiceManagerTest {
     @Test
     void testGetAllAvailableModels_ReturnsModelsByProvider() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -530,8 +530,8 @@ class LLMServiceManagerTest {
     @Test
     void testFindProviderIndexByModel_ReturnsCorrectIndex() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("qwen3"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("PHI-3.5", "PHI-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("qwen3"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("PHI-3.5", "PHI-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
@@ -545,8 +545,8 @@ class LLMServiceManagerTest {
     @Test
     void testGetServiceByModel_ReturnsCorrectService() throws LLMException {
 	// Given
-	when(primaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("llama2"));
-	when(secondaryService.getRegisterdModelNames()).thenReturn(Arrays.asList("gpt-4"));
+	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2"));
+	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-4"));
 
 	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);

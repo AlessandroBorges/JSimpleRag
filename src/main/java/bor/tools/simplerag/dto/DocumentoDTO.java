@@ -7,7 +7,10 @@ import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +27,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DocumentoDTO {
 
     private Integer id;
@@ -103,7 +108,7 @@ public class DocumentoDTO {
         entity.setFlagVigente(this.flagVigente);
         entity.setDataPublicacao(this.dataPublicacao);
         entity.setTokensTotal(this.tokensTotal);
-        entity.setMetadados(this.metadados);
+        entity.setMetadados(new MetaDoc(this.metadados));
         entity.setCreatedAt(this.createdAt);
         entity.setUpdatedAt(this.updatedAt);
         entity.setDeletedAt(this.deletedAt);

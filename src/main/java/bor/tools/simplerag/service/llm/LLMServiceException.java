@@ -8,6 +8,11 @@ package bor.tools.simplerag.service.llm;
  */
 public class LLMServiceException extends RuntimeException {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+    
     private final String providerName;
     private final ErrorType errorType;
 

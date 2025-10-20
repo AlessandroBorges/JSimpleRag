@@ -1,5 +1,9 @@
 package bor.tools.simplerag.entity.enums;
 
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Enum representing the type of document content.
  * Maps to PostgreSQL enum tipo_conteudo ('livro', 'normativo', 'artigo', 'manual', 'outros')
@@ -25,7 +29,7 @@ public enum TipoConteudo {
     WIKI(18, "wiki", "Conteúdo colaborativo tipo Wiki"),
     PROJETO(19, "projeto", "Documento de projeto ou planejamento"),
     DOCUMENTO_INTERNO(20, "documento_interno", "Documento interno da organização"),
-    OUTROS(21, "outros", "Outro tipo de documento não listado");
+    OUTROS(99, "outros", "Outro tipo de documento não listado");
 
     /**
      * The corresponding code in the application.
@@ -50,6 +54,7 @@ public enum TipoConteudo {
         return codigo;
     }
 
+    @JsonValue
     public String getDbValue() {
         return dbValue;
     }
@@ -58,17 +63,7 @@ public enum TipoConteudo {
         return description;
     }
 
-    /**
-     * Get enum from database value
-     */
-    public static TipoConteudo fromDbValue(String dbValue) {
-        for (TipoConteudo tipo : values()) {
-            if (tipo.dbValue.equals(dbValue))
-                return tipo;
-        }
-        throw new IllegalArgumentException("Unknown tipo_conteudo value: " + dbValue);
-    }
-
+    
     /**
      * Get enum from code
      */
@@ -106,12 +101,22 @@ public enum TipoConteudo {
 
     /**
      * Get enum from name, case insensitive
+     * @param name
+     * @return
      */
+    @JsonCreator
+    public static TipoConteudo fromString(String name) {
+	return fromName(name);
+    }
+    
+    /**
+     * Get enum from name, case insensitive
+     */    
     public static TipoConteudo fromName(String name) {
         for (TipoConteudo tipo : values()) {
             if (tipo.name().equalsIgnoreCase(name))
                 return tipo;
         }
-        return null;
+        throw new IllegalArgumentException("Unknown tipo_conteudo name: " + name);
     }
 }

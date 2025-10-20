@@ -33,7 +33,22 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/libraries")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Libraries", description = "Library management")
+@Tag(
+    name = "Libraries",
+    description = """
+        Library management operations.
+
+        **Key Concepts:**
+        - Libraries are containers for related documents (books, regulations, articles, manuals)
+        - Each library has configurable search weights (semantic + textual = 1.0)
+        - Libraries use UUID for external APIs and integer ID for internal operations
+
+        **Search Weight Configuration:**
+        - Legal documents: Higher textual weight (e.g., 0.4 semantic + 0.6 textual) for precise term matching
+        - Technical documentation: Higher semantic weight (e.g., 0.7 semantic + 0.3 textual) for conceptual understanding
+        - General knowledge: Balanced weights (e.g., 0.6 semantic + 0.4 textual)
+        """
+)
 public class LibraryController {
 
     private final LibraryService libraryService;
@@ -42,16 +57,39 @@ public class LibraryController {
      * Create or update library
      */
     @PostMapping
-    @Operation(summary = "Create or update library",
-               description = "Saves library with weight validation (semantic + textual = 1.0)")
+    @Operation(
+        summary = "Create or update library",
+        description = """
+            Creates or updates a library with search weight configuration.
+
+            **Weight Validation:**
+            - pesoSemantico + pesoTextual must equal 1.0
+            - Both values must be between 0.0 and 1.0
+
+            **Recommended Weights by Content Type:**
+            - Legal/Regulatory (0.4/0.6): Emphasizes exact term matching (article numbers, law names)
+            - Technical Documentation (0.7/0.3): Favors conceptual understanding
+            - Scientific Articles (0.6/0.4): Balanced approach
+            - General Knowledge (0.6/0.4): Default balanced configuration
+
+            **Examples:**
+            ```json
+            {
+              "nome": "Brazilian Legislation",
+              "areaConhecimento": "Legal",
+              "pesoSemantico": 0.4,
+              "pesoTextual": 0.6,
+              "tipo": "PUBLICA"
+            }
+            ```
+            """
+    )
     public ResponseEntity<LibraryDTO> save(@Valid @RequestBody LibraryDTO dto) {
         log.info("Saving library: {}", dto.getNome());
 
         try {
             LibraryDTO saved = libraryService.save(dto);
-
             log.info("Library saved: id={}, uuid={}", saved.getId(), saved.getUuid());
-
             return ResponseEntity.status(dto.getId() == null ? HttpStatus.CREATED : HttpStatus.OK)
                     .body(saved);
 
@@ -65,11 +103,76 @@ public class LibraryController {
     }
 
     /**
+     * Get all libraries
+     */
+    @GetMapping
+    @Operation(
+        summary = "Get all libraries",
+        description = """
+            Returns all active libraries (not soft-deleted).
+
+            **Use Cases:**
+            - Display library catalog
+            - Browse available knowledge areas
+            - Select library for document upload
+            - Administrative overview
+
+            **Response includes:**
+            - Library UUID (for external API use)
+            - Name and knowledge area
+            - Search weights configuration
+            - Library type (PUBLIC/PRIVATE)
+            - Creation and update timestamps
+            """
+    )
+    public ResponseEntity<List<LibraryDTO>> findAll() {
+        log.debug("Finding all libraries");
+
+        try {
+            List<LibraryDTO> libraries = libraryService.findAll();
+
+            log.info("Found {} libraries", libraries.size());
+
+            return ResponseEntity.ok(libraries);
+
+        } catch (Exception e) {
+            log.error("Error finding all libraries: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar bibliotecas: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Delete library (soft or hard delete)
      */
     @DeleteMapping("/{uuid}")
-    @Operation(summary = "Delete library (soft or hard)",
-               description = "Soft delete sets deletedAt, hard delete removes library and associations")
+    @Operation(
+        summary = "Delete library (soft or hard)",
+        description = """
+            Deletes a library using its UUID.
+
+            **Delete Types:**
+            1. **Soft Delete (default, hard=false)**:
+               - Sets deletedAt timestamp to current date/time
+               - Library remains in database but is marked as deleted
+               - Can be recovered by clearing deletedAt field
+               - Recommended for most cases
+
+            2. **Hard Delete (hard=true)**:
+               - Permanently removes library from database
+               - CASCADE delete removes all associated:
+                 * Documents
+                 * Chapters
+                 * Embeddings
+                 * User-library associations
+               - **IRREVERSIBLE** - use with extreme caution!
+
+            **Security Note:** Uses UUID for external API access. Internal integer ID is not exposed.
+
+            **Example:**
+            - Soft delete: `DELETE /api/v1/libraries/{uuid}?hard=false`
+            - Hard delete: `DELETE /api/v1/libraries/{uuid}?hard=true`
+            """
+    )
     public ResponseEntity<Void> delete(@PathVariable UUID uuid,
                                        @RequestParam(defaultValue = "false") boolean hard) {
         log.info("Deleting library: uuid={}, hard={}", uuid, hard);
@@ -94,7 +197,19 @@ public class LibraryController {
      * Get library by UUID
      */
     @GetMapping("/{uuid}")
-    @Operation(summary = "Get library by UUID")
+    @Operation(
+        summary = "Get library by UUID",
+        description = """
+            Retrieves library details using its UUID.
+
+            **UUID vs ID Pattern:**
+            - **UUID**: Used for external API access (security, prevents database enumeration)
+            - **Integer ID**: Used internally for high-performance database operations
+            - External clients should always use UUID
+
+            Returns library with all configuration including search weights.
+            """
+    )
     public ResponseEntity<LibraryDTO> findByUuid(@PathVariable UUID uuid) {
         log.debug("Finding library by UUID: {}", uuid);
 
@@ -108,8 +223,37 @@ public class LibraryController {
      * Get library with associated users
      */
     @GetMapping("/{uuid}/with-users")
-    @Operation(summary = "Get library with associated users",
-               description = "Returns library with all user associations (PROPRIETARIO, COLABORADOR, LEITOR)")
+    @Operation(
+        summary = "Get library with associated users",
+        description = """
+            Returns library with all associated users and their access levels.
+
+            **User Association Types:**
+            - **PROPRIETARIO (Owner)**:
+              * Full access to library
+              * Can edit library settings
+              * Can delete library
+              * Can manage other users' access
+
+            - **COLABORADOR (Collaborator)**:
+              * Read and write access
+              * Can add/edit documents
+              * Cannot delete library
+              * Cannot change library settings
+
+            - **LEITOR (Reader)**:
+              * Read-only access
+              * Can search and view documents
+              * Cannot modify anything
+
+            **Response includes:**
+            - Library details
+            - All associated users with their names and access types
+            - User count
+
+            **Use Case:** Managing library permissions and viewing who has access
+            """
+    )
     public ResponseEntity<LibraryWithUsersDTO> getWithUsers(@PathVariable UUID uuid) {
         log.debug("Finding library with users: uuid={}", uuid);
 

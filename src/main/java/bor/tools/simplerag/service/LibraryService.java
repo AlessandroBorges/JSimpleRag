@@ -125,7 +125,7 @@ public class LibraryService {
         }
 
         // Convert DTO to Entity
-        Library library = toEntity(dto);
+        Library library = dto.toEntity();
 
         // Generate UUID if not present
         if (library.getUuid() == null) {
@@ -136,20 +136,7 @@ public class LibraryService {
         return LibraryDTO.from(saved);
     }
 
-    /**
-     * Convert DTO to Entity
-     */
-    private Library toEntity(LibraryDTO dto) {
-        Library library = new Library();
-        library.setId(dto.getId());
-        library.setUuid(dto.getUuid());
-        library.setNome(dto.getNome());
-        library.setAreaConhecimento(dto.getAreaConhecimento());
-        library.setPesoSemantico(dto.getPesoSemantico());
-        library.setPesoTextual(dto.getPesoTextual());
-        library.setMetadados(dto.getMetadados());
-        return library;
-    }
+    
 
     /**
      * Delete library (soft or hard delete)
@@ -175,6 +162,16 @@ public class LibraryService {
             libraryRepository.save(library);
             log.info("Library soft deleted: {}", library.getNome());
         }
+    }
+
+    /**
+     * Find all libraries
+     * @return List of all libraries
+     */
+    public List<LibraryDTO> findAll() {
+        return libraryRepository.findAll().stream()
+                .map(LibraryDTO::from)
+                .collect(Collectors.toList());
     }
 
     /**

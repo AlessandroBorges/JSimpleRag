@@ -20,7 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.UploadTextRequest;
+import bor.tools.simplerag.dto.UploadUrlRequest;
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.service.DocumentoService;
+import bor.tools.simplerag.service.ProcessingStatusTracker;
+import bor.tools.simplerag.service.ProcessingStatusTracker.ProcessingStatus;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,6 +55,8 @@ import lombok.extern.slf4j.Slf4j;
 public class DocumentController {
 
     private final DocumentoService documentoService;
+    private final ObjectMapper objectMapper;
+    private final ProcessingStatusTracker statusTracker;
 
     /**
      * Upload document from text content
@@ -59,9 +68,28 @@ public class DocumentController {
      * @return Created document DTO
      */
     @PostMapping("/upload/text")
-    @Operation(summary = "Upload document from text",
-               description = "Upload document from markdown or plain text. " +
-                            "Recommended for content already in markdown format.")
+    @Operation(
+        summary = "Upload document from text",
+        description = """
+            Upload document from markdown or plain text content.
+
+            **Recommended for:** Content already in markdown format or plain text
+
+            **Upload Workflow:**
+            1. POST /api/v1/documents/upload/text → Returns document with ID
+            2. POST /api/v1/documents/{id}/process → Starts async processing
+            3. GET /api/v1/documents/{id}/status → Monitor processing status
+
+            **Requirements:**
+            - Title: 3-500 characters
+            - Content: Minimum 100 characters
+            - Library must exist
+
+            **Metadata:** Optional JSON with fields like autor, isbn, palavras_chave
+
+            **Processing:** Document is NOT automatically processed. Call /process endpoint after upload.
+            """
+    )
     public ResponseEntity<DocumentoDTO> uploadFromText(@Valid @RequestBody UploadTextRequest request) {
         log.info("Uploading document from text: {} (library={})", request.getTitulo(), request.getLibraryId());
 
@@ -70,7 +98,7 @@ public class DocumentController {
                     request.getTitulo(),
                     request.getConteudo(),
                     request.getLibraryId(),
-                    request.getMetadados()
+                    new MetaDoc( request.getMetadados())
             );
 
             log.info("Document uploaded from text: id={}", saved.getId());
@@ -96,9 +124,27 @@ public class DocumentController {
      * @return Created document DTO
      */
     @PostMapping("/upload/url")
-    @Operation(summary = "Upload document from URL",
-               description = "Download and convert document from URL. " +
-                            "Supports HTML, PDF, MS Office formats.")
+    @Operation(
+        summary = "Upload document from URL",
+        description = """
+            Download document from URL and convert to markdown.
+
+            **Supported Formats:**
+            - HTML web pages (extracts main content)
+            - PDF documents
+            - Microsoft Office (DOCX, XLSX, PPTX)
+            - Plain text files
+
+            **Automatic Extraction:**
+            - Title: Extracted from HTML <title>, PDF metadata, or filename
+            - Content: Converted to markdown automatically
+            - Metadata: fonte_url and data_download auto-populated
+
+            **Processing:** Document is NOT automatically processed. Call /process endpoint after upload.
+
+            **Note:** URL must be publicly accessible (no authentication required)
+            """
+    )
     public ResponseEntity<DocumentoDTO> uploadFromUrl(@Valid @RequestBody UploadUrlRequest request) {
         log.info("Uploading document from URL: {} (library={})", request.getUrl(), request.getLibraryId());
 
@@ -107,7 +153,7 @@ public class DocumentController {
                     request.getUrl(),
                     request.getLibraryId(),
                     request.getTitulo(),
-                    request.getMetadados()
+                    new MetaDoc( request.getMetadados())
             );
 
             log.info("Document uploaded from URL: id={}", saved.getId());
@@ -132,13 +178,40 @@ public class DocumentController {
      * @param file Uploaded file
      * @param libraryId Library ID
      * @param titulo Optional title (will be derived from filename if null)
-     * @param metadata Optional metadata JSON
+     * @param metadataJson Optional metadata JSON
      * @return Created document DTO
      */
     @PostMapping(value = "/upload/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload document from file",
-               description = "Upload document file (PDF, DOCX, TXT, etc.). " +
-                            "File will be converted to markdown automatically.")
+    @Operation(
+        summary = "Upload document from file",
+        description = """
+            Upload document file with automatic conversion to markdown.
+
+            **Supported Formats:**
+            - PDF (.pdf)
+            - Microsoft Word (.doc, .docx)
+            - Text files (.txt, .md)
+            - OpenDocument (.odt)
+            - Rich Text Format (.rtf)
+
+            **Size Limits:**
+            - Maximum file size: 50MB
+            - Minimum content: 100 characters after conversion
+
+            **Parameters:**
+            - file: The document file (required)
+            - libraryId: UUID of target library (required)
+            - titulo: Optional title (auto-extracted from filename if not provided)
+            - metadata: Optional JSON string with custom metadata
+
+            **Metadata Example:**
+            ```json
+            {"autor": "John Doe", "tipo_conteudo": "1", "isbn": "978-0132350884"}
+            ```
+
+            **Processing:** Document is NOT automatically processed. Call /process endpoint after upload.
+            """
+    )
     public ResponseEntity<DocumentoDTO> uploadFromFile(
             @RequestPart("file") MultipartFile file,
             @RequestParam("libraryId") Integer libraryId,
@@ -176,6 +249,47 @@ public class DocumentController {
     }
 
     /**
+     * Get all documents
+     */
+    @GetMapping
+    @Operation(
+        summary = "Get all documents",
+        description = """
+            Returns all documents across all libraries.
+
+            **Use Cases:**
+            - Administrative overview of all documents
+            - Global search across libraries
+            - Document inventory management
+
+            **Note:** To get documents for a specific library, use /library/{libraryId} endpoint instead.
+
+            **Response includes:**
+            - Document ID and title
+            - Library ID
+            - Active status (flagVigente)
+            - Token count
+            - Publication date
+            - Creation and update timestamps
+            """
+    )
+    public ResponseEntity<List<DocumentoDTO>> findAll() {
+        log.debug("Finding all documents");
+
+        try {
+            List<DocumentoDTO> documents = documentoService.findAll();
+
+            log.info("Found {} documents", documents.size());
+
+            return ResponseEntity.ok(documents);
+
+        } catch (Exception e) {
+            log.error("Error finding all documents: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar documentos: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Process document asynchronously
      *
      * Fluxo steps (d) through (g): splitting, embedding generation, persistence
@@ -186,9 +300,23 @@ public class DocumentController {
      * @return Processing status (async)
      */
     @PostMapping("/{documentId}/process")
-    @Operation(summary = "Process document asynchronously",
-               description = "Splits document into chapters, generates embeddings, and persists to database. " +
-                            "Returns immediately with status endpoint URL.")
+    @Operation(
+        summary = "Process document asynchronously",
+        description = """
+            Initiates asynchronous document processing:
+            1. Splits document into chapters (~8k tokens each)
+            2. Generates embeddings for document, chapters, and chunks
+            3. Persists embeddings to database for search
+
+            **Processing time:** 1-10 minutes depending on document size
+            **Returns immediately** with 202 Accepted status
+            **Monitor progress:** Use GET /api/v1/documents/{id}/status
+
+            **Optional Parameters:**
+            - includeQA: Generate Q&A pairs from content (experimental)
+            - includeSummary: Generate chapter summaries (experimental)
+            """
+    )
     public ResponseEntity<Map<String, Object>> processDocument(
             @PathVariable Integer documentId,
             @RequestParam(defaultValue = "false") boolean includeQA,
@@ -198,6 +326,13 @@ public class DocumentController {
                 documentId, includeQA, includeSummary);
 
         try {
+            // Verify document exists and get title
+            DocumentoDTO documento = documentoService.findById(documentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+
+            // Start status tracking
+            statusTracker.startProcessing(documentId, documento.getTitulo());
+
             // Start async processing
             CompletableFuture<DocumentoService.ProcessingStatus> future =
                     documentoService.processDocumentAsync(documentId, includeQA, includeSummary);
@@ -206,7 +341,9 @@ public class DocumentController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Document processing started");
             response.put("documentId", documentId);
+            response.put("titulo", documento.getTitulo());
             response.put("statusUrl", "/api/v1/documents/" + documentId + "/status");
+            response.put("estimatedTime", "1-10 minutes");
 
             log.info("Document processing started: id={}", documentId);
 
@@ -224,15 +361,26 @@ public class DocumentController {
     /**
      * Get document processing status
      *
-     * Note: This is a simplified version. A production implementation would
-     * track processing status in a separate table or cache.
+     * Uses in-memory ProcessingStatusTracker to provide real-time status updates.
      *
      * @param documentId Document ID
      * @return Processing status
      */
     @GetMapping("/{documentId}/status")
-    @Operation(summary = "Get document processing status",
-               description = "Returns current processing status for a document")
+    @Operation(
+        summary = "Get document processing status",
+        description = """
+            Returns real-time processing status for a document.
+
+            **Status Values:**
+            - NOT_STARTED: Document exists but processing not initiated
+            - PROCESSING: Currently generating embeddings and chunks
+            - COMPLETED: Processing finished successfully
+            - FAILED: Processing encountered an error
+
+            **Progress:** Integer 0-100 indicating completion percentage
+            """
+    )
     public ResponseEntity<Map<String, Object>> getProcessingStatus(@PathVariable Integer documentId) {
         log.debug("Getting processing status for document: {}", documentId);
 
@@ -240,18 +388,30 @@ public class DocumentController {
             DocumentoDTO documento = documentoService.findById(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
 
-            Map<String, Object> status = new HashMap<>();
-            status.put("documentId", documentId);
-            status.put("titulo", documento.getTitulo());
-            status.put("tokensTotal", documento.getTokensTotal());
-            status.put("flagVigente", documento.getFlagVigente());
-            status.put("createdAt", documento.getCreatedAt());
-            status.put("updatedAt", documento.getUpdatedAt());
+            // Get real-time processing status from tracker
+            ProcessingStatus processingStatus = statusTracker.getStatus(documentId);
 
-            // Note: In production, check processing status from a tracking table
-            status.put("status", documento.getTokensTotal() != null ? "COMPLETED" : "PENDING");
+            Map<String, Object> response = new HashMap<>();
+            response.put("documentId", documentId);
+            response.put("titulo", documento.getTitulo());
+            response.put("status", processingStatus.getStatus().toString());
+            response.put("statusDescription", processingStatus.getStatus().getDescription());
+            response.put("progress", processingStatus.getProgress());
+            response.put("message", processingStatus.getMessage());
+            response.put("startedAt", processingStatus.getStartedAt());
+            response.put("updatedAt", processingStatus.getUpdatedAt());
+            response.put("completedAt", processingStatus.getCompletedAt());
 
-            return ResponseEntity.ok(status);
+            if (processingStatus.getErrorMessage() != null) {
+                response.put("errorMessage", processingStatus.getErrorMessage());
+            }
+
+            // Include document metadata
+            response.put("tokensTotal", documento.getTokensTotal());
+            response.put("flagVigente", documento.getFlagVigente());
+            response.put("createdAt", documento.getCreatedAt());
+
+            return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
             log.error("Document not found: {}", e.getMessage());
@@ -369,7 +529,7 @@ public class DocumentController {
     // ============ Helper Methods ============
 
     /**
-     * Parse metadata JSON string
+     * Parse metadata JSON string to Map using Jackson ObjectMapper
      */
     private Map<String, Object> parseMetadata(String metadataJson) {
         if (metadataJson == null || metadataJson.trim().isEmpty()) {
@@ -377,61 +537,11 @@ public class DocumentController {
         }
 
         try {
-            // Simple JSON parsing (in production, use Jackson ObjectMapper)
-            // For now, return empty map
-            // TODO: Implement proper JSON parsing
-            return new HashMap<>();
+            return objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            log.warn("Failed to parse metadata JSON: {}", e.getMessage());
+            log.warn("Failed to parse metadata JSON: {}. Returning empty map.", e.getMessage());
             return new HashMap<>();
         }
     }
 
-    // ============ Request DTOs ============
-
-    /**
-     * Request DTO for text upload
-     */
-    public static class UploadTextRequest {
-        private String titulo;
-        private String conteudo;
-        private Integer libraryId;
-        private Map<String, Object> metadados;
-
-        // Getters and Setters
-        public String getTitulo() { return titulo; }
-        public void setTitulo(String titulo) { this.titulo = titulo; }
-
-        public String getConteudo() { return conteudo; }
-        public void setConteudo(String conteudo) { this.conteudo = conteudo; }
-
-        public Integer getLibraryId() { return libraryId; }
-        public void setLibraryId(Integer libraryId) { this.libraryId = libraryId; }
-
-        public Map<String, Object> getMetadados() { return metadados; }
-        public void setMetadados(Map<String, Object> metadados) { this.metadados = metadados; }
-    }
-
-    /**
-     * Request DTO for URL upload
-     */
-    public static class UploadUrlRequest {
-        private String url;
-        private Integer libraryId;
-        private String titulo;
-        private Map<String, Object> metadados;
-
-        // Getters and Setters
-        public String getUrl() { return url; }
-        public void setUrl(String url) { this.url = url; }
-
-        public Integer getLibraryId() { return libraryId; }
-        public void setLibraryId(Integer libraryId) { this.libraryId = libraryId; }
-
-        public String getTitulo() { return titulo; }
-        public void setTitulo(String titulo) { this.titulo = titulo; }
-
-        public Map<String, Object> getMetadados() { return metadados; }
-        public void setMetadados(Map<String, Object> metadados) { this.metadados = metadados; }
-    }
 }

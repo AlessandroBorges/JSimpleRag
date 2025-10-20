@@ -13,6 +13,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import bor.tools.simplerag.entity.Chapter;
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
 
 /**
@@ -54,7 +55,7 @@ public class ChapterDTO {
     private Integer tokensTotal;
 
     @Builder.Default
-    private Metadata metadados = new Metadata();
+    private MetaDoc metadados = new MetaDoc();
 
     private LocalDateTime createdAt;
 
@@ -115,7 +116,7 @@ public class ChapterDTO {
         if (src.getMetadados() != null) {
             dto.setMetadados(src.getMetadados());
         } else {
-	    dto.setMetadados(new Metadata());
+	    dto.setMetadados(new MetaDoc());
 	}
         
         return dto;
@@ -248,9 +249,9 @@ public class ChapterDTO {
     }
 
     
-    public Metadata getMetadados() {
+    public MetaDoc getMetadados() {
         if (metadados == null) {
-            metadados = new Metadata();
+            metadados = new MetaDoc();
         }
         return metadados;
     }

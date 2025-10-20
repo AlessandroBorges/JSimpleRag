@@ -1,6 +1,9 @@
 
 package bor.tools.simplerag.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * Metadata for Library and Documento entities.
  * Must include the key 'language' for document processing.
@@ -16,6 +19,9 @@ package bor.tools.simplerag.entity;
  * @author bor
  *
  */
+	
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MetaBiblioteca extends Metadata{
 	/**
 	 *

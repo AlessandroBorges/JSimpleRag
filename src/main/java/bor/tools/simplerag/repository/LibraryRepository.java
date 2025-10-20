@@ -1,13 +1,15 @@
 package bor.tools.simplerag.repository;
 
-import bor.tools.simplerag.entity.Library;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import bor.tools.simplerag.entity.Library;
 
 /**
  * Repositório JPA para a entidade Library.
@@ -100,4 +102,22 @@ public interface LibraryRepository extends JpaRepository<Library, Integer> {
      */
     @Query("SELECT l FROM Library l JOIN UserLibrary ul ON l.id = ul.libraryId WHERE ul.userId = :id")
     List<Library> findByUsuarioId(Integer id);
+
+    
+    /**
+     * Busca todas as bibliotecas associadas a um usuário
+     */
+    @Query("SELECT l FROM Library l "
+    	+ "JOIN UserLibrary ul ON l.id = ul.libraryId "
+	+ "JOIN User u ON ul.userId = u.id "
+    	+ "WHERE u.uuid = :userUuid")
+    List<Library> findByUsuarioUuid(@Param("userUuid") UUID userUuid);
+    
+    /**
+     * Busca biblioteca por UUID
+     */
+    @Query("SELECT l FROM Library l WHERE l.uuid = :libraryUuid")
+    Optional<Library> findByUuid(UUID libraryUuid);
+
+
 }

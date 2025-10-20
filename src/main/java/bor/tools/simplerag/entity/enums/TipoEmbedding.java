@@ -1,5 +1,8 @@
 package bor.tools.simplerag.entity.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Enum representing the type of embedding stored in the system. Maps to
  * PostgreSQL enum tipo_embedding ('documento', 'capitulo', 'trecho')
@@ -53,6 +56,7 @@ public enum TipoEmbedding {
 	this.dbValue = dbValue;
     }
 
+   @JsonValue
     public String getDbValue() {
 	return dbValue;
     }
@@ -60,7 +64,8 @@ public enum TipoEmbedding {
     /**
      * Get enum from database value
      */
-    public static TipoEmbedding fromDbValue(String dbValue) {
+    @JsonCreator
+    public static TipoEmbedding fromString(String dbValue) {
 	for (TipoEmbedding tipo : values()) {
 	    if (tipo.dbValue.equals(dbValue))
 		return tipo;

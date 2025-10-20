@@ -271,6 +271,7 @@ GRANT ALL PRIVILEGES ON SCHEMA public TO rag_rw;
 ### Erro persiste com rag_rw
 
 **Diagnóstico**:
+
 ```sql
 -- Conectar como rag_rw
 psql -h alessandro-X99 -U rag_rw -d db_rag
@@ -283,6 +284,7 @@ SELECT * FROM databasechangelog LIMIT 1;
 ```
 
 **Solução**:
+
 ```sql
 -- Como superuser
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO rag_rw;

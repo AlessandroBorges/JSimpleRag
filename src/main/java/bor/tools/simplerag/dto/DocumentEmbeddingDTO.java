@@ -2,7 +2,10 @@ package bor.tools.simplerag.dto;
 
 import java.time.LocalDateTime;
 
-import bor.tools.simplerag.entity.Metadata;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +22,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DocumentEmbeddingDTO {
 
     private Integer id;
@@ -40,7 +44,7 @@ public class DocumentEmbeddingDTO {
 
     private String textoIndexado;
 
-    private Metadata metadados;
+    private MetaDoc metadados;
 
     private LocalDateTime createdAt;
 
@@ -72,7 +76,7 @@ public class DocumentEmbeddingDTO {
                 .trechoTexto(src.getTexto())
                 .ordemCap(src.getOrderChapter())
                 .embeddingVector(src.getEmbeddingVector())
-                .metadados(src.getMetadados() != null ? new Metadata(src.getMetadados()) : null)
+                .metadados(src.getMetadados() != null ? new MetaDoc(src.getMetadados()) : null)
                 .createdAt(src.getCreatedAt())
                 .updatedAt(src.getUpdatedAt())
                 .deletedAt(src.getDeletedAt())
@@ -147,7 +151,7 @@ public class DocumentEmbeddingDTO {
      */
     public void setMetadataValue(String key, Object value) {
         if (metadados == null) {
-            metadados = new Metadata();
+            metadados = new MetaDoc();
         }
         metadados.put(key, value);
     }

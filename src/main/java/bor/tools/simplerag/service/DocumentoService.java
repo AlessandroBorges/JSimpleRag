@@ -23,6 +23,7 @@ import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.DocumentEmbedding;
 import bor.tools.simplerag.entity.Documento;
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.repository.ChapterRepository;
@@ -85,7 +86,7 @@ public class DocumentoService {
      * @return Saved document DTO
      */
     public DocumentoDTO uploadFromText(String titulo, String conteudoMarkdown,
-                                      Integer libraryId, Map<String, Object> metadata) {
+                                      Integer libraryId, MetaDoc metadata) {
         log.debug("Uploading document from text: {}", titulo);
 
         // Validate library exists
@@ -101,7 +102,7 @@ public class DocumentoService {
                 .conteudoMarkdown(conteudoMarkdown)
                 .flagVigente(true)
                 .dataPublicacao(java.time.LocalDate.now())
-                .metadados(metadata != null ? metadata : new HashMap<>())
+                .metadados(metadata != null ? metadata : new MetaDoc())
                 .build();
 
         // Calculate token count
@@ -126,7 +127,7 @@ public class DocumentoService {
      * @throws Exception If download or conversion fails
      */
     public DocumentoDTO uploadFromUrl(String url, Integer libraryId,
-                                     String titulo, Map<String, Object> metadata) throws Exception {
+                                     String titulo, MetaDoc metadata) throws Exception {
         log.debug("Uploading document from URL: {}", url);
 
         // Validate library exists
@@ -152,7 +153,7 @@ public class DocumentoService {
 
         // Add URL to metadata
         if (metadata == null) {
-            metadata = new HashMap<>();
+            metadata = new MetaDoc();
         }
         metadata.put("url", url);
         metadata.put("detected_format", detectedFormat);
@@ -172,7 +173,7 @@ public class DocumentoService {
      * @throws Exception If conversion fails
      */
     public DocumentoDTO uploadFromFile(String fileName, byte[] fileContent,
-                                      Integer libraryId, Map<String, Object> metadata) throws Exception {
+                                      Integer libraryId, Map<String, Object> metadata_) throws Exception {
         log.debug("Uploading document from file: {}", fileName);
 
         // Validate library exists
@@ -191,10 +192,10 @@ public class DocumentoService {
         // Derive title from filename
         String titulo = deriveTitle(fileName, markdown);
 
-        // Add file info to metadata
-        if (metadata == null) {
-            metadata = new HashMap<>();
-        }
+        MetaDoc metadata = new MetaDoc();
+        if (metadata_ != null) {
+	    metadata.putAll(metadata_);
+	}       
         metadata.put("file_name", fileName);
         metadata.put("detected_format", detectedFormat);
         metadata.put("file_size_bytes", fileContent.length);
@@ -391,7 +392,7 @@ public class DocumentoService {
                 .conteudo(dto.getConteudo())
                 .ordemDoc(dto.getOrdemDoc())
                // .tokens(dto.getTokens())
-                .metadados(dto.getMetadados() != null ? dto.getMetadados() : new Metadata())
+                .metadados(dto.getMetadados() != null ? dto.getMetadados() : new MetaDoc())
                 .build();
     }
 
@@ -410,6 +411,15 @@ public class DocumentoService {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Get all documents
+     */
+    public List<DocumentoDTO> findAll() {
+        return documentoRepository.findAll().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     /**

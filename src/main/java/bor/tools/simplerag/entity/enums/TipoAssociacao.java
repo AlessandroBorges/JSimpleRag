@@ -1,8 +1,11 @@
 package bor.tools.simplerag.entity.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
- * Enum representing the type of association between User and Library.
- * Maps to PostgreSQL enum tipo_associacao ('proprietario', 'colaborador', 'leitor')
+ * Enum representing the type of association between User and Library. Maps to
+ * PostgreSQL enum tipo_associacao ('proprietario', 'colaborador', 'leitor')
  */
 public enum TipoAssociacao {
 
@@ -30,13 +33,24 @@ public enum TipoAssociacao {
      * 
      * @param dbValue
      */
-   private TipoAssociacao(String dbValue) {
+
+    private TipoAssociacao(String dbValue) {
 	this.dbValue = dbValue;
     }
 
+    @JsonValue
     public String getDbValue() {
 	return dbValue;
     }
-    
-    
+
+    @JsonCreator
+    public static TipoAssociacao fromString(String dbValue) {
+	for (TipoAssociacao tipo : TipoAssociacao.values()) {
+	    if (tipo.getDbValue().equalsIgnoreCase(dbValue)) {
+		return tipo;
+	    }
+	}
+	throw new IllegalArgumentException("Unknown value for enumeration TipoAssociacao: " + dbValue);
+    }
+
 }

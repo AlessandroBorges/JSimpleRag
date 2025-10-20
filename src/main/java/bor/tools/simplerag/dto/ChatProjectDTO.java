@@ -4,6 +4,9 @@ package bor.tools.simplerag.dto;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import bor.tools.simplerag.entity.MetaProject;
 import bor.tools.simplerag.entity.ChatProject;
 import lombok.AllArgsConstructor;
@@ -21,6 +24,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatProjectDTO {
 
     /**

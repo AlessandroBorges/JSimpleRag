@@ -5,9 +5,11 @@
       "Bash(mvn install:install-file:*)",
       "Bash(mvn test-compile:*)",
       "Bash(mvn test:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(./mvnw clean compile:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "default"
 }

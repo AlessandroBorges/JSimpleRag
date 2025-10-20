@@ -1,7 +1,6 @@
 package bor.tools.simplerag.entity;
 
 import java.time.LocalDate;
-import java.util.Map;
 
 import org.hibernate.annotations.Type;
 
@@ -61,7 +60,7 @@ public class Documento extends Updatable {
 
     @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
-    private Map<String, Object> metadados;
+    private MetaDoc metadados;
 
 
 

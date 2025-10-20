@@ -6,6 +6,7 @@ import org.hibernate.annotations.Type;
 
 import bor.tools.simplerag.entity.enums.TipoBiblioteca;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,7 +16,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -80,7 +82,7 @@ public class Library extends Updatable {
      * Type of library: PUBLIC (shared) or PRIVATE (user-specific).
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo", nullable = false)
+    @Column(name = "tipo", nullable = false, length = 50)
     private TipoBiblioteca tipo;
 
     /**
@@ -89,7 +91,8 @@ public class Library extends Updatable {
      */
     @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
-    private MetaBiblioteca metadados;
+    @Builder.Default
+    private MetaBiblioteca metadados = new MetaBiblioteca();
 
 
      /**
@@ -100,8 +103,9 @@ public class Library extends Updatable {
     private void validateWeights() {
         if (pesoSemantico != null && pesoTextual != null) {
             Float sum = pesoSemantico + pesoTextual;
-            if (Math.abs(sum - 1.0f) > 0.001f)
-                throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
+            if (Math.abs(sum - 1.0f) > 0.01f) {
+        	throw new IllegalStateException("A soma dos pesos semântico e textual deve ser igual a 1.0");
+            }
         }
     }
     
@@ -113,5 +117,52 @@ public class Library extends Updatable {
 	if(this.uuid==null)
 	    uuid = UUID.randomUUID();
 	return this.uuid;
+    }
+    
+    /**
+     * Get or create metadata
+     * @return
+     */   
+    public MetaBiblioteca getMetadados() {
+	if (metadados == null) {
+	    metadados = new MetaBiblioteca();
+	}
+	return metadados;
+    }
+    
+    @Transient 
+    public void setLanguage(String language) {	
+	getMetadados().setLanguage(language);
+    }
+    /**
+     * Gets the language from metadata
+     */
+    @Transient 
+    public String getLanguage() {
+        return metadados != null ? metadados.getLanguage() : null;
+    }
+
+    @Transient 
+    public void setEmbeddingModel(String model) {
+	getMetadados().setEmbeddingModel(model);    
+    }
+    /**
+     * Gets the embedding model from metadata
+     */
+    @Transient 
+    public String getEmbeddingModel() {
+        return metadados != null ? metadados.getEmbeddingModel() : null;
+    }
+
+    @Transient 
+    public void setEmbeddingDimension(Integer dimension) {	
+	getMetadados().setEmbeddingDimension(dimension);	    
+    }
+    /**
+     * Gets the embedding dimension from metadata
+     */
+    @Transient 
+    public Integer getEmbeddingDimension() {
+        return getMetadados().getEmbeddingDimension();
     }
 }

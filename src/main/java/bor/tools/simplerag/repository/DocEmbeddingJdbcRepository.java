@@ -25,6 +25,7 @@ import com.pgvector.PGvector;
 
 import bor.tools.simplerag.entity.DocumentEmbedding;
 import bor.tools.simplerag.entity.MetaBiblioteca;
+import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.util.VectorUtil;
 import jakarta.annotation.PostConstruct;
@@ -99,7 +100,7 @@ public class DocEmbeddingJdbcRepository {
             .libraryId(rs.getInt("library_id"))
             .documentoId(rs.getInt("documento_id"))
             .chapterId(rs.getObject("chapter_id", Integer.class))
-            .tipoEmbedding(TipoEmbedding.fromDbValue(rs.getString("tipo_embedding")))
+            .tipoEmbedding(TipoEmbedding.fromString(rs.getString("tipo_embedding")))
             .texto(rs.getString("texto"))
             .orderChapter(rs.getObject("order_chapter", Integer.class))
             .createdAt(rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null)
@@ -111,7 +112,7 @@ public class DocEmbeddingJdbcRepository {
         if (metadataJson != null && !metadataJson.isEmpty() && !metadataJson.equals("{}")) {
             // TODO: Usar Jackson para parse adequado do JSON
             // Por enquanto, criamos um mapa vazio para evitar NPE
-            doc.setMetadados(new HashMap<>());
+            doc.setMetadados(new MetaDoc());
         }
 
         // Processa embedding vector
@@ -138,9 +139,9 @@ public class DocEmbeddingJdbcRepository {
         DocumentEmbedding doc = rowMapper.mapRow(rs, rowNum);
 
         // Adiciona scores aos metadados
-        Map<String, Object> metadados = doc.getMetadados();
+        MetaDoc metadados = doc.getMetadados();
         if (metadados == null) {
-            metadados = new HashMap<>();
+            metadados = new MetaDoc();
             doc.setMetadados(metadados);
         }
 

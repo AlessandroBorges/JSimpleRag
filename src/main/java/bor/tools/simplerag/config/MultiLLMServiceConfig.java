@@ -1,7 +1,10 @@
 package bor.tools.simplerag.config;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,10 +13,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import bor.tools.simplellm.LLMConfig;
-import bor.tools.simplellm.*;
+import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.LLMServiceFactory;
-import bor.tools.simplellm.LLMServiceFactory.SERVICE_PROVIDER;
-
+import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.llm.LLMServiceStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +53,8 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 @Slf4j
 public class MultiLLMServiceConfig {
+    
+    Map<String, LLMService> listLLMService = new HashMap<>();
 
     private final LLMServiceConfig LLMServiceConfig;
 
@@ -253,6 +257,7 @@ public class MultiLLMServiceConfig {
     /**
      * Creates an LLMService instance with given configuration.
      */
+    @SuppressWarnings("static-access")
     private LLMService createLLMService(String providerName, 
 	    				String embeddingModel,
 	    				String apiUrl, 
@@ -266,11 +271,20 @@ public class MultiLLMServiceConfig {
         LLMServiceConfig.parseEmbeddingModelsToArray(embeddingModel, 0, config);
         
         LLMService service = LLMServiceFactory.createLLMService(provider, config);
-
         
+        String name = provider.name() + "-" + config.getBaseUrl();
+        listLLMService.put(name, service);
         return service;
     }
 
+    /**
+     * Get ACTIVE LLMService providers
+     * @return
+     */
+    public Map<String,LLMService> getActiveProviderMap(){	
+	return Collections.unmodifiableMap(this.listLLMService);
+    }
+    
     /**
      * Parses provider name from configuration to ProviderEnum.
      */

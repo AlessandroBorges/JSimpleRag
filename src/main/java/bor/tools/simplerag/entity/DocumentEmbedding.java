@@ -1,8 +1,8 @@
 package bor.tools.simplerag.entity;
 
-import java.util.Map;
-
 import org.hibernate.annotations.Type;
+
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
@@ -38,6 +38,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+@JsonPropertyOrder({ "id", "libraryId", "documentoId", "chapterId", "orderChapter", "tipoEmbedding", "metadados" })
 public class DocumentEmbedding extends Updatable {
 
     @Id
@@ -76,7 +77,7 @@ public class DocumentEmbedding extends Updatable {
      * @see bor.tools.simplerag.entity.enums.TipoEmbedding
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_embedding", nullable = false)
+    @Column(name = "tipo_embedding", nullable = false, length = 50)
     private TipoEmbedding tipoEmbedding;
 
     /**
@@ -145,7 +146,7 @@ public class DocumentEmbedding extends Updatable {
      */
     @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
-    private Map<String, Object> metadados;
+    private MetaDoc metadados;
 
 
     /**

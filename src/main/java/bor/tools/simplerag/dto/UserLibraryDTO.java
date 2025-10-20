@@ -2,6 +2,9 @@ package bor.tools.simplerag.dto;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import bor.tools.simplerag.entity.UserLibrary;
 import bor.tools.simplerag.entity.enums.TipoAssociacao;
 import lombok.AllArgsConstructor;
@@ -18,6 +21,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserLibraryDTO {
 
     /**

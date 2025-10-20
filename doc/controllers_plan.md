@@ -19,6 +19,7 @@ JSimpleRag é uma aplicação RAG (Retrieval Augmented Generation) com foco em *
 - **Error Handling**: Retornos padronizados com ResponseEntity
 
 ### API Structure
+
 ```
 /api/v1/search              → RAG Search Controller (PRIORITÁRIO)
 /api/v1/libraries           → Library Controller

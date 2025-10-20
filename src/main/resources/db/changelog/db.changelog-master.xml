@@ -32,4 +32,16 @@
     <!-- Phase 9: Add deleted_at column for soft delete support -->
     <include file="db/changelog/009-add-deleted-at-to-all-tables.xml"/>
 
+    <!-- Phase 10: Convert PostgreSQL ENUMs to VARCHAR for JPA compatibility -->
+    <include file="db/changelog/010-convert-enums-to-varchar.xml"/>
+
+    <!-- Phase 11: Remove peso_total_check constraint (validation now in Java code) -->
+    <include file="db/changelog/011-remove-peso-total-check.xml"/>
+
+    <!-- Phase 12: Create client table for API authentication -->
+    <include file="db/changelog/012-create-client-table.xml"/>
+
+    <!-- Phase 13: Remove database triggers for updated_at (managed by JPA @PreUpdate) -->
+    <include file="db/changelog/013-remove-update-triggers.xml"/>
+
 </databaseChangeLog>

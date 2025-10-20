@@ -1,5 +1,8 @@
 package bor.tools.simplerag.entity.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Enum representing the type of document section.
  * Maps to PostgreSQL enum tipo_secao ('introducao', 'metodologia', 'desenvolvimento', 'conclusao', 'anexo', 'outros')
@@ -36,6 +39,7 @@ public enum TipoSecao {
         return codigo;
     }
 
+    @JsonValue
     public String getDbValue() {
         return dbValue;
     }
@@ -43,7 +47,8 @@ public enum TipoSecao {
     /**
      * Get enum from database value
      */
-    public static TipoSecao fromDbValue(String dbValue) {
+    @JsonCreator
+    public static TipoSecao fromString(String dbValue) {
         for (TipoSecao tipo : values()) {
             if (tipo.dbValue.equals(dbValue))
 				return tipo;

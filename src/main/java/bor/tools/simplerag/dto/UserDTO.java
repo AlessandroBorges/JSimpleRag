@@ -3,6 +3,10 @@ package bor.tools.simplerag.dto;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import bor.tools.simplerag.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +22,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({ "id", "uuid", "nome", "email", "ativo", "libraryIds", 
+                     
+    "createdAt", "updatedAt", "deletedAt" })	
 public class UserDTO {
 
     private Integer id;
@@ -87,6 +95,7 @@ public class UserDTO {
     /**
      * Validates if the email has a valid format
      */
+    @JsonIgnore
     public boolean isEmailValid() {
         if (email == null || email.trim().isEmpty()) {
             return false;
@@ -98,6 +107,7 @@ public class UserDTO {
     /**
      * Validates if required fields are present
      */
+    @JsonIgnore
     public boolean isValid() {
         return nome != null && !nome.trim().isEmpty()
                 && isEmailValid()

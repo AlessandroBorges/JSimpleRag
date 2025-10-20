@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import bor.tools.simplellm.LLMConfig;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.LLMServiceFactory;
-import bor.tools.simplellm.LLMServiceFactory.SERVICE_PROVIDER;
+import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.ModelEmbedding;
 import bor.tools.simplellm.Model_Type;

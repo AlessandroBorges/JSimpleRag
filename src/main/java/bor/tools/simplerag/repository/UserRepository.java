@@ -2,9 +2,11 @@ package bor.tools.simplerag.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import bor.tools.simplerag.entity.User;
@@ -17,12 +19,15 @@ import bor.tools.simplerag.entity.User;
 @Repository
 public interface UserRepository extends JpaRepository<User, Integer> {
 
-    /**
-     * Busca usuário por UUID
-     */
-    @Query("SELECT u FROM User u WHERE u.uuid = :uuid")
-    Optional<User> findByUuid(String uuid);
 
+    /**
+     * Busca por uuid
+     * @param userUuuid - UUID do usuário
+     * @return
+     */
+    @Query("SELECT u FROM User u WHERE u.uuid = :userUuid")
+    Optional<User> findByUuid(@Param("userUuid") UUID userUuid);
+    
     /**
      * Busca usuário por email
      */
@@ -31,9 +36,15 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     /**
      * Verifica se existe usuário com o email especificado
+     */        
+    default boolean existsByEmail(String email) {
+        return countByEmailIgnoreCase(email) > 0;
+    }
+
+    /**
+     * Conta quantos usuários existem com o email especificado (case-insensitive)
      */
-    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM User u WHERE LOWER(u.email) = LOWER(:email)")
-    boolean existsByEmail(String email);
+    long countByEmailIgnoreCase(String email);
 
     /**
      * Busca usuários ativos

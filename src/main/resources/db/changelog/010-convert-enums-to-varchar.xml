@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!--
+    Converts PostgreSQL ENUM types to VARCHAR for better JPA/Hibernate compatibility.
+
+    REASONING:
+    - PostgreSQL ENUMs have poor Hibernate support across versions
+    - @Enumerated(EnumType.STRING) works seamlessly with VARCHAR
+    - Validation moved to application layer (Java enums)
+    - Easier schema evolution (no ALTER TYPE needed for new values)
+    - Better compatibility with JPA standard
+
+    TRADE-OFFS:
+    - Lost database-level validation (handled by Java now)
+    - Slightly more storage (VARCHAR vs internal integer)
+    - Gained: stability, compatibility, easier maintenance
+    -->
+
+    <!--
+        Step 1: Convert tipo_biblioteca column in library table
+    -->
+    <changeSet id="010-convert-tipo-biblioteca-to-varchar" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="library" columnName="tipo"/>
+        </preConditions>
+
+        <comment>Convert library.tipo from tipo_biblioteca ENUM to VARCHAR(50)</comment>
+
+        <sql>
+            -- Change column type to VARCHAR, casting existing ENUM values to text
+            ALTER TABLE library
+            ALTER COLUMN tipo TYPE VARCHAR(50) USING tipo::text;
+        </sql>
+
+        <rollback>
+            <sql>
+                -- Rollback: convert back to ENUM (requires tipo_biblioteca type exists)
+                ALTER TABLE library
+                ALTER COLUMN tipo TYPE tipo_biblioteca USING tipo::tipo_biblioteca;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!--
+        Step 2: Convert tipo_embedding column in doc_embedding table
+    -->
+    <changeSet id="010-convert-tipo-embedding-to-varchar" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="doc_embedding" columnName="tipo_embedding"/>
+        </preConditions>
+
+        <comment>Convert doc_embedding.tipo_embedding from tipo_embedding ENUM to VARCHAR(50)</comment>
+
+        <sql>
+            -- Change column type to VARCHAR, casting existing ENUM values to text
+            ALTER TABLE doc_embedding
+            ALTER COLUMN tipo_embedding TYPE VARCHAR(50) USING tipo_embedding::text;
+        </sql>
+
+        <rollback>
+            <sql>
+                ALTER TABLE doc_embedding
+                ALTER COLUMN tipo_embedding TYPE tipo_embedding USING tipo_embedding::tipo_embedding;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!--
+        Step 3: Convert tipo_associacao column in user_library table
+    -->
+    <changeSet id="010-convert-tipo-associacao-to-varchar" author="jsimplerag">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="user_library" columnName="tipo_associacao"/>
+        </preConditions>
+
+        <comment>Convert user_library.tipo_associacao from tipo_associacao ENUM to VARCHAR(50)</comment>
+
+        <sql>
+            -- Change column type to VARCHAR, casting existing ENUM values to text
+            ALTER TABLE user_library
+            ALTER COLUMN tipo_associacao TYPE VARCHAR(50) USING tipo_associacao::text;
+        </sql>
+
+        <rollback>
+            <sql>
+                ALTER TABLE user_library
+                ALTER COLUMN tipo_associacao TYPE tipo_associacao USING tipo_associacao::tipo_associacao;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!--
+        Step 4: Drop unused ENUM types (optional - only if not used elsewhere)
+
+        NOTE: Commented out for safety. Uncomment if you're sure these ENUMs
+              are not used in other tables or want to clean them up.
+    -->
+    <!--
+    <changeSet id="010-drop-tipo-biblioteca-enum" author="jsimplerag">
+        <sql>DROP TYPE IF EXISTS tipo_biblioteca CASCADE;</sql>
+        <rollback>
+            <sql>
+                CREATE TYPE tipo_biblioteca AS ENUM (
+                    'compartilhada',
+                    'pessoal',
+                    'chat',
+                    'projeto'
+                );
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="010-drop-tipo-embedding-enum" author="jsimplerag">
+        <sql>DROP TYPE IF EXISTS tipo_embedding CASCADE;</sql>
+        <rollback>
+            <sql>
+                CREATE TYPE tipo_embedding AS ENUM (
+                    'documento',
+                    'capitulo',
+                    'trecho',
+                    'perguntas_respostas',
+                    'resumo',
+                    'metadados',
+                    'outros'
+                );
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="010-drop-tipo-associacao-enum" author="jsimplerag">
+        <sql>DROP TYPE IF EXISTS tipo_associacao CASCADE;</sql>
+        <rollback>
+            <sql>
+                CREATE TYPE tipo_associacao AS ENUM (
+                    'proprietario',
+                    'colaborador',
+                    'leitor'
+                );
+            </sql>
+        </rollback>
+    </changeSet>
+    -->
+
+</databaseChangeLog>

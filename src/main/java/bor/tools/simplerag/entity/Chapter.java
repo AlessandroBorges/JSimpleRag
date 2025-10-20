@@ -2,6 +2,8 @@ package bor.tools.simplerag.entity;
 
 import org.hibernate.annotations.Type;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,6 +29,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+@JsonPropertyOrder({ "id", "documentoId", "titulo", "ordemDoc", "tokenInicio", "tokenFim", "metadados" })	
 public class Chapter extends Updatable {
 
     @Id
@@ -56,7 +59,7 @@ public class Chapter extends Updatable {
 
     @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
-    private Metadata metadados;
+    private MetaDoc metadados;
 
 
 }

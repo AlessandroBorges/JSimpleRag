@@ -27,9 +27,9 @@ public class UserLibrary extends Updatable {
     
     @Column(name = "library_id", nullable = false)
     private Integer libraryId;
-    
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_associacao", nullable = false)
-    TipoAssociacao tipoAssociacao;	
+    @Column(name = "tipo_associacao", nullable = false, length = 50)
+    private TipoAssociacao tipoAssociacao;	
 
 }

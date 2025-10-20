@@ -2,6 +2,7 @@ package bor.tools.simplerag.dto;
 
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaBiblioteca;
+import bor.tools.simplerag.entity.enums.TipoBiblioteca;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +10,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.*;
 
 /**
  * DTO for Library entity.
@@ -20,6 +23,17 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonPropertyOrder({ "id", "uuid", 
+    		     "nome", 
+                     "areaConhecimento", 
+                     "pesoSemantico", "pesoTextual",
+                     "language",
+                     "embeddingModel",                     
+		     "embeddingDimension",
+                     "metadados", 
+                     "createdAt", "updatedAt", "deletedAt" })
 public class LibraryDTO {
 
     private Integer id;
@@ -35,8 +49,12 @@ public class LibraryDTO {
 
     @Builder.Default
     private Float pesoTextual = 0.40f;
+    
+    @Builder.Default
+    private TipoBiblioteca tipo = TipoBiblioteca.PESSOAL;
 
-    private MetaBiblioteca metadados;
+    @Builder.Default
+    private MetaBiblioteca metadados = new MetaBiblioteca();
 
     private LocalDateTime createdAt;
 
@@ -61,6 +79,7 @@ public class LibraryDTO {
 		.areaConhecimento(src.getAreaConhecimento())
 		.pesoSemantico(src.getPesoSemantico())
 		.pesoTextual(src.getPesoTextual())
+		.tipo(src.getTipo())
 		.metadados(src.getMetadados())
 		.createdAt(src.getCreatedAt())
 		.updatedAt(src.getUpdatedAt())
@@ -75,12 +94,13 @@ public class LibraryDTO {
     public Library toEntity() {
         Library entity = new Library();
         entity.setId(this.id);
-        entity.setUuid(this.uuid);
+        entity.setUuid(getUuid());
         entity.setNome(this.nome);
         entity.setAreaConhecimento(this.areaConhecimento);
         entity.setPesoSemantico(this.pesoSemantico);
         entity.setPesoTextual(this.pesoTextual);
-        entity.setMetadados(this.metadados);
+        entity.setMetadados(getMetadados());
+        entity.setTipo(getTipo());
         entity.setCreatedAt(this.createdAt);
         entity.setUpdatedAt(this.updatedAt);
         entity.setDeletedAt(this.deletedAt);
@@ -90,6 +110,7 @@ public class LibraryDTO {
     /**
      * Validates that semantic and textual weights sum to 1.0
      */
+    @JsonIgnore
     public boolean isWeightValid() {
         if (pesoSemantico != null && pesoTextual != null) {
             float sum = pesoSemantico + pesoTextual;
