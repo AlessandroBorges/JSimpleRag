@@ -4,15 +4,16 @@ import java.net.URL;
 import java.util.List;
 
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 
 /**
  * Core interface for document splitting operations. <br>
- * 
+ *
  * docStub can be null when loading a document. It represents a partial document
  * and maybe used to pass metadata or context.
- * 
- * 
+ *
+ * Uses DocumentoWithAssociationDTO since splitters need access to library info
+ * and chapter associations for proper document processing.
  */
 public interface DocumentSplitter {
     /**
@@ -20,7 +21,7 @@ public interface DocumentSplitter {
      * @param document The document to split
      * @return List of document parts
      */
-    List<ChapterDTO> splitDocumento(DocumentoDTO document);
+    List<ChapterDTO> splitDocumento(DocumentoWithAssociationDTO document);
 
     /**
      * Loads a document from a URL.
@@ -28,7 +29,7 @@ public interface DocumentSplitter {
      * @param docStub Document's stub. Can be null
      * @return Loaded document
      */
-    DocumentoDTO carregaDocumento(URL url, DocumentoDTO docStub) throws Exception;
+    DocumentoWithAssociationDTO carregaDocumento(URL url, DocumentoWithAssociationDTO docStub) throws Exception;
 
     /**
      * Loads a document from a string path.
@@ -36,5 +37,5 @@ public interface DocumentSplitter {
      * @param docStub Document's stub. Can be null
      * @return Loaded document
      */
-    DocumentoDTO carregaDocumento(String path, DocumentoDTO docStub) throws Exception;
+    DocumentoWithAssociationDTO carregaDocumento(String path, DocumentoWithAssociationDTO docStub) throws Exception;
 }

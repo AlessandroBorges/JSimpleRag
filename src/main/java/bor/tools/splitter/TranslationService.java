@@ -1,6 +1,6 @@
 package bor.tools.splitter;
 
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 
 
 /**
@@ -14,5 +14,5 @@ public interface TranslationService {
      * @param target Target language
      * @return Translated document
      */
-    DocumentoDTO translateDocument(DocumentoDTO document, Lang target);
+    DocumentoWithAssociationDTO translateDocument(DocumentoWithAssociationDTO document, Lang target);
 }

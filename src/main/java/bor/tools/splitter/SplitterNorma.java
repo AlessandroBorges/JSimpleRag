@@ -16,7 +16,7 @@ import org.springframework.lang.NonNull;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.splitter.normsplitter.Artigo;
 import bor.tools.splitter.normsplitter.Normativo;
 import bor.tools.splitter.normsplitter.NormativosLoader;
@@ -57,31 +57,31 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
 	/**
-	 * Carrega DocumentoDTO a partir de uma URL.<br>
+	 * Carrega DocumentoWithAssociationDTO a partir de uma URL.<br>
 	 *
 	 * @param urlDocumentoDTO - endereço do documento
-	 * @return DocumentoDTO carregado
+	 * @return DocumentoWithAssociationDTO carregado
 	 *
 	 * @throws Exception
 	 */
-	public DocumentoDTO carregaNorma(@NonNull URL urlDocumento, DocumentoDTO docStub) throws Exception {
+	public DocumentoWithAssociationDTO carregaNorma(@NonNull URL urlDocumento, DocumentoWithAssociationDTO docStub) throws Exception {
 		Normativo normativo = loader.load(urlDocumento.toString());
 		int[] nivel  = {0};
 		return carregaNorma(normativo, nivel, docStub);
 	}
 
 	/**
-	 * Carrega DocumentoDTO a partir de uma URL.<br>
+	 * Carrega DocumentoWithAssociationDTO a partir de uma URL.<br>
 	 *
 	 * @param urlDocumentoDTO - endereço do documento
 	 * @param nivel - nivel atual de profundidade de aninhamento
 	 *
-	 * @return null se o nível de aninhamento for maior que o permitido, ou DocumentoDTO carregado
+	 * @return null se o nível de aninhamento for maior que o permitido, ou DocumentoWithAssociationDTO carregado
 	 *
 	 * @throws Exception
 	 */
-	public DocumentoDTO carregaNorma(@NonNull URL urlDocumento, int[] nivel, 
-		DocumentoDTO docStub) throws Exception {
+	public DocumentoWithAssociationDTO carregaNorma(@NonNull URL urlDocumento, int[] nivel, 
+		DocumentoWithAssociationDTO docStub) throws Exception {
 		if (nivel[0] >= NIVEL_MAXIMO) {
 			return null;
 		}
@@ -95,12 +95,12 @@ public class SplitterNorma  extends AbstractSplitter{
 	 *
 	 * @param normativo Instancia de Normativo
 	 * @param nivel - nível de aninhamento
-	 * @param docStub - DocumentoDTO base. Opcional. Pode ser nulo.
-	 * @return DocumentoDTO com o normativo carregado, incluindo partes e embeddings
+	 * @param docStub - DocumentoWithAssociationDTO base. Opcional. Pode ser nulo.
+	 * @return DocumentoWithAssociationDTO com o normativo carregado, incluindo partes e embeddings
 	 * @throws Exception
 	 */
-	public DocumentoDTO carregaNorma(@NonNull Normativo normativo, int[] nivel,
-		DocumentoDTO docStub) throws Exception {
+	public DocumentoWithAssociationDTO carregaNorma(@NonNull Normativo normativo, int[] nivel,
+		DocumentoWithAssociationDTO docStub) throws Exception {
 		if (nivel[0] >= NIVEL_MAXIMO) {
 			return null;
 		}
@@ -110,7 +110,7 @@ public class SplitterNorma  extends AbstractSplitter{
 		// incrementa nível de aninhamento
 		nivel[0] = nivel[0] + 1;
 
-		DocumentoDTO doc = docStub == null? new DocumentoDTO():docStub;
+		DocumentoWithAssociationDTO doc = docStub == null? new DocumentoWithAssociationDTO():docStub;
 		doc.setUrl(normativo.getUrl());
 		doc.setTitulo(normativo.getAlias());
 		doc.setTexto(normativo.getTexto());
@@ -182,12 +182,12 @@ public class SplitterNorma  extends AbstractSplitter{
 	 * <li>Normativos Anexos</li>
 	 *
 	 * @param normativo  - normativo de origem
-	 * @param doc - DocumentoDTO a ser populado
+	 * @param doc - DocumentoWithAssociationDTO a ser populado
 	 * @param nivel - nivel atual de aninhamento
      *
 	 */
 	
-	protected void carregaNormasAssociadas(Normativo normativo, DocumentoDTO doc, int nivel) {
+	protected void carregaNormasAssociadas(Normativo normativo, DocumentoWithAssociationDTO doc, int nivel) {
 		// carregamento recursivo das normas relacionadas
 		List<Normativo> nAssociados = new ArrayList<>();
 		nAssociados.addAll(normativo.getListRegulamentos());
@@ -198,7 +198,7 @@ public class SplitterNorma  extends AbstractSplitter{
 			try {
 				URL url = new URL(normativoAssociado.getUrl());
 				int[] nivelAssociado = {nivel};
-				DocumentoDTO docAssociado = carregaNorma(url, nivelAssociado, doc);
+				DocumentoWithAssociationDTO docAssociado = carregaNorma(url, nivelAssociado, doc);
 				if (docAssociado != null) {
 					doc.addAnexo(doc);
 				}
@@ -270,17 +270,17 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
     @Override
-    public List<ChapterDTO > splitDocumento(@NonNull DocumentoDTO documento) {
+    public List<ChapterDTO > splitDocumento(@NonNull DocumentoWithAssociationDTO documento) {
         return documento.getCapitulos();
     }
 
     /**
-     * Carrega DocumentoDTO por URL
+     * Carrega DocumentoWithAssociationDTO por URL
      *
      * @param urlDocumentoDTO - URL do documento
      */
     @Override
-    public DocumentoDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoDTO docStub) throws Exception {
+    public DocumentoWithAssociationDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoWithAssociationDTO docStub) throws Exception {
        return carregaNorma(urlDocumento, docStub);
     }
 
@@ -302,14 +302,14 @@ public class SplitterNorma  extends AbstractSplitter{
 	}
 
 	@Override
-	public DocumentoDTO carregaDocumento(String path, DocumentoDTO docStub) throws Exception {      
+	public DocumentoWithAssociationDTO carregaDocumento(String path, DocumentoWithAssociationDTO docStub) throws Exception {      
 		URL url = new URL(path);
 		return carregaNorma(url, docStub);
 	}
 
 
 	@Override
-	protected List<ChapterDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
+	protected List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO doc, String[] lines, List<TitleTag> titles) {
 	    logger.debug("Splitting legal document by titles. Found {} titles", titles.size());
 
 	    if (titles.isEmpty()) {
@@ -480,7 +480,7 @@ public class SplitterNorma  extends AbstractSplitter{
 
 
 	@Override
-	public List<ChapterDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
+	public List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO documento, int effectiveChunkSize) {
 	   throw new UnsupportedOperationException("Split by size not supported for legal documents");
 	}
 

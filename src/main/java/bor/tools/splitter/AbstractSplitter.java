@@ -27,7 +27,7 @@ import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.utils.RAGUtil;
@@ -404,17 +404,17 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * Split de um documento em capítulos.
      * 
      */
-    public abstract List<ChapterDTO> splitDocumento(DocumentoDTO DocumentoDTO);
+    public abstract List<ChapterDTO> splitDocumento(DocumentoWithAssociationDTO DocumentoWithAssociationDTO);
     
     
     /**
-     * Carrega DocumentoDTO a partir de uma URL.
-     * @param urlDocumento URL do DocumentoDTO
-     * @param docStub DocumentoDTO para preencher, se null, cria um novo
+     * Carrega DocumentoWithAssociationDTO a partir de uma URL.
+     * @param urlDocumento URL do DocumentoWithAssociationDTO
+     * @param docStub DocumentoWithAssociationDTO para preencher, se null, cria um novo
      * 
      */
-    public DocumentoDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoDTO docStub) throws Exception {
-	DocumentoDTO doc = docStub == null ? new DocumentoDTO() : docStub;
+    public DocumentoWithAssociationDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoWithAssociationDTO docStub) throws Exception {
+	DocumentoWithAssociationDTO doc = docStub == null ? new DocumentoWithAssociationDTO() : docStub;
 	doc.setUrl(urlDocumento.toString());
 	OkHttpClient client = RAGUtil.getUnsafeOkHttpClient();
 	Request request = new Request.Builder().url(urlDocumento).get().header("User-Agent",
@@ -437,7 +437,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 		Metadata metadata = new Metadata();
 		ParseContext context = new ParseContext();
 
-		// Fazendo o parsing do DocumentoDTO
+		// Fazendo o parsing do DocumentoWithAssociationDTO
 		parser.parse(input, handler, metadata, context);
 
 		{
@@ -470,17 +470,17 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
     }
 
     /**
-     * Carrega DocumentoDTO a partir de um arquivo local ou em rede.
+     * Carrega DocumentoWithAssociationDTO a partir de um arquivo local ou em rede.
      * 
      * @param path caminho do arquivo
-     * @param docStub DocumentoDTO para preencher, se null, cria um novo
-     * @return DocumentoDTO carregado
+     * @param docStub DocumentoWithAssociationDTO para preencher, se null, cria um novo
+     * @return DocumentoWithAssociationDTO carregado
      */
-    public DocumentoDTO carregaDocumento(String path, DocumentoDTO docStub) throws Exception {
+    public DocumentoWithAssociationDTO carregaDocumento(String path, DocumentoWithAssociationDTO docStub) throws Exception {
 	if (path.matches("^(http|.*\\.(html|xhtml|htm|xml))$")) {
 	    return carregaDocumento(new URI(path).toURL(), docStub);
 	} else {
-	    DocumentoDTO doc = docStub == null ? new DocumentoDTO() : docStub;
+	    DocumentoWithAssociationDTO doc = docStub == null ? new DocumentoWithAssociationDTO() : docStub;
 	    doc.setUrl(path);
 	    if (doc.getTitulo() == null) {
 		String titulo = AbstractSplitter.detectaNome(path);
@@ -504,12 +504,12 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
     /**
      * Split document by detected titles.
      * 
-     * @param doc    - DocumentoDTO
+     * @param doc    - DocumentoWithAssociationDTO
      * @param lines  - lines of text
      * @param titles - detected titles
      * @return list of ChapterDTO
      */    
-    protected abstract List<ChapterDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles);
+    protected abstract List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO doc, String[] lines, List<TitleTag> titles);
 
     /**
      * Detect titles in text lines.
@@ -948,7 +948,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @param effectiveChunkSize - effective chunk size in tokens / words
      * @return
      */
-    public abstract List<ChapterDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) ;
+    public abstract List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO documento, int effectiveChunkSize) ;
 
 
 }// fim classe

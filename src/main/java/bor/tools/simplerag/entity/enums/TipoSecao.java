@@ -1,5 +1,7 @@
 package bor.tools.simplerag.entity.enums;
 
+import java.text.Normalizer;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -48,12 +50,13 @@ public enum TipoSecao {
      * Get enum from database value
      */
     @JsonCreator
-    public static TipoSecao fromString(String dbValue) {
+    public static TipoSecao fromString(String tipo_) {
+	tipo_ = Normalizer.normalize(tipo_.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         for (TipoSecao tipo : values()) {
-            if (tipo.dbValue.equals(dbValue))
+            if (tipo.dbValue.equals(tipo_))
 				return tipo;
         }
-        throw new IllegalArgumentException("Unknown tipo_secao value: " + dbValue);
+        throw new IllegalArgumentException("Unknown tipo_secao value: " + tipo_);
     }
 
     /**

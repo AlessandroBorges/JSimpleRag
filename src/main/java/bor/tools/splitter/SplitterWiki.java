@@ -11,7 +11,7 @@ import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -61,7 +61,7 @@ public class SplitterWiki extends AbstractSplitter {
      * Split principal do documento em capítulos
      */
     @Override
-    public List<ChapterDTO> splitDocumento(@NonNull DocumentoDTO documento) {
+    public List<ChapterDTO> splitDocumento(@NonNull DocumentoWithAssociationDTO documento) {
         logger.debug("Splitting Wikipedia-style document: {}", documento.getTitulo());
 
         String content = documento.getTexto();
@@ -151,7 +151,7 @@ public class SplitterWiki extends AbstractSplitter {
      * Split por títulos detectados
      */
     @Override
-    protected List<ChapterDTO> splitByTitles(DocumentoDTO doc, String[] lines, List<TitleTag> titles) {
+    protected List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO doc, String[] lines, List<TitleTag> titles) {
         List<ChapterDTO> capitulos = new ArrayList<>();
 
         for (int i = 0; i < titles.size(); i++) {
@@ -193,7 +193,7 @@ public class SplitterWiki extends AbstractSplitter {
     /**
      * Split em capítulos baseado em parágrafos (modo padrão para Wiki)
      */
-    private List<ChapterDTO> splitIntoChaptersByParagraphs(DocumentoDTO doc, String content) {
+    private List<ChapterDTO> splitIntoChaptersByParagraphs(DocumentoWithAssociationDTO doc, String content) {
         logger.debug("Splitting Wiki content by paragraphs with maxWords: {}", maxWordsPerChapter);
 
         // Usar o splitIntoParagraphs() como base para separação
@@ -305,7 +305,7 @@ public class SplitterWiki extends AbstractSplitter {
     }
     
     @Override
-    public List<ChapterDTO> splitBySize(DocumentoDTO documento, int effectiveChunkSize) {
+    public List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO documento, int effectiveChunkSize) {
 	throw new UnsupportedOperationException("Split by size not supported for Wiki documents");
     }
 }

@@ -1270,7 +1270,7 @@ public class RAGUtil {
 	    return 0;
 	}	
 	LLMService service = getLLMService(null);
-	return service.tokenCount(texto,"gpt-5");
+	return service.tokenCount(texto,"gpt-3.5");
     }
 
     /**

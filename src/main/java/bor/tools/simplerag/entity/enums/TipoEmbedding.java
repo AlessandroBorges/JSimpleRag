@@ -1,5 +1,7 @@
 package bor.tools.simplerag.entity.enums;
 
+import java.text.Normalizer;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -62,14 +64,16 @@ public enum TipoEmbedding {
     }
 
     /**
-     * Get enum from database value
+     * Get enum from string value, ignoring accents and leading/trailing spaces
+     * @param tipo_ - string representation
      */
     @JsonCreator
-    public static TipoEmbedding fromString(String dbValue) {
+    public static TipoEmbedding fromString(String tipo_) {
+	tipo_ = Normalizer.normalize(tipo_.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
 	for (TipoEmbedding tipo : values()) {
-	    if (tipo.dbValue.equals(dbValue))
+	    if (tipo.dbValue.equals(tipo_))
 		return tipo;
 	}
-	throw new IllegalArgumentException("Unknown tipo_embedding value: " + dbValue);
+	throw new IllegalArgumentException("Unknown tipo_embedding value: " + tipo_);
     }
 }

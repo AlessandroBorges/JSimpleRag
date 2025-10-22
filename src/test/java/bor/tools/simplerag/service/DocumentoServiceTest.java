@@ -3,6 +3,7 @@ package bor.tools.simplerag.service;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.Documento;
@@ -293,7 +294,7 @@ class DocumentoServiceTest {
         mockResult.setAllEmbeddings(Collections.emptyList());
 
         when(asyncSplitterService.fullProcessingAsync(
-                any(DocumentoDTO.class),
+                any(DocumentoWithAssociationDTO.class),
                 any(LibraryDTO.class),
                 any(TipoConteudo.class),
                 anyBoolean(),

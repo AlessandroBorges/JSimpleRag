@@ -1,5 +1,7 @@
 package bor.tools.simplerag.entity.enums;
 
+import java.text.Normalizer;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -21,14 +23,21 @@ public enum TipoBiblioteca {
 	return dbValue;
     }
     
+    /**
+     * Get enum from string, case insensitive, ignoring accents and leading/trailing spaces
+     * 
+     * @param tipo_ - string representation
+     * @return TipoBiblioteca enum
+     */
     @JsonCreator
-    public static TipoBiblioteca fromString(String dbValue) {
+    public static TipoBiblioteca fromString(String tipo_) {
+	tipo_ = Normalizer.normalize(tipo_.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
 	for (TipoBiblioteca tipo : TipoBiblioteca.values()) {
-	    if (tipo.getDbValue().equalsIgnoreCase(dbValue)) {
+	    if (tipo.getDbValue().equalsIgnoreCase(tipo_)) {
 		return tipo;
 	    }
 	}
-	throw new IllegalArgumentException("Unknown dbValue: " + dbValue);
+	throw new IllegalArgumentException("Unknown dbValue: " + tipo_);
     }
     
     /**

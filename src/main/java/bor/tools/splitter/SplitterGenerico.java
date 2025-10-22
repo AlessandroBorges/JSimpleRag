@@ -13,14 +13,14 @@ import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
  * Splitter genérico para documentos em texto plano e Markdown.
  *
- * Assume que o formato de origem é um DocumentoDTO texto plano simples ou
+ * Assume que o formato de origem é um DocumentoWithAssociationDTO texto plano simples ou
  * markdown eventualmente composta por títulos, subtítulos e parágrafos.
  *
  */
@@ -53,34 +53,34 @@ public class SplitterGenerico extends AbstractSplitter {
      * @inheritDoc
      */
     @Override
-    public List<ChapterDTO> splitDocumento(@NonNull DocumentoDTO DocumentoDTO) {
-	String text = DocumentoDTO.getTexto();
+    public List<ChapterDTO> splitDocumento(@NonNull DocumentoWithAssociationDTO DocumentoWithAssociationDTO) {
+	String text = DocumentoWithAssociationDTO.getTexto();
 	String[] lines = text.split("\n");
 	List<TitleTag> titles = detectTitles(lines);
 	if (titles.isEmpty()) {
 	    // Se não houver títulos, dividir o texto em partes de tamanho fixo
-	    return splitBySize(DocumentoDTO, this.maxWords);
+	    return splitBySize(DocumentoWithAssociationDTO, this.maxWords);
 	} else {
-	    return splitByTitles(DocumentoDTO, lines, titles);
+	    return splitByTitles(DocumentoWithAssociationDTO, lines, titles);
 	}
     }
 
     /**
-     * Divide DocumentoDTO por titulos.
+     * Divide DocumentoWithAssociationDTO por titulos.
      * 
-     * @param DocumentoDTO - DocumentoDTO a ser dividido
-     * @param lines        - linhas do DocumentoDTO
-     * @param titles       - titulos do DocumentoDTO
-     * @return lista de partes do DocumentoDTO
+     * @param DocumentoWithAssociationDTO - DocumentoWithAssociationDTO a ser dividido
+     * @param lines        - linhas do DocumentoWithAssociationDTO
+     * @param titles       - titulos do DocumentoWithAssociationDTO
+     * @return lista de partes do DocumentoWithAssociationDTO
      */
-    public List<ChapterDTO> splitByTitles(DocumentoDTO DocumentoDTO, String[] lines, List<TitleTag> titles) {
+    public List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO DocumentoWithAssociationDTO, String[] lines, List<TitleTag> titles) {
 
 	if (titles.isEmpty()) {
-	    return splitBySize(DocumentoDTO, maxWords);
+	    return splitBySize(DocumentoWithAssociationDTO, maxWords);
 	} else {
 	    int n_titles = titles.size();
 	    if (lines == null)
-		lines = DocumentoDTO.getTexto().split("\n");
+		lines = DocumentoWithAssociationDTO.getTexto().split("\n");
 
 	    List<ChapterDTO> lista = new ArrayList<>(n_titles + 1);
 	    {
@@ -103,7 +103,7 @@ public class SplitterGenerico extends AbstractSplitter {
 		    if (parag == null || parag.isEmpty())
 			continue;
 		    ChapterDTO parte = new ChapterDTO();
-		    DocumentoDTO.addParte(parte);
+		    DocumentoWithAssociationDTO.addParte(parte);
 		    parte.setConteudo(parag);
 		    lista.add(parte);
 		}
@@ -114,9 +114,9 @@ public class SplitterGenerico extends AbstractSplitter {
 
 
     /**
-     * Divide DocumentoDTO em partes de tamanho fixo, com base no número máximo de
+     * Divide DocumentoWithAssociationDTO em partes de tamanho fixo, com base no número máximo de
      */
-    public List<ChapterDTO> splitBySize(DocumentoDTO documento, int maxWords) {
+    public List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO documento, int maxWords) {
 	logger.debug("Splitting document by size with maxWords: {}", maxWords);
 
 	// Use ContentSplitter como base para uma implementação robusta
@@ -177,10 +177,10 @@ public class SplitterGenerico extends AbstractSplitter {
     }
 
     /**
-     * Detecta títulos no texto do DocumentoDTO.
+     * Detecta títulos no texto do DocumentoWithAssociationDTO.
      * 
      *
-     * @param text texto do DocumentoDTO, em formato MarkDown ou texto plano
+     * @param text texto do DocumentoWithAssociationDTO, em formato MarkDown ou texto plano
      * @return Map com numero da linha e títulos
      **/
     public List<TitleTag> detectTitles(String[] lines) {

@@ -3,6 +3,7 @@ package bor.tools.simplerag.entity.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.text.Normalizer;
 
 /**
  * Enum representing the type of document content.
@@ -29,6 +30,13 @@ public enum TipoConteudo {
     WIKI(18, "wiki", "Conteúdo colaborativo tipo Wiki"),
     PROJETO(19, "projeto", "Documento de projeto ou planejamento"),
     DOCUMENTO_INTERNO(20, "documento_interno", "Documento interno da organização"),
+    MANUAL_DE_PROCEDIMENTOS(21, "manual_de_procedimentos", "Manual detalhado de procedimentos"),
+    MANUAL_TECNICO(22, "manual_tecnico", "Manual técnico especializado"),
+    DIDATICO(23, "didatico", "Material didático ou educacional"),
+    INSTRUTOR(24, "instrutor", "Material para instrutores ou treinadores"),
+    INFORME(25, "informe", "Informe ou boletim informativo"),
+    INFORMATICA(26, "informatica", "Documentação de informática ou TI"),
+    
     OUTROS(99, "outros", "Outro tipo de documento não listado");
 
     /**
@@ -101,18 +109,21 @@ public enum TipoConteudo {
 
     /**
      * Get enum from name, case insensitive
-     * @param name
+     * @param string - string representation
      * @return
      */
     @JsonCreator
-    public static TipoConteudo fromString(String name) {
-	return fromName(name);
+    public static TipoConteudo fromString(String string) {
+	return fromName(string);
     }
     
     /**
      * Get enum from name, case insensitive
      */    
-    public static TipoConteudo fromName(String name) {
+    public static TipoConteudo fromName(String name) {	
+	//remover acentos e trimar	
+	name = Normalizer.normalize(name.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+	
         for (TipoConteudo tipo : values()) {
             if (tipo.name().equalsIgnoreCase(name))
                 return tipo;

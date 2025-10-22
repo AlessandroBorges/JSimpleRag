@@ -1,6 +1,6 @@
 package bor.tools.splitter;
 
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 
 /**
  * Interface para verificar se um artefato existe.
@@ -13,5 +13,5 @@ public interface ExistsArtefato<T> {
 	 * @param doc a ser verificado
 	 * @return
 	 */
-	public boolean exists(DocumentoDTO doc);
+	public boolean exists(DocumentoWithAssociationDTO doc);
 }

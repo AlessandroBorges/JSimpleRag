@@ -1,5 +1,7 @@
 package bor.tools.simplerag.entity.enums;
 
+import java.text.Normalizer;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -33,24 +35,35 @@ public enum TipoAssociacao {
      * 
      * @param dbValue
      */
-
     private TipoAssociacao(String dbValue) {
 	this.dbValue = dbValue;
     }
 
+    /**
+     * Get the database value for this enum
+     * 
+     * @return
+     */
     @JsonValue
     public String getDbValue() {
 	return dbValue;
     }
 
+    /**
+     * Get enum from string, case insensitive, ignoring accents and leading/trailing spaces
+     * 
+     * @param name
+     * @return
+     */
     @JsonCreator
-    public static TipoAssociacao fromString(String dbValue) {
+    public static TipoAssociacao fromString(String name) {
+	name = Normalizer.normalize(name.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
 	for (TipoAssociacao tipo : TipoAssociacao.values()) {
-	    if (tipo.getDbValue().equalsIgnoreCase(dbValue)) {
+	    if (tipo.getDbValue().equalsIgnoreCase(name)) {
 		return tipo;
 	    }
 	}
-	throw new IllegalArgumentException("Unknown value for enumeration TipoAssociacao: " + dbValue);
+	throw new IllegalArgumentException("Unknown value for enumeration TipoAssociacao: " + name);
     }
 
 }

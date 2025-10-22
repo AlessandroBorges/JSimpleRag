@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
-import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 
 /**
@@ -59,7 +59,7 @@ public class AsyncSplitterService {
      * @return Future com lista de capítulos processados
      */
     @Async
-    public CompletableFuture<List<ChapterDTO>> processDocumentAsync(DocumentoDTO documento,
+    public CompletableFuture<List<ChapterDTO>> processDocumentAsync(DocumentoWithAssociationDTO documento,
                                                                     LibraryDTO biblioteca,
                                                                     TipoConteudo tipoConteudo) {
         return CompletableFuture.supplyAsync(() -> {
@@ -200,7 +200,7 @@ public class AsyncSplitterService {
      * @return Future com resultado completo do processamento
      */
     @Async
-    public CompletableFuture<ProcessingResult> fullProcessingAsync(DocumentoDTO documento,
+    public CompletableFuture<ProcessingResult> fullProcessingAsync(DocumentoWithAssociationDTO documento,
                                                                   LibraryDTO biblioteca,
                                                                   TipoConteudo tipoConteudo,
                                                                   boolean includeQA,
@@ -254,7 +254,7 @@ public class AsyncSplitterService {
     /**
      * Enriquece metadados do capítulo com informações de processamento
      */
-    private void enrichChapterMetadata(ChapterDTO capitulo, DocumentoDTO documento,
+    private void enrichChapterMetadata(ChapterDTO capitulo, DocumentoWithAssociationDTO documento,
                                      LibraryDTO biblioteca, TipoConteudo tipoConteudo) {
         if (capitulo.getMetadados() == null) {
             capitulo.initializeMetadata();
@@ -282,14 +282,14 @@ public class AsyncSplitterService {
      * Resultado completo do processamento
      */
     public static class ProcessingResult {
-        private DocumentoDTO documento;
+        private DocumentoWithAssociationDTO documento;
         private LibraryDTO biblioteca;
         private List<ChapterDTO> capitulos;
         private List<DocumentEmbeddingDTO> allEmbeddings = new java.util.ArrayList<>();
 
         // Getters e Setters
-        public DocumentoDTO getDocumento() { return documento; }
-        public void setDocumento(DocumentoDTO documento) { this.documento = documento; }
+        public DocumentoWithAssociationDTO getDocumento() { return documento; }
+        public void setDocumento(DocumentoWithAssociationDTO documento) { this.documento = documento; }
 
         public LibraryDTO getBiblioteca() { return biblioteca; }
         public void setBiblioteca(LibraryDTO biblioteca) { this.biblioteca = biblioteca; }

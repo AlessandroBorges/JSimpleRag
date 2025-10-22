@@ -57,7 +57,8 @@ public class Documento extends Updatable {
 
     @Column(name = "tokens_total")
     private Integer tokensTotal;
-
+    
+    
     @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
     private MetaDoc metadados;

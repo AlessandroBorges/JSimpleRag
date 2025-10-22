@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.DocumentEmbedding;
@@ -238,7 +239,7 @@ public class DocumentoService {
                 }
 
                 LibraryDTO biblioteca = LibraryDTO.from(libraryOpt.get());
-                DocumentoDTO documentoDTO = toDTO(documento);
+                DocumentoWithAssociationDTO documentoDTO = toDTOWithAssociation(documento);
                 documentoDTO.setBiblioteca(biblioteca);
 
                 // Determine content type using DocumentRouter (Fluxo step d)
@@ -397,7 +398,7 @@ public class DocumentoService {
     }
 
     /**
-     * Convert Documento Entity to DTO
+     * Convert Documento Entity to simple DTO (without associations)
      */
     private DocumentoDTO toDTO(Documento entity) {
         return DocumentoDTO.builder()
@@ -408,8 +409,29 @@ public class DocumentoService {
                 .flagVigente(entity.getFlagVigente())
                 .dataPublicacao(entity.getDataPublicacao())
                 .tokensTotal(entity.getTokensTotal())
+                .metadados(entity.getMetadados() != null ? new Metadata(entity.getMetadados()) : null)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .deletedAt(entity.getDeletedAt())
+                .build();
+    }
+
+    /**
+     * Convert Documento Entity to DTO with associations (for processing workflows)
+     */
+    private DocumentoWithAssociationDTO toDTOWithAssociation(Documento entity) {
+        return DocumentoWithAssociationDTO.builder()
+                .id(entity.getId())
+                .bibliotecaId(entity.getBibliotecaId())
+                .titulo(entity.getTitulo())
+                .conteudoMarkdown(entity.getConteudoMarkdown())
+                .flagVigente(entity.getFlagVigente())
+                .dataPublicacao(entity.getDataPublicacao())
+                .tokensTotal(entity.getTokensTotal())
+                .metadados(entity.getMetadados() != null ? new Metadata(entity.getMetadados()) : null)
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .deletedAt(entity.getDeletedAt())
                 .build();
     }
 

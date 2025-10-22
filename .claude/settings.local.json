@@ -6,7 +6,15 @@
       "Bash(mvn test-compile:*)",
       "Bash(mvn test:*)",
       "Bash(cat:*)",
-      "Bash(./mvnw clean compile:*)"
+      "Bash(./mvnw clean compile:*)",
+      "Bash(mvn clean compile)",
+      "Bash(for file in /mnt/f/1-ProjetosIA/github/JSimpleRag/src/main/java/bor/tools/splitter/{SplitterWiki,SplitterNorma,SplitterGenerico,TranslationService,ExistsArtefato}.java)",
+      "Bash(do)",
+      "Bash(if [ -f \"$file\" ])",
+      "Bash(then)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(mvn compile -DskipTests)"
     ],
     "deny": [],
     "ask": []
