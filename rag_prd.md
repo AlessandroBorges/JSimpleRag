@@ -25,6 +25,7 @@ O Sistema RAG Hierárquico é uma plataforma de gestão e recuperação intelige
 ## 2. Objetivos e Métricas de Sucesso
 
 ### 2.1 Objetivos de Negócio
+
 | Objetivo | Métrica | Meta |
 |----------|---------|------|
 | Reduzir tempo de busca | Tempo médio para encontrar informação relevante | 70% de redução |

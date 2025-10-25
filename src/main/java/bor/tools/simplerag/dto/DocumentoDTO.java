@@ -34,7 +34,11 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "id", "bibliotecaId", "titulo", "flagVigente", "dataPublicacao",
-                     "tokensTotal", "metadados", "checksum", "createdAt", "updatedAt", "deletedAt" })
+                     "tokensTotal", "metadados", "checksum", "createdAt", "updatedAt", "deletedAt",
+                     "contentLength",
+                     "url",
+                     "vigente",
+                     "conteudoMarkdown" })	
 public class DocumentoDTO {
 
     private Integer id;

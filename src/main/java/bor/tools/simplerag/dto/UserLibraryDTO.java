@@ -40,6 +40,9 @@ public class UserLibraryDTO {
      */
     private Integer libraryId;
 
+    /**
+     * Type of association (PROPRIETARIO, COLABORADOR, LEITOR)
+     */
     private TipoAssociacao tipoAssociacao;
 
     // Timestamp fields

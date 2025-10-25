@@ -40,7 +40,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * Tamanho mínimo para chunks (em tokens)
      */
-    private static final int MIN_CHUNK_SIZE = 100;
+    private static final int MIN_CHUNK_SIZE = 512;
 
     /**
      * Construtor com injeção de dependências
@@ -138,7 +138,10 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
         try {
             // Gerar pares Q&A usando o DocumentSummarizer
             List<QuestionAnswer> qaList = documentSummarizer.generateQA(capitulo.getConteudo(), k);
-
+            
+            Integer documentoId = capitulo.getDocumentoId() != null ? capitulo.getDocumentoId() : -1;
+            Integer capituloId = capitulo.getId() != null ? capitulo.getId() : -1;
+            
             for (int i = 0; i < qaList.size(); i++) {
                 QuestionAnswer qa = qaList.get(i);
 
@@ -150,6 +153,8 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
                     combinedText,
                     capitulo.getTitulo() + " - Q&A " + (i + 1),
                     biblioteca,
+                    documentoId,
+                    capituloId,
                     TipoEmbedding.PERGUNTAS_RESPOSTAS,
                     Embeddings_Op.DOCUMENT
                 );
@@ -247,8 +252,16 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
      */
     private DocumentEmbeddingDTO createFullTextEmbedding(ChapterDTO capitulo, LibraryDTO biblioteca) throws LLMException {
         String fullText = buildTextWithMetadata(capitulo);
-        return createEmbeddingFromText(fullText, capitulo.getTitulo(), biblioteca,
-                                     TipoEmbedding.CAPITULO, Embeddings_Op.DOCUMENT);
+        Integer documentoId = capitulo.getDocumentoId() != null ? capitulo.getDocumentoId() : -1;
+        Integer capituloId = capitulo.getId() != null ? capitulo.getId() : -1;
+        
+        return createEmbeddingFromText(fullText, 
+        	capitulo.getTitulo(), 
+        		biblioteca,
+        		documentoId,
+        		capituloId,
+        		TipoEmbedding.CAPITULO,
+        		Embeddings_Op.DOCUMENT);
     }
 
     /**
@@ -256,22 +269,29 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
      */
     private DocumentEmbeddingDTO createMetadataOnlyEmbedding(ChapterDTO capitulo, LibraryDTO biblioteca) throws LLMException {
         String metadataText = buildMetadataText(capitulo);
-        return createEmbeddingFromText(metadataText, capitulo.getTitulo() + " (Metadados)", biblioteca,
-                                     TipoEmbedding.METADADOS, Embeddings_Op.DOCUMENT);
+        Integer documentoId = capitulo.getDocumentoId() != null ? capitulo.getDocumentoId() : -1;
+        Integer capituloId = capitulo.getId() != null ? capitulo.getId() : -1;
+        
+	return createEmbeddingFromText(metadataText, capitulo.getTitulo() + " (Metadados)", biblioteca, documentoId,
+		capituloId, TipoEmbedding.METADADOS, Embeddings_Op.DOCUMENT);
     }
 
     /**
      * Cria embedding apenas com texto
      */
-    private DocumentEmbeddingDTO createTextOnlyEmbedding(ChapterDTO capitulo, LibraryDTO biblioteca) throws LLMException {
-        return createEmbeddingFromText(capitulo.getConteudo(), capitulo.getTitulo(), biblioteca,
-                                     TipoEmbedding.CAPITULO, Embeddings_Op.DOCUMENT);
+    private DocumentEmbeddingDTO createTextOnlyEmbedding(ChapterDTO capitulo, LibraryDTO biblioteca)
+	    throws LLMException {
+	Integer documentoId = capitulo.getDocumentoId() != null ? capitulo.getDocumentoId() : -1;
+	Integer capituloId = capitulo.getId() != null ? capitulo.getId() : -1;
+	return createEmbeddingFromText(capitulo.getConteudo(), capitulo.getTitulo(), biblioteca, documentoId,
+		capituloId, TipoEmbedding.CAPITULO, Embeddings_Op.DOCUMENT);
     }
 
     /**
      * Cria múltiplos embeddings dividindo o texto em chunks
      */
-    private List<DocumentEmbeddingDTO> createSplitTextEmbeddings(ChapterDTO capitulo, LibraryDTO biblioteca) {
+    private List<DocumentEmbeddingDTO> createSplitTextEmbeddings(ChapterDTO capitulo, LibraryDTO biblioteca) 
+    {
         List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
 
         try {
@@ -281,12 +301,18 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
 
             for (int i = 0; i < chunks.size(); i++) {
                 ChapterDTO chunk = chunks.get(i);
+                Integer documentoId = capitulo.getDocumentoId() != null ? capitulo.getDocumentoId() : -1;
+                Integer capituloId = capitulo.getId() != null ? capitulo.getId() : -1;
+                
                 String chunkTitle = capitulo.getTitulo() + " - Chunk " + (i + 1);
 
+                
                 DocumentEmbeddingDTO embedding = createEmbeddingFromText(
                     chunk.getConteudo(),
                     chunkTitle,
                     biblioteca,
+                    documentoId,
+                    capituloId,
                     TipoEmbedding.TRECHO,
                     Embeddings_Op.DOCUMENT
                 );
@@ -333,8 +359,11 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * Cria um DocumentEmbeddingDTO a partir de texto
      */
-    private DocumentEmbeddingDTO createEmbeddingFromText(String text, String title, 
+    private DocumentEmbeddingDTO createEmbeddingFromText(String text, 
+	    					String title, 
 	    					LibraryDTO biblioteca,
+	    					Integer documentoId,
+	    					Integer capituloId,
                                                 TipoEmbedding tipoEmbedding, 
                                                 Embeddings_Op operation) 
                                                 	   throws LLMException {
@@ -344,7 +373,10 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
         docEmbedding.setTrechoTexto(text);
         docEmbedding.setEmbeddingVector(embedding); 
         docEmbedding.setTipoEmbedding(tipoEmbedding);
-
+        docEmbedding.setBibliotecaId(biblioteca.getId());
+        docEmbedding.setDocumentoId(documentoId);
+        docEmbedding.setCapituloId(capituloId);
+ 
         // Configurar metadados
         docEmbedding.getMetadados().setNomeDocumento(title);
         docEmbedding.getMetadados().put("biblioteca_id", biblioteca.getId());
@@ -453,6 +485,12 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
                 "Crie um sumário conciso e informativo do texto fornecido, " +
                 "destacando os pontos principais e informações mais relevantes.";
 
+            Integer estimatedTokens = estimateTokenCount(chapter.getConteudo());
+            logger.debug("Estimated {} tokens for chapter: {}", estimatedTokens, chapter.getTitulo());
+            
+            Integer documentoId = chapter.getDocumentoId() != null ? chapter.getDocumentoId() : -1;
+            Integer capituloId = chapter.getId() != null ? chapter.getId() : -1;
+            
             // Gerar o sumário usando DocumentSummarizer
             String summary;
             if (summaryInstructions != null && !summaryInstructions.trim().isEmpty()) {
@@ -476,6 +514,8 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
                 summary,
                 chapter.getTitulo() + " - Sumário",
                 library,
+                documentoId,
+                capituloId,
                 TipoEmbedding.RESUMO,
                 Embeddings_Op.DOCUMENT
             );
@@ -553,6 +593,10 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
                                                         LibraryDTO library) 
     {
         try {
+            
+            Integer documentoId = chapter.getDocumentoId() != null ? chapter.getDocumentoId() : -1;
+            Integer capituloId = chapter.getId() != null ? chapter.getId() : -1;
+            
             StringBuilder hybridContent = new StringBuilder();
             
             // Adicionar contexto estrutural
@@ -583,6 +627,8 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
                 hybridContent.toString(),
                 chapter.getTitulo() + " - Sumário Contextualizado",
                 library,
+                documentoId,
+                capituloId,
                 TipoEmbedding.RESUMO,
                 Embeddings_Op.DOCUMENT
             );

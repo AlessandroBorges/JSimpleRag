@@ -10,6 +10,7 @@ JSimpleRag is a hierarchical RAG (Retrieval-Augmented Generation) system built i
 
 ### Core Hierarchy
 The system implements a 4-level hierarchical structure:
+
 ```
 Biblioteca (Knowledge Area/Library)
 ├── Documento (Document - books, articles, manuals)
@@ -34,6 +35,7 @@ Biblioteca (Knowledge Area/Library)
 ## Development Commands
 
 ### Build and Test
+
 ```bash
 # Build project
 ./mvnw clean compile
@@ -55,6 +57,7 @@ Biblioteca (Knowledge Area/Library)
 ```
 
 ### Application Execution
+
 ```bash
 # Run application
 ./mvnw spring-boot:run
@@ -70,6 +73,7 @@ java -jar target/simplerag-0.0.1-SNAPSHOT.jar
 ```
 
 ### Database Operations
+
 ```bash
 # Start PostgreSQL with PGVector (Docker)
 docker-compose up -d postgres

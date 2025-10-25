@@ -1,8 +1,6 @@
 package bor.tools.simplerag.dto;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -38,7 +36,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonPropertyOrder({ "id", "bibliotecaId", "titulo", "flagVigente", "dataPublicacao", "tokensTotal", "metadados", "createdAt", "updatedAt", "deletedAt", "biblioteca", "anexos", "capitulos", "conteudoMarkdown" })
+@JsonPropertyOrder({ "id", "bibliotecaId", "titulo", "flagVigente", "dataPublicacao", 
+      "tokensTotal", "metadados", 
+      "biblioteca", "anexos", "capitulos",
+      "checksum", "contentLength", "url", "vigente",
+      "conteudoMarkdown" ,
+      "createdAt", "updatedAt", "deletedAt"})
 public class DocumentoWithAssociationDTO {
 
     private Integer id;
@@ -140,6 +143,17 @@ public class DocumentoWithAssociationDTO {
         return entity;
     }
 
+    /**
+     * Get metadata, initializing if null
+     * @return
+     */
+    public Metadata getMetadados() {
+	if (metadados == null) {
+	    metadados = new Metadata();
+	}
+	return metadados;
+    }
+    
     /**
      * Convenience method to check if document is active
      */
@@ -413,6 +427,11 @@ public class DocumentoWithAssociationDTO {
     }
     
     public void addParte(ChapterDTO parte) {
+	parte.setDocumentoId(this.id);
+	parte.getMetadados().addMetadata(this.getMetadados());
+	if (parte.getOrdemDoc() == null) {
+	    parte.setOrdemDoc(this.getChaptersCount() + 1);
+	}
 	this.addCapitulo(parte);	
     }
 

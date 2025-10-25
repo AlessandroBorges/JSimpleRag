@@ -15,6 +15,7 @@ import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
+import bor.tools.utils.RAGUtil;
 
 /**
  * Serviço de processamento assíncrono para operações de splitting.
@@ -30,6 +31,8 @@ import bor.tools.simplerag.entity.enums.TipoConteudo;
 public class AsyncSplitterService {
 
     private static final Logger logger = LoggerFactory.getLogger(AsyncSplitterService.class);
+
+    private static final int MIN_TOKENS_FOR_SUMMARY = 512;
 
     private final SplitterFactory splitterFactory;
     private final EmbeddingProcessorImpl embeddingProcessor;
@@ -76,9 +79,8 @@ public class AsyncSplitterService {
 
                 // 2. Dividir documento em capítulos
                 List<ChapterDTO> capitulos = splitter.splitBySize(documento,
-                    splitterFactory.getSplitterConfig().getEffectiveChunkSize(biblioteca.getUuid().toString(),
-                	    
-                	    tipoConteudo));
+                					splitterFactory.getSplitterConfig().getEffectiveChunkSize(biblioteca.getUuid().toString(),           	    
+                					tipoConteudo));
 
                 logger.debug("Document {} split into {} chapters", documento.getTitulo(), capitulos.size());
 
@@ -231,7 +233,9 @@ public class AsyncSplitterService {
                     }
 
                     // Sumário se solicitado
-                    if (includeSummary) {
+                    int tokens = capitulo.getConteudo() != null ? RAGUtil.countTokens(capitulo.getConteudo()) : 0;
+                    
+                    if (includeSummary && capitulo.getConteudo() != null && tokens > MIN_TOKENS_FOR_SUMMARY) {
                         List<DocumentEmbeddingDTO> summaryEmbeddings = generateSummaryAsync(
                             capitulo, biblioteca, null, null).get();
                         result.addEmbeddings(summaryEmbeddings);

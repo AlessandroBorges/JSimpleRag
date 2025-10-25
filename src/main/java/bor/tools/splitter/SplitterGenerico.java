@@ -68,112 +68,165 @@ public class SplitterGenerico extends AbstractSplitter {
     /**
      * Divide DocumentoWithAssociationDTO por titulos.
      * 
-     * @param DocumentoWithAssociationDTO - DocumentoWithAssociationDTO a ser dividido
-     * @param lines        - linhas do DocumentoWithAssociationDTO
-     * @param titles       - titulos do DocumentoWithAssociationDTO
+     * @param docDTO - DocumentoWithAssociationDTO a ser dividido
+     * @param lines  - linhas do DocumentoWithAssociationDTO
+     * @param titles - titulos do DocumentoWithAssociationDTO
      * @return lista de partes do DocumentoWithAssociationDTO
      */
-    public List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO DocumentoWithAssociationDTO, String[] lines, List<TitleTag> titles) {
+    public List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO docDTO, String[] lines, List<TitleTag> titles) {
+	logger.debug("Splitting document by titles. Found {} titles", titles.size());
 
 	if (titles.isEmpty()) {
-	    return splitBySize(DocumentoWithAssociationDTO, maxWords);
-	} else {
-	    int n_titles = titles.size();
-	    if (lines == null)
-		lines = DocumentoWithAssociationDTO.getTexto().split("\n");
-
-	    List<ChapterDTO> lista = new ArrayList<>(n_titles + 1);
-	    {
-
-		String[] sections = new String[n_titles + 1];
-		List<Integer> titlePositions = titles.stream().map(TitleTag::getPosition).collect(Collectors.toList());
-
-		for (int i = 0; i < n_titles; i++) {
-		    // magic java
-		    int start = i == 0 ? 0 : titlePositions.get(i - 1); // inclui inicio
-		    int end = i == (n_titles - 1) ? lines.length : titlePositions.get(i); // inclui parte final
-		    List<String> linesList = new ArrayList<>();
-		    for (int j = start; j < end; j++) {
-			linesList.add(lines[j]);
-		    }
-		    sections[i] = String.join("\n", linesList);
-		}
-
-		for (String parag : sections) {
-		    if (parag == null || parag.isEmpty())
-			continue;
-		    ChapterDTO parte = new ChapterDTO();
-		    DocumentoWithAssociationDTO.addParte(parte);
-		    parte.setConteudo(parag);
-		    lista.add(parte);
-		}
-	    }
-	    return lista;
+	    return splitBySize(docDTO, maxWords);
 	}
+
+	if (lines == null) {
+	    lines = docDTO.getTexto().split("\n");
+	}
+
+	List<ChapterDTO> capitulos = new ArrayList<>();
+
+	// Processa cada seção entre títulos
+	for (int i = 0; i < titles.size(); i++) {
+	    int startPos = i == 0 ? 0 : titles.get(i - 1).getPosition();
+	    int endPos = titles.get(i).getPosition();
+
+	    String content = extractContentBetweenLines(lines, startPos, endPos);
+	    if (!content.isEmpty()) {
+		ChapterDTO capitulo = createChapter(docDTO, titles.get(i).getTitle(), content, capitulos.size() + 1);
+		capitulos.add(capitulo);
+	    }
+	}
+
+	// Processa conteúdo após o último título
+	int lastTitlePos = titles.get(titles.size() - 1).getPosition();
+	String finalContent = extractContentBetweenLines(lines, lastTitlePos, lines.length);
+	if (!finalContent.isEmpty()) {
+	    ChapterDTO capitulo = createChapter(docDTO, "Conclusão", finalContent, capitulos.size() + 1);
+	    capitulos.add(capitulo);
+	}
+
+	logger.debug("Created {} chapters from document", capitulos.size());
+	return capitulos;
     }
 
+    /**
+     * Extrai conteúdo entre duas posições de linhas
+     */
+    private String extractContentBetweenLines(String[] lines, int start, int end) {
+	List<String> contentLines = new ArrayList<>();
+	for (int i = start; i < end && i < lines.length; i++) {
+	    contentLines.add(lines[i]);
+	}
+	return String.join("\n", contentLines).trim();
+    }
 
     /**
-     * Divide DocumentoWithAssociationDTO em partes de tamanho fixo, com base no número máximo de
+     * Cria um ChapterDTO com os metadados do documento
      */
-    public List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO documento, int maxWords) {
+    private ChapterDTO createChapter(DocumentoWithAssociationDTO docDTO, String titulo, String conteudo, int ordem) {
+	ChapterDTO capitulo = new ChapterDTO();
+	docDTO.addParte(capitulo);	
+	capitulo.setTitulo(titulo);
+	capitulo.setConteudo(conteudo);	
+	return capitulo;
+    }
+
+    /**
+     * Divide DocumentoWithAssociationDTO em sentenças, respeitando o limite de máximo
+     * de palavras por parte.
+     */
+    public List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO docDTO, int maxWords) {
 	logger.debug("Splitting document by size with maxWords: {}", maxWords);
 
-	// Use ContentSplitter como base para uma implementação robusta
 	ContentSplitter contentSplitter = new ContentSplitter();
-	List<ChapterDTO> chapters = contentSplitter.splitContent(documento.getTexto(), false);
+	List<ChapterDTO> chapters = contentSplitter.splitContent(docDTO.getTexto(), false);
 
-	// Ajustar os capítulos para o limite de palavras especificado
 	List<ChapterDTO> adjustedChapters = new ArrayList<>();
 	int chapterNumber = 1;
 
 	for (ChapterDTO chapter : chapters) {
-	    String content = chapter.getConteudo();
-	    int wordCount = countWords(content);
+	    configureChapterMetadata(chapter, docDTO);
+	    
+	    int wordCount = countWords(chapter.getConteudo());
 
 	    if (wordCount <= maxWords) {
-		// Capítulo dentro do limite
 		chapter.setOrdemDoc(chapterNumber++);
 		adjustedChapters.add(chapter);
 	    } else {
-		// Dividir capítulo em partes menores
-		String[] paragraphs = splitIntoParagraphs(content);
-		StringBuilder currentChapter = new StringBuilder();
-		int currentWords = 0;
-
-		for (String paragraph : paragraphs) {
-		    int paragraphWords = countWords(paragraph);
-
-		    if (currentWords + paragraphWords > maxWords && currentWords > 0) {
-			// Criar novo capítulo
-			ChapterDTO newChapter = new ChapterDTO();
-			newChapter.setTitulo(chapter.getTitulo() + " (Parte " + chapterNumber + ")");
-			newChapter.setConteudo(currentChapter.toString().trim());
-			newChapter.setOrdemDoc(chapterNumber++);
-			adjustedChapters.add(newChapter);
-
-			// Reiniciar
-			currentChapter = new StringBuilder();
-			currentWords = 0;
-		    }
-
-		    currentChapter.append(paragraph).append("\n\n");
-		    currentWords += paragraphWords;
-		}
-
-		// Adicionar último fragmento
-		if (currentChapter.length() > 0) {
-		    ChapterDTO newChapter = new ChapterDTO();
-		    newChapter.setTitulo(chapter.getTitulo() + " (Parte " + chapterNumber + ")");
-		    newChapter.setConteudo(currentChapter.toString().trim());
-		    newChapter.setOrdemDoc(chapterNumber++);
-		    adjustedChapters.add(newChapter);
-		}
+		List<ChapterDTO> splitChapters = splitLargeChapter(chapter, maxWords, chapterNumber);
+		chapterNumber += splitChapters.size();
+		adjustedChapters.addAll(splitChapters);
 	    }
 	}
 
 	logger.debug("Split completed. Generated {} chapters", adjustedChapters.size());
 	return adjustedChapters;
+    }
+
+    /**
+     * Configura metadados básicos do capítulo
+     */
+    private void configureChapterMetadata(ChapterDTO chapter, DocumentoWithAssociationDTO docDTO) {
+	chapter.setDocumentoId(docDTO.getId());
+	chapter.getMetadados().addMetadata(docDTO.getMetadados());
+    }
+
+    /**
+     * Divide um capítulo grande em partes menores respeitando o limite de palavras
+     */
+    private List<ChapterDTO> splitLargeChapter(ChapterDTO chapter, int maxWords, int startNumber) {
+	List<ChapterDTO> parts = new ArrayList<>();
+	String[] paragraphs = splitIntoParagraphs(chapter.getConteudo());
+	
+	StringBuilder currentContent = new StringBuilder();
+	int currentWordCount = 0;
+	int partNumber = startNumber;
+
+	for (String paragraph : paragraphs) {
+	    int paragraphWords = countWords(paragraph);
+
+	    if (shouldCreateNewPart(currentWordCount, paragraphWords, maxWords)) {
+		parts.add(createChapterPart(chapter.getTitulo(), currentContent.toString(), partNumber++));
+		currentContent = new StringBuilder();
+		currentWordCount = 0;
+	    }
+
+	    appendParagraph(currentContent, paragraph);
+	    currentWordCount += paragraphWords;
+	}
+
+	// Adicionar última parte se houver conteúdo
+	if (currentContent.length() > 0) {
+	    parts.add(createChapterPart(chapter.getTitulo(), currentContent.toString(), partNumber));
+	}
+
+	return parts;
+    }
+
+    /**
+     * Verifica se deve criar uma nova parte baseado no limite de palavras
+     */
+    private boolean shouldCreateNewPart(int currentWords, int paragraphWords, int maxWords) {
+	return currentWords > 0 && (currentWords + paragraphWords > maxWords);
+    }
+
+    /**
+     * Adiciona parágrafo ao conteúdo atual
+     */
+    private void appendParagraph(StringBuilder content, String paragraph) {
+	content.append(paragraph).append("\n\n");
+    }
+
+    /**
+     * Cria uma parte de capítulo com título numerado
+     */
+    private ChapterDTO createChapterPart(String baseTitle, String content, int partNumber) {
+	ChapterDTO part = new ChapterDTO();
+	part.setTitulo(baseTitle + " (Parte " + partNumber + ")");
+	part.setConteudo(content.trim());
+	part.setOrdemDoc(partNumber);
+	return part;
     }
 
     /**

@@ -310,102 +310,91 @@ public class SplitterNorma  extends AbstractSplitter{
 
 	@Override
 	protected List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO doc, String[] lines, List<TitleTag> titles) {
-	    logger.debug("Splitting legal document by titles. Found {} titles", titles.size());
+		logger.debug("Splitting legal document by titles. Found {} titles", titles.size());
 
-	    if (titles.isEmpty()) {
-	        // Se não há títulos, criar um único capítulo com todo o conteúdo
-	        ChapterDTO capitulo = new ChapterDTO();
-	        capitulo.setTitulo(doc.getTitulo());
-	        capitulo.setConteudo(doc.getTexto());
-	        capitulo.setOrdemDoc(1);
-	        return List.of(capitulo);
-	    }
+		if (titles.isEmpty()) {
+			return List.of(createSingleChapter(doc));
+		}
 
-	    List<ChapterDTO> capitulos = new ArrayList<>();
-	    String currentSection = null;
-	    StringBuilder currentContent = new StringBuilder();
-	    int currentChapterNumber = 1;
+		List<ChapterDTO> capitulos = new ArrayList<>();
+		List<TitleTag> secoes = extractSecoes(titles);
 
-	    // Agrupar por Seções (nível 4) que serão mapeadas para ChapterDTO
-	    for (int i = 0; i < titles.size(); i++) {
-	        TitleTag title = titles.get(i);
+		if (secoes.isEmpty()) {
+			return List.of(createSingleChapter(doc));
+		}
 
-	        // Se encontramos uma seção, ela se torna um novo ChapterDTO
-	        if ("secao".equals(title.getTag()) ||
-	            ("capitulo".equals(title.getTag()) && currentSection == null)) {
+		for (int i = 0; i < secoes.size(); i++) {
+			TitleTag secao = secoes.get(i);
+			int startPos = secao.getPosition();
+			int endPos = (i + 1 < secoes.size()) ? secoes.get(i + 1).getPosition() : lines.length;
+			
+			String content = extractContent(lines, startPos, endPos);
+			ChapterDTO capitulo = createCapitulo(secao.getTitle(), content, i + 1, doc);
+			capitulos.add(capitulo);
+		}
 
-	            // Finalizar seção anterior
-	            if (currentSection != null && currentContent.length() > 0) {
-	                ChapterDTO capitulo = createCapituloFromSection(currentSection,
-	                                                               currentContent.toString().trim(),
-	                                                               currentChapterNumber++);
-	                capitulos.add(capitulo);
-	            }
-
-	            // Iniciar nova seção
-	            currentSection = title.getTitle();
-	            currentContent = new StringBuilder();
-
-	            // Adicionar conteúdo da linha do título
-	            if (title.getPosition() < lines.length) {
-	                currentContent.append(lines[title.getPosition()]).append("\n");
-	            }
-	        } else {
-	            // Para outros tipos de título (artigo, subseção), adicionar ao conteúdo atual
-	            if (title.getPosition() < lines.length) {
-	                currentContent.append(lines[title.getPosition()]).append("\n");
-	            }
-	        }
-
-	        // Adicionar conteúdo entre títulos
-	        int startPos = title.getPosition() + 1;
-	        int endPos = (i + 1 < titles.size()) ? titles.get(i + 1).getPosition() : lines.length;
-
-	        for (int j = startPos; j < endPos; j++) {
-	            String line = lines[j];
-	            if (!line.trim().isEmpty()) {
-	                currentContent.append(line).append("\n");
-	            }
-	        }
-	    }
-
-	    // Finalizar última seção
-	    if (currentSection != null && currentContent.length() > 0) {
-	        ChapterDTO capitulo = createCapituloFromSection(currentSection,
-	                                                       currentContent.toString().trim(),
-	                                                       currentChapterNumber);
-	        capitulos.add(capitulo);
-	    }
-
-	    // Se não foi possível criar capítulos por seções, criar por conteúdo completo
-	    if (capitulos.isEmpty()) {
-	        ChapterDTO capitulo = new ChapterDTO();
-	        capitulo.setTitulo(doc.getTitulo());
-	        capitulo.setConteudo(doc.getTexto());
-	        capitulo.setOrdemDoc(1);
-	        capitulos.add(capitulo);
-	    }
-
-	    logger.debug("Created {} chapters from legal document", capitulos.size());
-	    return capitulos;
+		logger.debug("Created {} chapters from legal document", capitulos.size());
+		return capitulos;
 	}
 
 	/**
-	 * Cria um ChapterDTO a partir de uma seção de normativo
+	 * Cria um único capítulo com todo o conteúdo do documento
 	 */
-	private ChapterDTO createCapituloFromSection(String sectionTitle, String content, int ordem) {
-	    ChapterDTO capitulo = new ChapterDTO();
-	    capitulo.setTitulo(sectionTitle);
-	    capitulo.setConteudo(content);
-	    capitulo.setOrdemDoc(ordem);
-
-	    // Adicionar metadados específicos de normativos
-	    capitulo.getMetadados().put("tipo_secao", "normativo");
-	    capitulo.getMetadados().put("nivel_hierarquico", "secao");
-
-	    return capitulo;
+	private ChapterDTO createSingleChapter(DocumentoWithAssociationDTO doc) {
+		ChapterDTO capitulo = new ChapterDTO();
+		capitulo.getMetadados().addMetadata(doc.getMetadados());
+		capitulo.setDocumentoId(doc.getId());
+		capitulo.setTitulo(doc.getTitulo());
+		capitulo.setConteudo(doc.getTexto());
+		capitulo.setOrdemDoc(1);
+		return capitulo;
 	}
 
+	/**
+	 * Extrai seções relevantes da lista de títulos
+	 */
+	private List<TitleTag> extractSecoes(List<TitleTag> titles) {
+		return titles.stream()
+			.filter(t -> "secao".equals(t.getTag()) || 
+						("capitulo".equals(t.getTag()) && isFirstCapitulo(t, titles)))
+			.toList();
+	}
+
+	/**
+	 * Verifica se um capítulo é o primeiro (não há seção antes dele)
+	 */
+	private boolean isFirstCapitulo(TitleTag capitulo, List<TitleTag> titles) {
+		return titles.stream()
+			.noneMatch(t -> "secao".equals(t.getTag()) && t.getPosition() < capitulo.getPosition());
+	}
+
+	/**
+	 * Extrai o conteúdo entre duas posições do array de linhas
+	 */
+	private String extractContent(String[] lines, int start, int end) {
+		StringBuilder content = new StringBuilder();
+		for (int i = start; i < end; i++) {
+			if (!lines[i].trim().isEmpty()) {
+				content.append(lines[i]).append("\n");
+			}
+		}
+		return content.toString().trim();
+	}
+
+	/**
+	 * Cria um ChapterDTO com todos os metadados necessários
+	 */
+	private ChapterDTO createCapitulo(String titulo, String conteudo, int ordem, DocumentoWithAssociationDTO doc) {
+		ChapterDTO capitulo = new ChapterDTO();
+		capitulo.setTitulo(titulo);
+		capitulo.setConteudo(conteudo);
+		capitulo.setOrdemDoc(ordem);
+		capitulo.getMetadados().addMetadata(doc.getMetadados());
+		capitulo.setDocumentoId(doc.getId());
+		capitulo.getMetadados().put("tipo_secao", "normativo");
+		capitulo.getMetadados().put("nivel_hierarquico", "secao");
+		return capitulo;
+	}
 
 	@Override
 	protected List<TitleTag> detectTitles(String[] lines) {
@@ -485,5 +474,3 @@ public class SplitterNorma  extends AbstractSplitter{
 	}
 
 }
-
-

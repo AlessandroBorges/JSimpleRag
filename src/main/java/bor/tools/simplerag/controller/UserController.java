@@ -152,13 +152,8 @@ public class UserController {
             // Convert to DTO
             UserDTO userDTO = UserDTO.from(userWithLibraries.getUser());
 
-            List<LibraryWithAssociationDTO> libraryDTOs = userWithLibraries.getLibrariesWithAssociations().stream()
-                    .map(la -> LibraryWithAssociationDTO.builder()
-                            .library(LibraryDTO.from(la.getLibrary()))
-                            .tipoAssociacao(la.getAssociation().getTipoAssociacao())
-                            .associationId(la.getAssociation().getId())
-                            .build())
-                    .collect(Collectors.toList());
+            // getLibrariesWithAssociations() already returns List<LibraryWithAssociationDTO>
+            List<LibraryWithAssociationDTO> libraryDTOs = userWithLibraries.getLibrariesWithAssociations();
 
             UserWithLibrariesDTO response = UserWithLibrariesDTO.builder()
                     .user(userDTO)
@@ -166,9 +161,7 @@ public class UserController {
                     .build();
 
             log.debug("User with libraries found: {} libraries", response.getLibraryCount());
-
             return ResponseEntity.ok(response);
-
         } catch (IllegalArgumentException e) {
             log.error("User not found: {}", e.getMessage());
             throw e;

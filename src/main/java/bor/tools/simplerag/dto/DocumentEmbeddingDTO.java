@@ -139,21 +139,26 @@ public class DocumentEmbeddingDTO {
         return tipoEmbedding == TipoEmbedding.TRECHO;
     }
 
+    
+    public MetaDoc getMetadados() {
+	if (metadados == null) {
+	    metadados = new MetaDoc();
+	}
+	return metadados;
+    }
+    
     /**
      * Get metadata value by key
      */
     public Object getMetadataValue(String key) {
-        return metadados != null ? metadados.get(key) : null;
+        return getMetadados().get(key) ;
     }
 
     /**
      * Set metadata value
      */
     public void setMetadataValue(String key, Object value) {
-        if (metadados == null) {
-            metadados = new MetaDoc();
-        }
-        metadados.put(key, value);
+	getMetadados().put(key, value);
     }
 
     /**

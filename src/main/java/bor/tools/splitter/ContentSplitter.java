@@ -16,7 +16,7 @@ import bor.tools.utils.RAGUtil;
 public class ContentSplitter {
     private static final int MIN_TOKENS = 512;
     private static final int IDEAL_TOKENS = 2000;
-    private static final int MAX_TOKENS = 16000;
+    private static final int MAX_TOKENS = 8192;
 
     /**
      * Split content into chapters, handling both Markdown and plain text
