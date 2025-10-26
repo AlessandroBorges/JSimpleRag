@@ -25,7 +25,8 @@ import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.LibraryService;
-import bor.tools.splitter.EmbeddingProcessorInterface;
+import bor.tools.simplerag.service.embedding.EmbeddingService;
+import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -117,7 +118,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SearchController {
 
     private final DocEmbeddingJdbcRepository embeddingRepository;
-    private final EmbeddingProcessorInterface embeddingProcessor;
+    private final EmbeddingService embeddingService;
     private final DocumentoRepository documentoRepository;
     private final ChapterRepository chapterRepository;
     private final LibraryService libraryService;
@@ -164,8 +165,14 @@ public class SearchController {
             }
 
             LibraryDTO library = loadLibrary(request.getLibraryIds());
-	    // Generate query embedding
-            float[] queryEmbedding = embeddingProcessor.createSearchEmbeddings(request.getQuery(), library );
+
+	    // Create embedding context
+	    EmbeddingContext context = EmbeddingContext.builder()
+	            .library(library)
+	            .build();
+
+	    // Generate query embedding using new service
+            float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);
 
             // Execute hybrid search
             List<DocumentEmbedding> embeddings = embeddingRepository.pesquisaHibrida(
@@ -307,8 +314,14 @@ public class SearchController {
         try {
             // Generate query embedding
             LibraryDTO library = loadLibrary(request.getLibraryIds());
-	    // Generate query embedding
-            float[] queryEmbedding = embeddingProcessor.createSearchEmbeddings(request.getQuery(), library );
+
+	    // Create embedding context
+	    EmbeddingContext context = EmbeddingContext.builder()
+	            .library(library)
+	            .build();
+
+	    // Generate query embedding using new service
+            float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);
 
             // Execute semantic search
             List<DocumentEmbedding> embeddings = embeddingRepository.pesquisaSemantica(

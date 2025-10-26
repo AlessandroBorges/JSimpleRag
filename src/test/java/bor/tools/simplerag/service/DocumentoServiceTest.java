@@ -1,10 +1,40 @@
 package bor.tools.simplerag.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
-import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
@@ -13,24 +43,11 @@ import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
-import bor.tools.splitter.AsyncSplitterService;
+import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
+import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
+import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for DocumentoService
@@ -60,7 +77,7 @@ class DocumentoServiceTest {
     private DocumentRouter documentRouter;
 
     @Mock
-    private AsyncSplitterService asyncSplitterService;
+    private EmbeddingOrchestrator embeddingOrchestrator;
 
     @InjectMocks
     private DocumentoService documentoService;
@@ -289,16 +306,14 @@ class DocumentoServiceTest {
         when(documentRouter.detectContentType(anyString())).thenReturn(TipoConteudo.OUTROS);
 
         // Create mock processing result
-        AsyncSplitterService.ProcessingResult mockResult = new AsyncSplitterService.ProcessingResult();
+        EmbeddingOrchestrator.ProcessingResult mockResult = new EmbeddingOrchestrator.ProcessingResult();
         mockResult.setCapitulos(Collections.emptyList());
         mockResult.setAllEmbeddings(Collections.emptyList());
 
-        when(asyncSplitterService.fullProcessingAsync(
+        when(embeddingOrchestrator.processDocumentFull(
                 any(DocumentoWithAssociationDTO.class),
-                any(LibraryDTO.class),
-                any(TipoConteudo.class),
-                anyBoolean(),
-                anyBoolean()
+                any(EmbeddingContext.class),
+                any(ProcessingOptions.class)
         )).thenReturn(CompletableFuture.completedFuture(mockResult));
 
         when(chapterRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
@@ -336,7 +351,7 @@ class DocumentoServiceTest {
     @Test
     void testPersistProcessingResult_SavesChapters() throws SQLException {
         // Given
-        AsyncSplitterService.ProcessingResult result = new AsyncSplitterService.ProcessingResult();
+        EmbeddingOrchestrator.ProcessingResult result = new EmbeddingOrchestrator.ProcessingResult();
 
         ChapterDTO chapterDTO = ChapterDTO.builder()
                 .titulo("Chapter 1")
@@ -370,7 +385,7 @@ class DocumentoServiceTest {
     @Test
     void testPersistProcessingResult_SavesEmbeddings() throws SQLException {
         // Given
-        AsyncSplitterService.ProcessingResult result = new AsyncSplitterService.ProcessingResult();
+        EmbeddingOrchestrator.ProcessingResult result = new EmbeddingOrchestrator.ProcessingResult();
         result.setCapitulos(Collections.emptyList());
 
         DocumentEmbeddingDTO embeddingDTO = new DocumentEmbeddingDTO();
@@ -393,7 +408,7 @@ class DocumentoServiceTest {
     @Test
     void testPersistProcessingResult_HandlesEmbeddingSaveError() throws SQLException {
         // Given
-        AsyncSplitterService.ProcessingResult result = new AsyncSplitterService.ProcessingResult();
+        EmbeddingOrchestrator.ProcessingResult result = new EmbeddingOrchestrator.ProcessingResult();
         result.setCapitulos(Collections.emptyList());
 
         DocumentEmbeddingDTO embeddingDTO = new DocumentEmbeddingDTO();

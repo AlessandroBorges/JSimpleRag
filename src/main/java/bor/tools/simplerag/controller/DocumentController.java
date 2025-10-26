@@ -337,6 +337,23 @@ public class DocumentController {
             CompletableFuture<DocumentoService.ProcessingStatus> future =
                     documentoService.processDocumentAsync(documentId, includeQA, includeSummary);
 
+            // Add success and error handlers for async processing
+            future.thenAccept(status -> {
+                log.info("Async processing completed for document {}: status={}, chapters={}, embeddings={}",
+                        documentId, status.getStatus(), status.getChaptersCount(), status.getEmbeddingsCount());
+                if ("COMPLETED".equals(status.getStatus())) {
+                    statusTracker.markCompleted(documentId,
+                            "Processed: " + status.getChaptersCount() + " chapters, " +
+                            status.getEmbeddingsCount() + " embeddings");
+                } else if ("FAILED".equals(status.getStatus())) {
+                    statusTracker.markFailed(documentId, status.getErrorMessage());
+                }
+            }).exceptionally(error -> {
+                log.error("Async processing failed for document {}: {}", documentId, error.getMessage(), error);
+                statusTracker.markFailed(documentId, error.getMessage());
+                return null;
+            });
+
             // Return immediately with status URL
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Document processing started");

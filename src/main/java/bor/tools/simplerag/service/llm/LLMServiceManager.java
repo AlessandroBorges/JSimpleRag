@@ -32,6 +32,7 @@ public class LLMServiceManager {
     private final AtomicInteger primaryRequests = new AtomicInteger(0);
     private final AtomicInteger secondaryRequests = new AtomicInteger(0);
     private final AtomicInteger failoverEvents = new AtomicInteger(0);
+    protected java.util.Map<String, LLMService> modelsToService;
 
     /**
      * Creates a new LLMServiceManager.
@@ -67,6 +68,45 @@ public class LLMServiceManager {
      */
     public float[] embeddings(Embeddings_Op op, String text) throws LLMServiceException {
         return embeddings(op, text, "nomic");
+    }
+    
+    /**
+     * Retrieves the default completion model name from the primary service.
+     *
+     * @return Default completion model name, or null if unavailable
+     */
+    public String getDefaultCompletionModelName() {
+	LLMService service = getPrimaryService();
+	try {
+
+	    int i = 1;
+	    while (service == null && i < services.size()) {
+		if (i == 1)
+		    log.warn("No primary LLM service available to get default model");
+		i++;
+		service = services.get(i);
+		if (service != null)
+		    log.info("Trying secondary LLM service at index {} as primary, as LLMService", i,
+			    service.getServiceProvider());
+	    }
+	    if (service == null) {
+		log.error("No LLM service available to get default model");
+		return null;
+	    }
+
+	    MapModels models = service.getInstalledModels();
+	    if (models != null && !models.isEmpty()) {
+		// Return the first model as default
+		return models.keySet().iterator().next();
+	    }
+	} catch (LLMServiceException e) {
+	    log.warn("Failed to get installed models from primary service: {}", e.getMessage());
+	    e.printStackTrace();
+	} catch (LLMException e) {
+	    log.warn("LLM exception while getting installed models: {}", e.getMessage());
+	    e.printStackTrace();
+	}
+	return null;
     }
 
     /**
@@ -500,6 +540,48 @@ public class LLMServiceManager {
     }
 
     /**
+     * Returns a map of all registered models to their corresponding LLMService.
+     * This is useful to see which service provides which models.
+     * 
+     * @return Map where keys are model names and values are the LLMService instances that provide them
+     */
+    public java.util.Map<String, LLMService> getRegisteredModelsMap() {
+	
+	if (modelsToService == null) {
+	    modelsToService = new java.util.HashMap<>();
+	}
+	
+	if(!modelsToService.isEmpty()) {
+	    return modelsToService;
+	}
+        
+
+        for (LLMService service : services) {
+            try {
+                MapModels registeredModels = service.getRegisteredModels();
+                if (registeredModels != null && !registeredModels.isEmpty()) {
+                    for (String modelName : registeredModels.keySet()) {
+                        // Only add if not already present (first service wins)
+                        modelsToService.putIfAbsent(modelName, service);
+                    }
+                    
+                    // Also add aliases
+                    for (java.util.Map.Entry<String, Model> entry : registeredModels.entrySet()) {
+                        Model model = entry.getValue();
+                        if (model != null && model.getAlias() != null) {
+                            modelsToService.putIfAbsent(model.getAlias(), service);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Error getting registered models from service: {}", e.getMessage());
+            }
+        }
+
+        return modelsToService;
+    }
+
+    /**
      * Returns all available models from all providers.
      *
      * @return Map of provider index to list of model names
@@ -579,6 +661,100 @@ public class LLMServiceManager {
         return index >= 0 ? services.get(index) : null;
     }
 
+    /**
+     * Retrieves an LLMService from the pool that has a registered model with the given name.
+     * 
+     * This method searches through all available LLMService instances in the pool
+     * and returns the first service that has the specified model registered.
+     * The search uses the getRegisteredModels() method to check for model availability.
+     * 
+     * The matching is case-insensitive and supports partial matching, meaning:
+     * - Exact matches are prioritized
+     * - Model names containing the search term are also matched
+     * - Model aliases are also searched
+     * 
+     * @param modelName The name of the registered model to search for
+     * @return LLMService instance that has the model registered, or null if not found
+     * @throws IllegalArgumentException if modelName is null or empty
+     * 
+     * @see LLMService#getRegisteredModels()
+     */
+    public LLMService getLLMServiceByRegisteredModel(String modelName) {
+        if (modelName == null || modelName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Model name cannot be null or empty");
+        }
+
+        String normalizedModelName = modelName.toLowerCase().trim();
+
+        // Search through all services in the pool
+        for (LLMService service : services) {
+            if (serviceHasRegisteredModel(service, normalizedModelName)) {
+                log.debug("Found LLMService for registered model '{}' in provider: {}", 
+                         modelName, service.getServiceProvider());
+                return service;
+            }
+        }
+
+        log.warn("No LLMService found with registered model: {}", modelName);
+        return null;
+    }
+
+    /**
+     * Checks if a service has a specific model registered.
+     * Uses getRegisteredModels() to check for model availability.
+     *
+     * @param service LLMService to check
+     * @param normalizedModelName Normalized model name (lowercase, trimmed)
+     * @return true if service has the model registered
+     */
+    private boolean serviceHasRegisteredModel(LLMService service, String normalizedModelName) {
+        try {
+            // Get registered models from service
+            MapModels registeredModels = service.getRegisteredModels();
+
+            if (registeredModels == null || registeredModels.isEmpty()) {
+                return false;
+            }
+
+            // Check for exact match first
+            for (String registeredModelName : registeredModels.keySet()) {
+                String normalizedRegistered = registeredModelName.toLowerCase().trim();
+
+                if (normalizedRegistered.equals(normalizedModelName)) {
+                    return true;
+                }
+            }
+
+            // Check for partial match
+            for (String registeredModelName : registeredModels.keySet()) {
+                String normalizedRegistered = registeredModelName.toLowerCase().trim();
+
+                if (normalizedRegistered.contains(normalizedModelName) ||
+                    normalizedModelName.contains(normalizedRegistered)) {
+                    return true;
+                }
+            }
+
+            // Check model aliases
+            for (java.util.Map.Entry<String, Model> entry : registeredModels.entrySet()) {
+                Model model = entry.getValue();
+                if (model != null && model.getAlias() != null) {
+                    String normalizedAlias = model.getAlias().toLowerCase().trim();
+                    if (normalizedAlias.equals(normalizedModelName) ||
+                        normalizedAlias.contains(normalizedModelName) ||
+                        normalizedModelName.contains(normalizedAlias)) {
+                        return true;
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.debug("Error checking registered models for service: {}", e.getMessage());
+        }
+
+        return false;
+    }
+
     // ============ Inner Classes ============
 
     /**
@@ -639,5 +815,17 @@ public class LLMServiceManager {
                 getSecondaryUsagePercentage()
             );
         }
+    }
+
+    /**
+     * Refreshes the cached map of registered models to services.
+     * This forces a re-query of all services to update the mapping.
+     */
+    public void refreshRegisteredModels() {
+	if(this.modelsToService != null) {
+	    this.modelsToService.clear();
+	    this.getRegisteredModelsMap();
+	}
+	
     }
 }

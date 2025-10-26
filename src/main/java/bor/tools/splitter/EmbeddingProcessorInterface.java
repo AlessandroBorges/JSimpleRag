@@ -9,7 +9,22 @@ import bor.tools.simplerag.dto.*;
 
 /**
  * Interface for embedding operations.
+ *
+ * @deprecated Use {@link bor.tools.simplerag.service.embedding.EmbeddingService} instead.
+ *             This interface is being phased out in favor of the new embedding service
+ *             architecture which provides better separation of concerns, retry logic,
+ *             and integration with LLMServiceManager pool.
+ *
+ * Migration guide:
+ * - Replace EmbeddingProcessorInterface with EmbeddingService
+ * - Use EmbeddingContext instead of passing LibraryDTO directly
+ * - Use EmbeddingOrchestrator for full document processing
+ *
+ * @see bor.tools.simplerag.service.embedding.EmbeddingService
+ * @see bor.tools.simplerag.service.embedding.EmbeddingOrchestrator
+ * @see bor.tools.simplerag.service.embedding.model.EmbeddingContext
  */
+@Deprecated(since = "0.0.2", forRemoval = true)
 public interface EmbeddingProcessorInterface {
 
 	/**

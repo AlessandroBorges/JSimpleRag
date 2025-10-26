@@ -1,0 +1,163 @@
+package bor.tools.simplerag.service.embedding.model;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import bor.tools.simplerag.dto.LibraryDTO;
+import lombok.Builder;
+import lombok.Data;
+
+/**
+ * Context object for embedding operations.
+ *
+ * Encapsulates library configuration, model selection, and metadata
+ * for embedding generation operations. Supports hierarchical model
+ * resolution: explicit override → library default → global default.
+ *
+ * @since 0.0.1
+ * @see EmbeddingRequest
+ */
+@Data
+@Builder
+public class EmbeddingContext {
+
+    /**
+     * Library context for the embedding operation.
+     * Provides access to library-specific configurations including
+     * default models, search weights, and metadata.
+     */
+    private LibraryDTO library;
+
+    /**
+     * Override for embedding model name (optional).
+     *
+     * If provided, takes precedence over library and global defaults.
+     * If null, uses library.defaultEmbeddingModel or global configuration.
+     *
+     * Example: "nomic-embed-text", "text-embedding-ada-002"
+     */
+    private String embeddingModelName;
+
+    /**
+     * Override for completion model name (optional).
+     *
+     * Used for Q&A generation and summarization operations.
+     * If null, uses global default from LLMServiceManager.getDefaultCompletionModelName().
+     *
+     * Note: Library does not manage completion models, only embedding models.
+     *
+     * Example: "qwen3-1.7b", "gpt-4", "mistral"
+     */
+    private String completionModelName;
+
+    /**
+     * Additional metadata for the operation.
+     *
+     * Can store custom key-value pairs for strategy-specific needs.
+     */
+    @Builder.Default
+    private Map<String, Object> additionalMetadata = new HashMap<>();
+
+    /**
+     * Resolves which embedding model to use.
+     *
+     * Resolution priority:
+     * 1. Explicit override (embeddingModelName)
+     * 2. Library metadata (library.getEmbeddingModel())
+     * 3. Global default (parameter)
+     *
+     * @param globalDefault Global default model name from configuration
+     * @return Resolved embedding model name
+     */
+    public String resolveEmbeddingModel(String globalDefault) {
+        if (embeddingModelName != null && !embeddingModelName.trim().isEmpty()) {
+            return embeddingModelName;
+        }
+        if (library != null && library.getEmbeddingModel() != null) {
+            return library.getEmbeddingModel();
+        }
+        return globalDefault;
+    }
+
+    /**
+     * Resolves which completion model to use.
+     *
+     * Resolution priority:
+     * 1. Explicit override (completionModelName)
+     * 2. Global default (parameter from LLMServiceManager)
+     *
+     * Note: Library does not manage completion models, only embedding models.
+     * The global default should come from LLMServiceManager.getDefaultCompletionModelName().
+     *
+     * @param globalDefault Global default model name from LLMServiceManager
+     * @return Resolved completion model name
+     */
+    public String resolveCompletionModel(String globalDefault) {
+        if (completionModelName != null && !completionModelName.trim().isEmpty()) {
+            return completionModelName;
+        }
+        return globalDefault;
+    }
+
+    /**
+     * Adds a metadata entry to the context.
+     *
+     * @param key Metadata key
+     * @param value Metadata value
+     */
+    public void addMetadata(String key, Object value) {
+        if (this.additionalMetadata == null) {
+            this.additionalMetadata = new HashMap<>();
+        }
+        this.additionalMetadata.put(key, value);
+    }
+
+    /**
+     * Retrieves a metadata value by key.
+     *
+     * @param key Metadata key
+     * @return Metadata value, or null if not found
+     */
+    public Object getMetadata(String key) {
+        return this.additionalMetadata != null
+            ? this.additionalMetadata.get(key)
+            : null;
+    }
+
+    /**
+     * Checks if the context has a specific metadata key.
+     *
+     * @param key Metadata key to check
+     * @return true if key exists, false otherwise
+     */
+    public boolean hasMetadata(String key) {
+        return this.additionalMetadata != null
+            && this.additionalMetadata.containsKey(key);
+    }
+
+    /**
+     * Creates a simple context with just a library.
+     *
+     * @param library Library context
+     * @return EmbeddingContext with library set
+     */
+    public static EmbeddingContext fromLibrary(LibraryDTO library) {
+        return EmbeddingContext.builder()
+                .library(library)
+                .build();
+    }
+
+    /**
+     * Creates a context with library and explicit embedding model.
+     *
+     * @param library Library context
+     * @param embeddingModel Embedding model name
+     * @return EmbeddingContext configured
+     */
+    public static EmbeddingContext withEmbeddingModel(LibraryDTO library, String embeddingModel) {
+        return EmbeddingContext.builder()
+                .library(library)
+                .embeddingModelName(embeddingModel)
+                .build();
+    }
+}

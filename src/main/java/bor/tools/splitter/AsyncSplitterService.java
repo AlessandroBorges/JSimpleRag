@@ -26,7 +26,18 @@ import bor.tools.utils.RAGUtil;
  * - Geração de embeddings
  * - Sumarização
  * - Geração de Q&A
+ *
+ * @deprecated Use {@link bor.tools.simplerag.service.embedding.EmbeddingOrchestrator} instead.
+ *             This service is being phased out in favor of the new orchestrator which provides:
+ *             - Retry logic for LLM failures (2 min delay, 2 retries)
+ *             - Better integration with LLMServiceManager pool
+ *             - Cleaner separation between splitting and embedding concerns
+ *             - Support for ProcessingOptions configuration
+ *
+ * @see bor.tools.simplerag.service.embedding.EmbeddingOrchestrator
+ * @see bor.tools.simplerag.service.embedding.model.ProcessingOptions
  */
+@Deprecated(since = "0.0.2", forRemoval = true)
 @Service
 public class AsyncSplitterService {
 

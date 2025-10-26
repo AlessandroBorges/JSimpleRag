@@ -23,7 +23,20 @@ import bor.tools.simplerag.entity.enums.TipoEmbedding;
  * Esta classe fornece funcionalidades completas para criação e processamento
  * de embeddings no contexto do JSimpleRag, integrando com o LLMService
  * e seguindo a arquitetura hierárquica do sistema.
+ *
+ * @deprecated Use {@link bor.tools.simplerag.service.embedding.EmbeddingServiceImpl} instead.
+ *             This implementation is being phased out in favor of the new embedding service
+ *             architecture which provides:
+ *             - Better separation of concerns via Strategy pattern
+ *             - Retry logic for LLM failures
+ *             - Integration with LLMServiceManager pool
+ *             - Support for hierarchical model resolution
+ *
+ * @see bor.tools.simplerag.service.embedding.EmbeddingService
+ * @see bor.tools.simplerag.service.embedding.EmbeddingServiceImpl
+ * @see bor.tools.simplerag.service.embedding.EmbeddingOrchestrator
  */
+@Deprecated(since = "0.0.2", forRemoval = true)
 @Service
 public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
 

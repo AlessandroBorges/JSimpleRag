@@ -30,7 +30,9 @@ import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
-import bor.tools.splitter.AsyncSplitterService;
+import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
+import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
+import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +77,7 @@ public class DocumentoService {
     private final LibraryService libraryService;
     private final DocumentConverter documentConverter;
     private final DocumentRouter documentRouter;
-    private final AsyncSplitterService asyncSplitterService;
+    private final EmbeddingOrchestrator embeddingOrchestrator;
 
     /**
      * Upload document from text content (Fluxo step a)
@@ -242,13 +244,20 @@ public class DocumentoService {
                 DocumentoWithAssociationDTO documentoDTO = toDTOWithAssociation(documento);
                 documentoDTO.setBiblioteca(biblioteca);
 
-                // Determine content type using DocumentRouter (Fluxo step d)
-                TipoConteudo tipoConteudo = documentRouter.detectContentType(documento.getConteudoMarkdown());
-                log.debug("Detected content type: {} for document: {}", tipoConteudo, documento.getTitulo());
+                // Create embedding context
+                EmbeddingContext context = EmbeddingContext.builder()
+                        .library(biblioteca)
+                        .build();
 
-                // Full async processing (Fluxo steps e, f, g)
-                AsyncSplitterService.ProcessingResult result = asyncSplitterService
-                        .fullProcessingAsync(documentoDTO, biblioteca, tipoConteudo, includeQA, includeSummary)
+                // Create processing options
+                ProcessingOptions options = ProcessingOptions.builder()
+                        .includeQA(includeQA)
+                        .includeSummary(includeSummary)
+                        .build();
+
+                // Full async processing using new orchestrator (Fluxo steps d, e, f, g)
+                EmbeddingOrchestrator.ProcessingResult result = embeddingOrchestrator
+                        .processDocumentFull(documentoDTO, context, options)
                         .get();
 
                 // Persist processing results (Fluxo step e and g)
@@ -284,10 +293,10 @@ public class DocumentoService {
      * Persist processing results (chapters + embeddings)
      * Implements Fluxo_carga_documents.md steps (e) and (g)
      *
-     * ✅ CORRECTED VERSION: Uses DocEmbeddingJdbcRepository
+     * ✅ UPDATED VERSION: Uses EmbeddingOrchestrator and DocEmbeddingJdbcRepository
      */
     @Transactional
-    protected void persistProcessingResult(AsyncSplitterService.ProcessingResult result, Documento documento) {
+    protected void persistProcessingResult(EmbeddingOrchestrator.ProcessingResult result, Documento documento) {
         log.debug("Persisting processing result for document: {}", documento.getId());
 
         // 1. Save chapters (using JPA repository - this is fine)
@@ -536,7 +545,7 @@ public class DocumentoService {
     /**
      * Calculate total tokens from processing result
      */
-    private int calculateTotalTokens(AsyncSplitterService.ProcessingResult result) {
+    private int calculateTotalTokens(EmbeddingOrchestrator.ProcessingResult result) {
         if (result.getCapitulos() == null) {
             return 0;
         }

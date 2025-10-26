@@ -41,6 +41,7 @@ The system supports multiple embedding optimization types for different RAG phas
 ### **Key Integration Points with JSimpleRag System**
 
 #### **Document Processing Phase**
+
 ```java
 // During document ingestion and chunking
 float[] documentEmbedding = llmService.embeddings(documentChunk,
@@ -48,6 +49,7 @@ float[] documentEmbedding = llmService.embeddings(documentChunk,
 ```
 
 #### **Search Query Phase**
+
 ```java
 // During user search request processing
 float[] queryEmbedding = llmService.embeddings(userQuery,

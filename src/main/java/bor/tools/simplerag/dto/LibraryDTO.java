@@ -119,24 +119,47 @@ public class LibraryDTO {
         return false;
     }
 
+    
+    public MetaBiblioteca getMetadados() {
+	if (metadados == null) {
+	    metadados = new MetaBiblioteca();
+	}
+	return metadados;
+    }
+    
     /**
      * Gets the language from metadata
      */
     public String getLanguage() {
-        return metadados != null ? metadados.getLanguage() : null;
+        return getMetadados().getLanguage();
     }
 
     /**
      * Gets the embedding model from metadata
      */
     public String getEmbeddingModel() {
-        return metadados != null ? metadados.getEmbeddingModel() : null;
+        return getMetadados().getEmbeddingModel();
     }
 
     /**
      * Gets the embedding dimension from metadata
      */
     public Integer getEmbeddingDimension() {
-        return metadados != null ? metadados.getEmbeddingDimension() : null;
+        return getMetadados().getEmbeddingDimension();
     }
+    
+    /**
+     * Gets the description from metadata
+     */
+    public String getDescription() {
+	return getMetadados().getDescricao();
+    }
+    
+    /**
+     * Sets the description in metadata
+     */
+    public void setDescription(String descricao) {
+   	getMetadados().setDescricao(descricao);
+       }
+    
 }

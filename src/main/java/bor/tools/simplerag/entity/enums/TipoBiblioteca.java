@@ -9,7 +9,8 @@ public enum TipoBiblioteca {
     PUBLICO("publico"),    
     PESSOAL("pessoal"),        
     CHATBOT("chat"),    
-    PROJETO("projeto")    
+    PROJETO("projeto"),
+    TECNICA("tecnica")
     ;
     
     private final String dbValue;
