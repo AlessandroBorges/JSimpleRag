@@ -14,7 +14,8 @@
       "Bash(then)",
       "Bash(fi)",
       "Bash(done)",
-      "Bash(mvn compile -DskipTests)"
+      "Bash(mvn compile -DskipTests)",
+      "Read(//home/alessandro/.m2/repository/bor/tools/**)"
     ],
     "deny": [],
     "ask": []

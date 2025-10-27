@@ -107,6 +107,12 @@ public class TikaDocumentConverter implements DocumentConverter {
 
     @Override
     public String convertToMarkdown(String inputContent, String inputFormat) throws Exception {
+	
+	if(inputFormat != null && inputFormat.contains("markdown")) {
+	    logger.debug("Input format is already markdown, returning original content");
+	    return inputContent;
+	}
+	
         if (inputContent == null || inputContent.trim().isEmpty()) {
             throw new IllegalArgumentException("Input content cannot be null or empty");
         }
@@ -143,7 +149,12 @@ public class TikaDocumentConverter implements DocumentConverter {
             // Download content from URI
             byte[] content = downloadContent(contentSource);
 
-            // Convert using byte array method
+	    // Convert using byte array method
+	    if (inputFormat != null && inputFormat.contains("markdown")) {
+		logger.debug("Input format is already markdown, returning original content");
+		return content != null ? new String(content) : null;
+	    }
+   
             return convertToMarkdown(content, inputFormat);
 
         } catch (Exception e) {
@@ -154,6 +165,12 @@ public class TikaDocumentConverter implements DocumentConverter {
 
     @Override
     public String convertToMarkdown(byte[] content, String inputFormat) throws Exception {
+	
+	if(inputFormat != null && inputFormat.contains("markdown")) {
+	    logger.debug("Input format is already markdown, returning original content");
+	    return content != null ? new String(content) : null;
+	}
+	
         if (content == null || content.length == 0) {
             throw new IllegalArgumentException("Content byte array cannot be null or empty");
         }
@@ -182,6 +199,10 @@ public class TikaDocumentConverter implements DocumentConverter {
         }
     }
 
+    /**
+     * Detects the format of the document located at the given URI.
+     * It downloads a sample of the content for detection.
+     */
     @Override
     public String detectFormat(URI contentSource) throws Exception {
         if (contentSource == null) {

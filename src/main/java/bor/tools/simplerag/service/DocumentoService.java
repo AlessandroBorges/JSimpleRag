@@ -1,5 +1,6 @@
 package bor.tools.simplerag.service;
 
+import java.net.URI;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -184,11 +185,20 @@ public class DocumentoService {
         if (library.isEmpty()) {
             throw new IllegalArgumentException("Library not found: " + libraryId);
         }
-
-        // Detect format (Fluxo step b)
-        String detectedFormat = documentConverter.detectFormat(fileContent);
-        log.debug("Detected format: {} for file: {}", detectedFormat, fileName);
-
+      
+        String detectedFormat = simpleFormatDetector(fileName);
+        
+	if (detectedFormat == null || detectedFormat.isEmpty()) {
+	    // Try to detect from byte sample
+	    byte[] sample = new byte[Math.min(fileContent.length, 256)];
+	    System.arraycopy(fileContent, 0, sample, 0, sample.length);
+	    detectedFormat = documentConverter.detectFormat(sample);
+	    log.debug("Detected format: {} for file: {}", detectedFormat, fileName);
+	    
+	    if (detectedFormat != null || detectedFormat.contains("text/plain")) {
+		detectedFormat = "markdown"; // Fallback to txt
+	    }
+	}
         // Convert to Markdown (Fluxo step c)
         String markdown = documentConverter.convertToMarkdown(fileContent, detectedFormat);
 
@@ -205,6 +215,72 @@ public class DocumentoService {
 
         // Create and save document
         return uploadFromText(titulo, markdown, libraryId, metadata);
+    }
+
+    /**
+     * Simple format detector based on file extension
+     * @param fileName
+     * @return MIME Types or null if unknown
+     */
+    private String simpleFormatDetector(String fileName) {
+	String ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+	
+	switch (ext) {
+	    case "pdf":
+		return "application/pdf";
+		
+	    case "doc":
+		return "application/msword";
+		
+	    case "docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+		
+	    case "txt":
+	    case "sql":
+	    case "log":
+		return "text/plain";
+		
+	    case "java":
+		return "text/x-java-source";
+		
+	    case "py":
+		return "text/x-python";
+		
+	    case "js":	
+		return "application/javascript";
+		
+	    case "csv":
+		return "text/csv";
+		
+	    case "md":
+	    case "markdown":
+		return "text/markdown";
+		
+	    case "html":
+	    case "htm":
+		return "text/html";
+		
+	    case "xml":
+		return "application/xml";
+		
+	    case "xhtml":	
+		return "application/xhtml+xml";
+		
+	    case "ppt":
+		return "application/vnd.ms-powerpoint";
+		
+	    case "pptx":
+		return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+		
+	    case "xls":
+	    case "xlm":
+		return "application/vnd.ms-excel";
+		
+	    case "xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";	    
+	    default:
+		return null;
+	}
     }
 
     /**

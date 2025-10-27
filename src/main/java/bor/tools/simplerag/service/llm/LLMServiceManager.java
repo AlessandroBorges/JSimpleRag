@@ -546,8 +546,8 @@ public class LLMServiceManager {
                 // Partial match (model name contains or is contained in available model)
                 if (normalizedAvailable.contains(normalizedModelName) ||
                     normalizedModelName.contains(normalizedAvailable)) {
-                    // add to cache
-                    models.addModel(normalizedModelName, models.get(availableModel)); //cache it
+                    // TODO: Aguardando implementação de MapModels.addModel(String, Model) no JSimpleLLM
+                    // models.addModel(normalizedModelName, models.get(availableModel)); //cache it
                     return true;
                 }
             }

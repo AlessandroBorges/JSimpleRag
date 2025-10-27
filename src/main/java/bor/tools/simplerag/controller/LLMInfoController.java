@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import bor.tools.simplellm.LLMConfig;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.SERVICE_PROVIDER;
-import bor.tools.simplerag.config.MultiLLMServiceConfig;
+import bor.tools.simplerag.config.LLMConfiguration;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.Model_Type;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,8 +44,8 @@ import lombok.extern.slf4j.Slf4j;
 public class LLMInfoController {
 
     private final LLMService llmService;
-    
-    private final MultiLLMServiceConfig multiLlmServiceConfig;
+
+    private final LLMConfiguration llmConfiguration;
 
     /**
      * Get available LLM providers and their online status.
@@ -70,7 +70,7 @@ public class LLMInfoController {
         List<ProviderStatus> providers = new ArrayList<>();
 
         // Check all known providers
-        Map<String,LLMService> services = multiLlmServiceConfig.getActiveProviderMap();
+        Map<String,LLMService> services = llmConfiguration.getActiveProviderMap();
         for ( LLMService llm : services.values()) {
             boolean isOnline = false;
             try {        	
@@ -103,28 +103,32 @@ public class LLMInfoController {
         }
     )
     public ResponseEntity<Map<String, LLMConfig>> getConfigurations() {
-        log.debug("Getting LLM configurations");
+	log.debug("Getting LLM configurations");
 
-        Map<String, LLMConfig> configurations = new HashMap<>();
+	Map<String, LLMConfig> configurations = new HashMap<>();
 
-        try {
-            // Get current service provider
-            SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
+	try {
+	    Map<String, LLMService> services = llmConfiguration.getActiveProviderMap();
+	    
+	    for (LLMService llmService : services.values()) {
+		// Get current service provider
+		SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
 
-            // Get configuration for current provider
-            LLMConfig config = llmService.getLLMConfig();
+		// Get configuration for current provider
+		LLMConfig config = llmService.getLLMConfig();
 
-            if (config != null) {
-                configurations.put(currentProvider.name(), config);
-            }
+		if (config != null) {
+		    configurations.put(currentProvider.name(), config);
+		}
+	    }
+	    
+	    log.info("Retrieved configurations for {} providers", configurations.size());
+	    return ResponseEntity.ok(configurations);
 
-            log.info("Retrieved configurations for {} providers", configurations.size());
-            return ResponseEntity.ok(configurations);
-
-        } catch (Exception e) {
-            log.error("Failed to retrieve configurations: {}", e.getMessage(), e);
-            return ResponseEntity.ok(configurations); // Return empty map on error
-        }
+	} catch (Exception e) {
+	    log.error("Failed to retrieve configurations: {}", e.getMessage(), e);
+	    return ResponseEntity.ok(configurations); // Return empty map on error
+	}
     }
 
     /**
@@ -145,33 +149,33 @@ public class LLMInfoController {
         }
     )
     public ResponseEntity<List<ModelInfo>> getInstalledModels() {
-        log.debug("Getting installed models");
+	log.debug("Getting installed models");
 
-        List<ModelInfo> modelInfoList = new ArrayList<>();
+	List<ModelInfo> modelInfoList = new ArrayList<>();
 
-        try {
-            SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
-            List<Model> installedModels = llmService.getInstalledModels().getModels();
+	try {
+	    Map<String, LLMService> services = llmConfiguration.getActiveProviderMap();
+	    for (LLMService llmService : services.values()) {
+		SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
+		List<Model> installedModels = llmService.getInstalledModels().getModels();
 
-            if (installedModels != null) {
-                for (Model model : installedModels) {
-                    List<String> types = extractModelTypes(model);
-                    modelInfoList.add(new ModelInfo(
-                        currentProvider.name(),
-                        model,
-                        types,
-                        null // online status not applicable for installed models
-                    ));
-                }
-            }
+		if (installedModels != null) {
+		    for (Model model : installedModels) {
+			List<String> types = extractModelTypes(model);
+			modelInfoList.add(new ModelInfo(currentProvider.name(), model, types, null // online status not
+												   // applicable for
+												   // installed models
+			));
+		    }
+		}
+	    }
+	    log.info("Retrieved {} installed models", modelInfoList.size());
+	    return ResponseEntity.ok(modelInfoList);
 
-            log.info("Retrieved {} installed models", modelInfoList.size());
-            return ResponseEntity.ok(modelInfoList);
-
-        } catch (Exception e) {
-            log.error("Failed to retrieve installed models: {}", e.getMessage(), e);
-            return ResponseEntity.ok(modelInfoList); // Return empty list on error
-        }
+	} catch (Exception e) {
+	    log.error("Failed to retrieve installed models: {}", e.getMessage(), e);
+	    return ResponseEntity.ok(modelInfoList); // Return empty list on error
+	}
     }
 
     /**
@@ -196,32 +200,29 @@ public class LLMInfoController {
 
         List<ModelInfo> modelInfoList = new ArrayList<>();
 
-        try {
-            SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
-            List<Model> registeredModels = llmService.getRegisteredModels().getModels();
+        try {            
+            Map<String,LLMService> services = llmConfiguration.getActiveProviderMap();
+            
+            for ( LLMService llmService : services.values()) {            
+		SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
+		List<Model> registeredModels = llmService.getRegisteredModels().getModels();
 
-            if (registeredModels != null) {
-                for (Model model : registeredModels) {
-                    List<String> types = extractModelTypes(model);
+		if (registeredModels != null) {
+		    for (Model model : registeredModels) {
+			List<String> types = extractModelTypes(model);
+			// Check if model is online
+			boolean isOnline = false;
+			try {
+			    isOnline = llmService.isModelOnline(model);
+			} catch (Exception e) {
+			    log.debug("Failed to check online status for model {}: {}", model.getName(),
+				    e.getMessage());
+			}
 
-                    // Check if model is online
-                    boolean isOnline = false;
-                    try {
-                        isOnline = llmService.isModelOnline(model);
-                    } catch (Exception e) {
-                        log.debug("Failed to check online status for model {}: {}",
-                                model.getName(), e.getMessage());
-                    }
-
-                    modelInfoList.add(new ModelInfo(
-                        currentProvider.name(),
-                        model,
-                        types,
-                        isOnline
-                    ));
-                }
-            }
-
+			modelInfoList.add(new ModelInfo(currentProvider.name(), model, types, isOnline));
+		    }
+		}
+	    }
             log.info("Retrieved {} registered models", modelInfoList.size());
             return ResponseEntity.ok(modelInfoList);
 

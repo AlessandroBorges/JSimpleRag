@@ -227,6 +227,15 @@ public class DocumentController {
             // Get file bytes
             byte[] fileContent = file.getBytes();
 
+            String filename = file.getOriginalFilename();                      
+	    if (filename != null) {
+		if (titulo == null || titulo.isBlank()) {
+		    // Derive title from filename if not provided
+		    titulo = filename != null ? filename.replaceFirst("[.][^.]+$", "") : "Untitled Document";
+		}
+		metadata.put("nome_documento", titulo);
+		metadata.put("url", filename);
+	    }
             // Upload
             DocumentoDTO saved = documentoService.uploadFromFile(
                     file.getOriginalFilename(),
@@ -548,11 +557,35 @@ public class DocumentController {
     /**
      * Parse metadata JSON string to Map using Jackson ObjectMapper
      */
-    private Map<String, Object> parseMetadata(String metadataJson) {
-        if (metadataJson == null || metadataJson.trim().isEmpty()) {
-            return new HashMap<>();
-        }
-
+    private Map<String, Object> parseMetadata(String metadataJson) {	
+	if (metadataJson == null || metadataJson.trim().isEmpty()) {
+	    return new HashMap<>();
+	}
+	
+	HashMap<String, Object> result = new HashMap<>();
+	
+	metadataJson = metadataJson.trim();	
+	
+	// Check for key=value pairs or simple keyword list
+	if (!metadataJson.startsWith("{") || !metadataJson.startsWith("[")) {
+	    if(metadataJson.contains("=")) {
+		// Parse key=value pairs
+		String[] pairs = metadataJson.split(",");
+		for (String pair : pairs) {
+		    String[] keyValue = pair.split("=", 2);
+		    if (keyValue.length == 2) {
+			result.put(keyValue[0].trim(), keyValue[1].trim());
+		    }
+		}
+	    } else {
+		// possible a list of keywords
+		String[] keywords = metadataJson.split(",");
+		result.put("keywords", List.of(keywords));
+	    }	    
+	    return result;	    
+	}
+	
+	// Try parsing as JSON
         try {
             return objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
