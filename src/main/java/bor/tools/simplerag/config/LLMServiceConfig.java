@@ -31,17 +31,20 @@ public class LLMServiceConfig {
 
     @Value("${llmservice.provider.name:LM_STUDIO}")
     private String providerName;
+    
+    @Value("${llmservice.provider.use_defaults:false}")
+    private boolean useDefaults;
 
     @Value("${llmservice.provider.llm.models:qwen/qwen3-1.7b}")
     private String llmModels;
 
-    @Value("${llmservice.provider.embedding.model:text-embedding-nomic-embed-text-v1.5@q8_0}")
+    @Value("${llmservice.provider.embedding.model:text-embedding-snowflake-arctic-embed-l-v2.0}")
     private String embeddingModel;
 
     @Value("${llmservice.provider.embedding.dimension:768}")
     private Integer embeddingDimension;
 
-    @Value("${llmservice.provider.embedding.embeddingContextLength:8192}")
+    @Value("${llmservice.provider.embedding.embeddingContextLength:2048}")
     private Integer embeddingContextLength; // Default context length for embedding models
 
     @Value("${llmservice.provider.api.url:#{null}}")
@@ -67,19 +70,34 @@ public class LLMServiceConfig {
 	    // Convert provider name to SERVICE_PROVIDER
 	    SERVICE_PROVIDER provider = parseProviderName(providerName);
 
-	    LLMConfig config = null;
-	    if (apiUrl != null || apiKey != null) {
-		LLMConfig.LLMConfigBuilder builder = LLMConfig.builder();
+	    LLMConfig config = null;	    
+	    if (useDefaults == false) {
+		// override default configuration with user-defined settings
+		if (apiUrl != null || apiKey != null) {
+		    LLMConfig.LLMConfigBuilder builder = LLMConfig.builder();
 
+		    if (apiUrl != null) {
+			builder.baseUrl(apiUrl);
+		    }
+		    if (apiKey != null) {
+			builder.apiToken(apiKey);
+		    }
+		    config = builder.build();
+		    parseLLMModelsToArray(apiUrl, config);
+		    parseEmbeddingModelsToArray(embeddingModel, embeddingContextLength, config);
+		}
+	    } else {
+		// use default configuration for the provider and aplly changes
+		log.info("Using default LLMConfig for provider: {}", provider);
+		log.info("Adding some user-defined models and settings to default configuration");
+		config = LLMServiceFactory.getDefaultLLMConfig(provider);
 		if (apiUrl != null) {
-		    builder.baseUrl(apiUrl);
+		    config.setBaseUrl(apiUrl);
 		}
 		if (apiKey != null) {
-		    builder.apiToken(apiKey);
+		    config.setApiToken(apiKey);
 		}
-		config = builder.build();
-
-		parseLlmModelsToArray(apiUrl, config);
+		parseLLMModelsToArray(apiUrl, config);
 		parseEmbeddingModelsToArray(embeddingModel, embeddingContextLength, config);
 	    }
 
@@ -195,7 +213,7 @@ public class LLMServiceConfig {
      * @param config    LLMCOnfig instance to add models to
      * @return Array of Model objects
      */
-    protected static Model[] parseLlmModelsToArray(String llmModels, LLMConfig config) {
+    protected static Model[] parseLLMModelsToArray(String llmModels, LLMConfig config) {
 	if (llmModels == null || llmModels.isEmpty()) {
 	    return new Model[0];
 	}
@@ -222,16 +240,16 @@ public class LLMServiceConfig {
      * @param config                 LLMConfig instance to add embedding models to
      * @return Array of ModelEmbedding objects
      */
-    protected static ModelEmbedding[] parseEmbeddingModelsToArray(String embeddingModel, int embeddingContextLength,
-	    LLMConfig config) {
+    protected static ModelEmbedding[] parseEmbeddingModelsToArray(String embeddingModel, 
+                                                        	    int embeddingContextLength,
+                                                        	    LLMConfig config) {
 	if (embeddingModel == null || embeddingModel.isEmpty()) {
 	    return new ModelEmbedding[0];
 	}
 	String[] embeddingModelNameArray = embeddingModel.split(",\\s*");
 	ModelEmbedding[] embeddings = new ModelEmbedding[embeddingModelNameArray.length];
 	for (int i = 0; i < embeddingModelNameArray.length; i++) {
-	    ModelEmbedding embedding = new ModelEmbedding(embeddingModelNameArray[i], embeddingContextLength,
-		    Model_Type.EMBEDDING);
+	    ModelEmbedding embedding = new ModelEmbedding(embeddingModelNameArray[i], embeddingContextLength, Model_Type.EMBEDDING);
 	    embeddings[i] = embedding;
 	    if (config != null) {
 		config.addModels(embedding);

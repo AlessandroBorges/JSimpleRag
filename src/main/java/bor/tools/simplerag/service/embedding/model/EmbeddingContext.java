@@ -48,8 +48,26 @@ public class EmbeddingContext {
      *
      * Example: "qwen3-1.7b", "gpt-4", "mistral"
      */
-    private String completionModelName;
+    private String completionQAModelName;
+    
+    /**
+     * Maximum tokens for Embedding operations.
+     * Can less, as 2048 or 512, depending on the model used.
+     * 
+     * Default is 8192 tokens.
+     */	
+    @Builder.Default
+    private Integer maxTokens = 8192;
+    
+    /**
+     * Dimension of the embedding vectors.
+     *
+     * Default is 768 dimensions.
+     */	
+    @Builder.Default
+    private Integer embeddingDimension = 768; 
 
+    
     /**
      * Additional metadata for the operation.
      *
@@ -58,6 +76,73 @@ public class EmbeddingContext {
     @Builder.Default
     private Map<String, Object> additionalMetadata = new HashMap<>();
 
+    /**
+     * Enriches the context with library defaults if not already set.
+     *
+     * This method should be called after building the context to populate
+     * fields from library metadata that weren't explicitly overridden.
+     *
+     * @return this context for method chaining
+     */
+    public EmbeddingContext enrichFromLibrary() {
+        if (library != null) {
+            // Only populate if not explicitly set (check if still equals default)
+            if ( mustUpdate(embeddingModelName, library.getEmbeddingModel()) ) {
+                embeddingModelName = library.getEmbeddingModel();
+            }
+
+            if (mustUpdate(embeddingDimension, library.getEmbeddingDimension())) {
+                embeddingDimension = library.getEmbeddingDimension();
+            }
+
+            if (mustUpdate(maxTokens, library.getMaxTokens())) {	
+                maxTokens = library.getMaxTokens();
+            }
+
+            if (mustUpdate(completionQAModelName, library.getCompletionQAModel())) {
+                completionQAModelName = library.getCompletionQAModel();
+            }
+        }
+        return this;
+    }
+    
+    /**
+     * Determines if an update is needed based on current and new values.
+     * @param currentValue
+     * @param newValue
+     * @return
+     */
+    private boolean mustUpdate(Object currentValue, Object newValue) {
+	// equals case - nothing to do
+	if(currentValue == newValue)
+	    return false;
+	
+	// newValue is not empty and currentValue is empty - need to update
+	if(isEmpty(currentValue) && !isEmpty(newValue))
+	    return true;
+	
+	// current value and newValues are different 
+	if(!isEmpty(currentValue)  && !isEmpty(newValue) && !newValue.equals(currentValue))
+	    return true;
+	
+	return false;
+    }
+    
+    /**
+     * checks if the object is null or an empty string
+     * @param str
+     * @return
+     */
+    private boolean isEmpty(Object obj) {
+	if( obj == null )
+	    return true;
+	
+	if(obj instanceof String s)
+	    return s.trim().isEmpty();
+	
+	return false;
+    }
+    
     /**
      * Resolves which embedding model to use.
      *
@@ -80,22 +165,31 @@ public class EmbeddingContext {
     }
 
     /**
-     * Resolves which completion model to use.
+     * Resolves which completion model to use for Q&A generation.
      *
      * Resolution priority:
-     * 1. Explicit override (completionModelName)
-     * 2. Global default (parameter from LLMServiceManager)
+     * 1. Explicit override (completionQAModelName in context)
+     * 2. Library suggestion (library.getCompletionQAModel())
+     * 3. Global default (parameter from LLMServiceManager)
      *
-     * Note: Library does not manage completion models, only embedding models.
-     * The global default should come from LLMServiceManager.getDefaultCompletionModelName().
+     * Note: Unlike embedding models which are library-specific, completion models
+     * are optionally suggested by library but ultimately managed by LLMServiceManager.
+     * The library can suggest a preferred model for Q&A generation based on the
+     * knowledge domain (e.g., legal terminology might prefer a specialized model).
      *
      * @param globalDefault Global default model name from LLMServiceManager
      * @return Resolved completion model name
      */
     public String resolveCompletionModel(String globalDefault) {
-        if (completionModelName != null && !completionModelName.trim().isEmpty()) {
-            return completionModelName;
+        // 1. Check explicit override
+        if (completionQAModelName != null && !completionQAModelName.trim().isEmpty()) {
+            return completionQAModelName;
         }
+
+        // 2. Check library suggestion (populated via enrichFromLibrary())
+        // This is already populated in completionQAModelName by enrichFromLibrary()
+
+        // 3. Use global default
         return globalDefault;
     }
 
@@ -138,26 +232,34 @@ public class EmbeddingContext {
     /**
      * Creates a simple context with just a library.
      *
+     * Automatically enriches the context with library metadata (models, dimensions, tokens).
+     *
      * @param library Library context
-     * @return EmbeddingContext with library set
+     * @return EmbeddingContext with library defaults applied
      */
-    public static EmbeddingContext fromLibrary(LibraryDTO library) {
-        return EmbeddingContext.builder()
+    public static EmbeddingContext fromLibrary(LibraryDTO library) {	
+        var obj = EmbeddingContext.builder()
                 .library(library)
-                .build();
+                .build()
+                .enrichFromLibrary();        
+        obj.enrichFromLibrary();        
+        return obj;
     }
 
     /**
-     * Creates a context with library and explicit embedding model.
+     * Creates a context with library and explicit embedding model override.
+     *
+     * The explicit embedding model takes precedence over library defaults.
      *
      * @param library Library context
-     * @param embeddingModel Embedding model name
+     * @param embeddingModel Embedding model name (overrides library default)
      * @return EmbeddingContext configured
      */
     public static EmbeddingContext withEmbeddingModel(LibraryDTO library, String embeddingModel) {
         return EmbeddingContext.builder()
                 .library(library)
                 .embeddingModelName(embeddingModel)
-                .build();
+                .build()
+                .enrichFromLibrary();
     }
 }

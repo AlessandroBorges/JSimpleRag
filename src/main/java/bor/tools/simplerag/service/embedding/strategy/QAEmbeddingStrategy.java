@@ -47,9 +47,12 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
     private final LLMServiceManager llmServiceManager;
 
-    @Value("${rag.embedding.default-model:nomic-embed-text}")
+    @Value("${rag.embedding.default-model:snowflake}")
     private String defaultEmbeddingModel;
 
+    @Value("${rag.completion-qa.default-model:phi4-mini}")
+    private String defaultCompletionQAModel;
+    
     // Q&A generation defaults
     private static final int DEFAULT_QA_PAIRS = 3;
     private static final int MAX_TEXT_LENGTH = 6000;
@@ -132,12 +135,18 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Generates Q&A pairs from chapter content using completion model.
      */
-    private List<QuestionAnswer> generateQAPairs(String content, int numberOfPairs,
+    private List<QuestionAnswer> generateQAPairs( String content, 
+	    					  int numberOfPairs,
                                                   EmbeddingRequest request) throws LLMException {
 
         // Resolve completion model to use
-        String defaultCompletionModel = llmServiceManager.getDefaultCompletionModelName();
-        String modelName = request.getCompletionModelName(defaultCompletionModel);
+        String defaultCompletionModel = request.getCompletionModelName(this.defaultCompletionQAModel);
+        
+        if (defaultCompletionModel == null || defaultCompletionModel.trim().isEmpty()) {
+            throw new IllegalStateException("No default completion model configured for Q&A generation");
+        }
+        
+        String modelName = defaultCompletionModel;
         log.debug("Using completion model for Q&A generation: {}", modelName);
 
         // Get appropriate LLMService from pool
@@ -162,7 +171,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         // Prepare prompt for Q&A generation
         String prompt = String.format(
             "Com base no texto fornecido, gere exatamente %d pares de pergunta e resposta relevantes e informativos. " +
-            "As perguntas devem abordar os pontos principais do texto. " +
+            "As perguntas devem abordar os pontos principais do texto.\n" +
             "Formato: Q: [pergunta]\\nA: [resposta]\\n\\n" +
             "Certifique-se de que as respostas sejam concisas mas informativas.",
             numberOfPairs
@@ -191,6 +200,18 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
     }
 
     /**
+     * Checks if the specified model exists in any registered LLM service.
+     * @param modelName the name of the model to check
+     */
+    protected boolean checkModelExists(String modelName) {
+	if (modelName == null || modelName.trim().isEmpty()) {
+	    return false;
+	}
+	LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
+	return llmService != null;
+    }
+    
+    /**
      * Creates an embedding for a single Q&A pair.
      */
     private DocumentEmbeddingDTO createQAEmbedding(
@@ -208,6 +229,13 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         // Resolve embedding model to use
         String modelName = request.getEmbeddingModelName(defaultEmbeddingModel);
         log.debug("Using embedding model: {}", modelName);
+        
+        if (!checkModelExists(modelName)) {
+	    throw new IllegalStateException(
+		"Embedding model not found: " + modelName +
+		". Check if the model is registered in any provider."
+	    );
+	}
 
         // Get appropriate LLMService from pool
         LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);

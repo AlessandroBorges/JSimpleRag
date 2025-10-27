@@ -166,10 +166,8 @@ public class SearchController {
 
             LibraryDTO library = loadLibrary(request.getLibraryIds());
 
-	    // Create embedding context
-	    EmbeddingContext context = EmbeddingContext.builder()
-	            .library(library)
-	            .build();
+	    // Create embedding context with library defaults
+	    EmbeddingContext context = EmbeddingContext.fromLibrary(library);
 
 	    // Generate query embedding using new service
             float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);
@@ -315,10 +313,8 @@ public class SearchController {
             // Generate query embedding
             LibraryDTO library = loadLibrary(request.getLibraryIds());
 
-	    // Create embedding context
-	    EmbeddingContext context = EmbeddingContext.builder()
-	            .library(library)
-	            .build();
+	    // Create embedding context with library defaults
+	    EmbeddingContext context = EmbeddingContext.fromLibrary(library);
 
 	    // Generate query embedding using new service
             float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);

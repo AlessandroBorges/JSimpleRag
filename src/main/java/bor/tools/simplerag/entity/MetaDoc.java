@@ -78,8 +78,8 @@ public class MetaDoc extends Metadata {
     @JsonIgnore
     @Transient
     public String getUrl() {
-	Object obj = this.get(URL_KEY);
-	return obj != null ? obj.toString() : null;
+	return this.getString(URL_KEY);
+	
     }
 
     /**
@@ -99,8 +99,7 @@ public class MetaDoc extends Metadata {
     @JsonIgnore
     @Transient
     public String getCapitulo() {
-	Object obj = this.get(CAPITULO_KEY);
-	return obj != null ? obj.toString() : null;
+	return getString(CAPITULO_KEY);	
     }
 
     /**
@@ -120,8 +119,7 @@ public class MetaDoc extends Metadata {
     @JsonIgnore
     @Transient
     public String getDescricao() {
-	Object obj = this.get(DESCRICAO_KEY);
-	return obj != null ? obj.toString() : null;
+	return this.getString(DESCRICAO_KEY);	
     }
 
     /**
@@ -137,8 +135,7 @@ public class MetaDoc extends Metadata {
      * @return the knowledge area, or null if not set
      */
     public String getAreaConhecimento() {
-	Object obj = this.get(AREA_CONHECIMENTO_KEY);
-	return obj != null ? obj.toString() : null;
+	return getString(AREA_CONHECIMENTO_KEY);	
     }
 
     /**
@@ -159,8 +156,8 @@ public class MetaDoc extends Metadata {
     @JsonIgnore
     @Transient
     public String getPalavrasChave() {
-	Object obj = this.get(PALAVRAS_CHAVE_KEY);
-	return obj != null ? obj.toString() : null;
+	return this.getString(PALAVRAS_CHAVE_KEY);
+	
     }
 
     /**

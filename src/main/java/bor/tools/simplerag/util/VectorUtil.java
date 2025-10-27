@@ -30,8 +30,8 @@ public class VectorUtil {
         norm = Math.sqrt(norm);
 
         // If the norm is 0, return the original vector (avoid division by zero)
-        if (norm == 0.0) {
-            return Arrays.copyOf(vector, vector.length);
+        if (Math.abs(norm) <= 0.0001) {
+            return vector;
         }
 
         // Normalize each component

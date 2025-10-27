@@ -3,8 +3,12 @@ package bor.tools.simplerag.service.llm;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import bor.tools.simplellm.*;
+import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.MapModels;
+import bor.tools.simplellm.MapParam;
+import bor.tools.simplellm.Model;
 import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
+import bor.tools.simplellm.Model_Type;
 import bor.tools.simplellm.exceptions.LLMException;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +29,7 @@ public class LLMServiceManager {
     private final int timeoutSeconds;
 
     
+    
     // Round-robin counter
     private final AtomicInteger roundRobinCounter = new AtomicInteger(0);
 
@@ -32,6 +37,10 @@ public class LLMServiceManager {
     private final AtomicInteger primaryRequests = new AtomicInteger(0);
     private final AtomicInteger secondaryRequests = new AtomicInteger(0);
     private final AtomicInteger failoverEvents = new AtomicInteger(0);
+    
+    /**
+     * Map of model names to their corresponding LLMService.
+     */
     protected java.util.Map<String, LLMService> modelsToService;
 
     /**
@@ -93,12 +102,88 @@ public class LLMServiceManager {
 		log.error("No LLM service available to get default model");
 		return null;
 	    }
-
+	    
+	    //easy path
+	    if(service.getDefaultModelName() !=null) {
+		return service.getDefaultModelName();
+	    }
+	    
+	    //hard path
 	    MapModels models = service.getInstalledModels();
 	    if (models != null && !models.isEmpty()) {
 		// Return the first model as default
 		return models.keySet().iterator().next();
 	    }
+	} catch (LLMServiceException e) {
+	    log.warn("Failed to get installed models from primary service: {}", e.getMessage());
+	    e.printStackTrace();
+	} catch (LLMException e) {
+	    log.warn("LLM exception while getting installed models: {}", e.getMessage());
+	    e.printStackTrace();
+	}
+	return null;
+    }
+    
+    /**
+     * Record to hold model name and its corresponding LLMService.
+     */
+    public record Model_Provider(String modelName, LLMService service) {}
+    
+    /**
+     * Retrieves the BEST completion model name for specific model types.<br>
+     * 
+     * @param modelType one or more of Model_Type enum values to filter models
+     * @return Default completion model name matching the specified types, or null if unavailable
+     * 
+     * @see LLMService#getInstalledModels()
+     * @see Model_Type
+     */
+    public Model_Provider getBestCompletionModelName(Model_Type... modelType) {
+	LLMService service = getPrimaryService();
+	
+	try {
+
+	    int i = 1;
+	    while (service == null && i < services.size()) {
+		if (i == 1)
+		    log.warn("No primary LLM service available to get model");
+		i++;
+		service = services.get(i);
+		if (service != null)
+		    log.info("Trying secondary LLM service at index {} as primary, as LLMService", i,
+			    service.getServiceProvider());
+	    }
+	    if (service == null) {
+		log.error("No LLM service available to get default model");
+		return null;
+	    }
+
+	    MapModels models = service.getInstalledModels();
+	    if (models != null && !models.isEmpty()) {
+		// Return the first model as default
+		for(var entry : models.entrySet()) {
+		    Model model = entry.getValue();
+		    String modelName = entry.getKey();
+		    
+		    if (model != null && modelType != null && modelType.length >0) {
+			for(var mt : modelType) {
+			    if (model.isType(mt)==false) {
+				// miss fired, try next
+				continue;
+			    }
+			}
+		    }
+		    return new Model_Provider(modelName, service);
+		}		    
+	    }
+	    
+	  //easy path
+	    if(service.getDefaultModelName() !=null) {	
+		log.warn("No model found matching types, returning default model {} from service {} ",
+			service.getDefaultModelName(), service.getServiceProvider());
+		return new Model_Provider(service.getDefaultModelName(), service);
+	    }
+	    
 	} catch (LLMServiceException e) {
 	    log.warn("Failed to get installed models from primary service: {}", e.getMessage());
 	    e.printStackTrace();
@@ -117,6 +202,7 @@ public class LLMServiceManager {
      * @return Embedding vector
      * @throws LLMServiceException if all providers fail
      */
+    @Deprecated
     public float[] embeddings(Embeddings_Op op, String text, String modelName) throws LLMServiceException {
 	MapParam param = new MapParam();
 	param.model(modelName);
@@ -157,6 +243,7 @@ public class LLMServiceManager {
      * @return Generated text
      * @throws LLMServiceException if all providers fail
      */
+    @Deprecated
     public String generateCompletion(String system, String prompt, String model) throws LLMServiceException {
 	MapParam params = new MapParam();
 
@@ -429,15 +516,28 @@ public class LLMServiceManager {
             if (models == null || models.isEmpty()) {
                 return false;
             }
+            normalizedModelName = normalizeModelName(normalizedModelName);
+            
+            if(models.containsKey(normalizedModelName)) {
+        	return true;	
+            }
 
             // Check for exact match
             for (String availableModel : models.keySet()) {
-                String normalizedAvailable = availableModel.toLowerCase().trim();
+                String normalizedAvailable = normalizeModelName(availableModel);
 
                 // Exact match
-                if (normalizedAvailable.equals(normalizedModelName)) {
+                if (normalizedAvailable.equalsIgnoreCase(normalizedModelName)) {                    
                     return true;
-                }               
+                } 
+                
+                //check alias
+                if(models.get(availableModel).getAlias() != null) {
+		    String alias = models.get(availableModel).getAlias().toLowerCase().trim();
+		    if(alias.equalsIgnoreCase(normalizedModelName)) {
+			return true;
+		    }
+		}
             }
          // Check for partial match
             for (String availableModel : models.keySet()) {
@@ -446,11 +546,11 @@ public class LLMServiceManager {
                 // Partial match (model name contains or is contained in available model)
                 if (normalizedAvailable.contains(normalizedModelName) ||
                     normalizedModelName.contains(normalizedAvailable)) {
+                    // add to cache
+                    models.addModel(normalizedModelName, models.get(availableModel)); //cache it
                     return true;
                 }
             }
-            
-            
             
         } catch (Exception e) {
             log.debug("Error checking models for service: {}", e.getMessage());
@@ -555,13 +655,13 @@ public class LLMServiceManager {
 	    return modelsToService;
 	}
         
-
         for (LLMService service : services) {
             try {
                 MapModels registeredModels = service.getRegisteredModels();
                 if (registeredModels != null && !registeredModels.isEmpty()) {
                     for (String modelName : registeredModels.keySet()) {
-                        // Only add if not already present (first service wins)
+                        // Only add if not already present (first service wins)    
+                	modelName = this.normalizeModelName(modelName);	
                         modelsToService.putIfAbsent(modelName, service);
                     }
                     
@@ -569,7 +669,8 @@ public class LLMServiceManager {
                     for (java.util.Map.Entry<String, Model> entry : registeredModels.entrySet()) {
                         Model model = entry.getValue();
                         if (model != null && model.getAlias() != null) {
-                            modelsToService.putIfAbsent(model.getAlias(), service);
+                            String alias = this.normalizeModelName(model.getAlias());	
+                            modelsToService.putIfAbsent(alias, service);
                         }
                     }
                 }
@@ -637,9 +738,8 @@ public class LLMServiceManager {
         if (modelName == null || modelName.trim().isEmpty()) {
             return 0; // Return primary by default
         }
-
-        String normalizedModelName = modelName.toLowerCase().trim();
-
+        
+        String normalizedModelName = normalizeModelName(modelName);
         for (int i = 0; i < services.size(); i++) {
             if (serviceSupportsModel(services.get(i), normalizedModelName)) {
                 return i;
@@ -685,12 +785,22 @@ public class LLMServiceManager {
         }
 
         String normalizedModelName = modelName.toLowerCase().trim();
+        
+        if(this.modelsToService != null) {
+            LLMService service = this.modelsToService.get(modelName);
+	    if(service != null) {
+		log.debug("Found LLMService for registered model '{}' in provider: {}", 
+			 modelName, service.getServiceProvider());
+		return service;
+	    }
+        }
 
         // Search through all services in the pool
         for (LLMService service : services) {
             if (serviceHasRegisteredModel(service, normalizedModelName)) {
                 log.debug("Found LLMService for registered model '{}' in provider: {}", 
                          modelName, service.getServiceProvider());
+                
                 return service;
             }
         }
@@ -755,6 +865,13 @@ public class LLMServiceManager {
         return false;
     }
 
+    /**
+     * Normalizes model name for consistent matching.
+     */
+    private String normalizeModelName(String modelName) {
+	return modelName != null ? modelName.toLowerCase().trim() : "";
+    }
+    
     // ============ Inner Classes ============
 
     /**

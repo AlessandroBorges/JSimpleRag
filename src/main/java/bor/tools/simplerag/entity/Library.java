@@ -165,4 +165,57 @@ public class Library extends Updatable {
     public Integer getEmbeddingDimension() {
         return getMetadados().getEmbeddingDimension();
     }
+    
+    /**
+     * Gets the description from metadata
+     */
+    @Transient
+    public String getDescription() {
+	return getMetadados().getDescricao();
+    }
+    
+    /**
+     * Sets the description in metadata
+     */
+    @Transient
+    public void setDescription(String descricao) {
+    	getMetadados().setDescricao(descricao);
+    }
+    
+    /**
+     * Gets the max tokens from metadata
+     * @return
+     */
+    @Transient
+    public Integer getMaxTokens() {	
+	return getMetadados().getMaxTokens();
+    }	
+    
+    /**
+     * Sets the max tokens in metadata
+     * @param maxTokens
+     */
+    @Transient
+    public void setMaxTokens(Integer maxTokens) {
+    	getMetadados().setMaxTokens(maxTokens);
+    }
+    /**
+     * Gets the completion QA model from metadata
+     * @return
+     */
+    @Transient
+    public void setCompletionQAModel(String model) {
+	getMetadados().setCompletionQAModel(model);
+    }
+    
+    /**
+     * Gets the suggested Completion Model for QA from the metadata.
+     *
+     * @return the completion model string, or null if not set
+     */
+    @Transient
+    public String getCompletionQAModel() {
+    	return getMetadados().getCompletionQAModel();
+    }
+    
 }

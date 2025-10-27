@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.stereotype.Component;
+
 import bor.tools.simplerag.dto.*;
 import bor.tools.utils.RAGUtil;
 
@@ -13,6 +15,7 @@ import bor.tools.utils.RAGUtil;
 /**
  * Split content into chapters, handling both Markdown and plain text
  */
+@Component
 public class ContentSplitter {
     private static final int MIN_TOKENS = 512;
     private static final int IDEAL_TOKENS = 2000;

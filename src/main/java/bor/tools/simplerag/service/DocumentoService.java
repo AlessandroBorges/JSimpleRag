@@ -244,10 +244,8 @@ public class DocumentoService {
                 DocumentoWithAssociationDTO documentoDTO = toDTOWithAssociation(documento);
                 documentoDTO.setBiblioteca(biblioteca);
 
-                // Create embedding context
-                EmbeddingContext context = EmbeddingContext.builder()
-                        .library(biblioteca)
-                        .build();
+                // Create embedding context with library defaults
+                EmbeddingContext context = EmbeddingContext.fromLibrary(biblioteca);
 
                 // Create processing options
                 ProcessingOptions options = ProcessingOptions.builder()

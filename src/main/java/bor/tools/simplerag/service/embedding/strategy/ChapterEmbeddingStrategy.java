@@ -16,6 +16,7 @@ import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
+import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.splitter.ContentSplitter;
@@ -44,8 +45,11 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private final LLMServiceManager llmServiceManager;
     private final ContentSplitter contentSplitter;
 
-    @Value("${rag.embedding.default-model:nomic-embed-text}")
+    @Value("${rag.embedding.default-model:snowflake}")
     private String defaultEmbeddingModel;
+    
+    @Value("${rag.embedding.default-dimension:768}")
+    private Integer defaultEmbeddingDimension;
 
     // Generation flags
     public static final int FLAG_FULL_TEXT_METADATA = 1;
@@ -273,6 +277,9 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         // Generate embedding
         float[] embedding = llmService.embeddings(Embeddings_Op.DOCUMENT, text, params);
 
+        // Normalize embedding
+        embedding = normalizeEmbedding(embedding, request.getContext());
+        
         // Create DTO
         DocumentEmbeddingDTO docEmbedding = new DocumentEmbeddingDTO();
         docEmbedding.setTrechoTexto(text);
@@ -293,6 +300,20 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         docEmbedding.getMetadados().put("created_at", java.time.Instant.now().toString());
 
         return docEmbedding;
+    }
+
+    private float[] normalizeEmbedding(float[] embedding, EmbeddingContext context) {
+	int length = context != null && context.getEmbeddingDimension() != null ?
+		    context.getEmbeddingDimension() : defaultEmbeddingDimension;	
+	// Adjust length if necessary
+	if (embedding != null && embedding.length != length) {
+	    log.debug("Normalizing embedding from length {} to {}", embedding.length, length);
+	    float[] normalized = new float[length];
+	    System.arraycopy(embedding, 0, normalized, 0, Math.min(embedding.length, length));
+	    embedding = normalized;	
+	}
+	// Normalize vector. always
+	return bor.tools.simplerag.util.VectorUtil.normalize(embedding);
     }
 
     /**

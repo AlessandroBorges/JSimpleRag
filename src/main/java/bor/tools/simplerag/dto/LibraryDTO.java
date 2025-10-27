@@ -27,11 +27,14 @@ import com.fasterxml.jackson.annotation.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "id", "uuid", 
     		     "nome", 
+    		     "description",
                      "areaConhecimento", 
                      "pesoSemantico", "pesoTextual",
                      "language",
                      "embeddingModel",                     
 		     "embeddingDimension",
+		     "tipo",
+		     "completionQAModel",
                      "metadados", 
                      "createdAt", "updatedAt", "deletedAt" })
 public class LibraryDTO {
@@ -95,7 +98,7 @@ public class LibraryDTO {
         Library entity = new Library();
         entity.setId(this.id);
         entity.setUuid(getUuid());
-        entity.setNome(this.nome);
+        entity.setNome(this.nome);     
         entity.setAreaConhecimento(this.areaConhecimento);
         entity.setPesoSemantico(this.pesoSemantico);
         entity.setPesoTextual(this.pesoTextual);
@@ -161,5 +164,35 @@ public class LibraryDTO {
     public void setDescription(String descricao) {
    	getMetadados().setDescricao(descricao);
        }
+
+    /**
+     * Gets the max tokens from metadata
+     * @return
+     */
+    public Integer getMaxTokens() {
+	return getMetadados().getMaxTokens();
+    }
     
+    /**
+     * Sets the max tokens in metadata
+     * @param maxTokens
+     */
+    public void setMaxTokens(Integer maxTokens) {
+    	getMetadados().setMaxTokens(maxTokens);
+    }
+    
+    /**
+     * Sets the completion QA model in metadata
+     * @param model
+     */
+    public void setCompletionQAModel(String model) {
+    	getMetadados().setCompletionQAModel(model);
+    }
+    /**
+     * Gets the completion QA model from metadata
+     * @return
+     */
+    public String getCompletionQAModel() {
+    	return getMetadados().getCompletionQAModel();
+    }
 }
