@@ -1,6 +1,6 @@
 package bor.tools.simplerag.service;
 
-import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import bor.tools.simplerag.entity.DocumentEmbedding;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
-import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
@@ -36,6 +35,7 @@ import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
+import bor.tools.utils.RAGUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -80,6 +80,120 @@ public class DocumentoService {
     private final DocumentRouter documentRouter;
     private final EmbeddingOrchestrator embeddingOrchestrator;
 
+    // ========== Checksum Utility Methods ==========
+
+    /**
+     * Calculate checksum for document content using CRC64 algorithm.
+     * CRC64 provides a good balance between speed and collision resistance.
+     *
+     * @param content Document content
+     * @return CRC64 checksum in hexadecimal format, or null if content is null/empty
+     */
+    private String calculateChecksum(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return null;
+        }
+
+        // Normalize content: lowercase, collapse whitespace, trim
+        String normalized = normalizeTextForChecksum(content);
+        byte[] bytes = normalized.getBytes(StandardCharsets.UTF_8);
+
+        // Use CRC64 from RAGUtil - fast and good enough for duplicate detection
+        return RAGUtil.getCRC64Checksum(bytes);
+    }
+
+    /**
+     * Calculate SHA-256 checksum for document content (more secure, slower).
+     * Use this for critical documents where collision resistance is paramount.
+     *
+     * @param content Document content
+     * @return SHA-256 checksum in hexadecimal format, or null if content is null/empty
+     */
+    private String calculateSecureChecksum(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            String normalized = normalizeTextForChecksum(content);
+            byte[] bytes = normalized.getBytes(StandardCharsets.UTF_8);
+            return RAGUtil.getSHA256Checksum(bytes);
+        } catch (Exception e) {
+            log.error("Failed to calculate SHA-256 checksum: {}", e.getMessage());
+            // Fallback to CRC64
+            return calculateChecksum(content);
+        }
+    }
+
+    /**
+     * Normalize text for checksum calculation.
+     * Ensures same content produces same checksum regardless of formatting.
+     *
+     * @param text Text to normalize
+     * @return Normalized text
+     */
+    private String normalizeTextForChecksum(String text) {
+        if (text == null) {
+            return "";
+        }
+        // Lowercase, replace all whitespace with single space, trim
+        return text.toLowerCase()
+                   .replaceAll("\\s+", " ")
+                   .trim();
+    }
+
+    /**
+     * Check if a document with the same checksum and biblioteca_id already exists.
+     * This prevents duplicate documents from being stored.
+     *
+     * @param checksum Document checksum
+     * @param bibliotecaId Library ID
+     * @return Optional containing existing document if found, empty otherwise
+     */
+    private Optional<Documento> findDuplicateDocument(String checksum, Integer bibliotecaId) {
+        if (checksum == null || checksum.trim().isEmpty() || bibliotecaId == null) {
+            return Optional.empty();
+        }
+
+        // Search for documents with same checksum in the same library (only vigentes)
+        List<Documento> documents = documentoRepository
+                .findByBibliotecaIdAndFlagVigenteTrue(bibliotecaId);
+
+        return documents.stream()
+                .filter(doc -> {
+                    if (doc.getMetadados() == null) {
+                        return false;
+                    }
+                    MetaDoc meta = new MetaDoc(doc.getMetadados());
+                    String docChecksum = meta.getChecksum();
+                    return checksum.equalsIgnoreCase(docChecksum);
+                })
+                .findFirst();
+    }
+
+    /**
+     * Store checksum in document metadata.
+     *
+     * @param documento Document entity
+     * @param checksum Checksum to store
+     */
+    private void storeChecksum(Documento documento, String checksum) {
+        if (checksum == null) {
+            return;
+        }
+
+        MetaDoc metadata = documento.getMetadados();
+        if (metadata == null) {
+            metadata = new MetaDoc();
+            documento.setMetadados(metadata);
+        }
+
+        metadata.setChecksum(checksum);
+        log.debug("Stored checksum {} for document: {}", checksum, documento.getTitulo());
+    }
+
+    // ========== End of Checksum Utility Methods ==========
+
     /**
      * Upload document from text content (Fluxo step a)
      *
@@ -99,6 +213,27 @@ public class DocumentoService {
             throw new IllegalArgumentException("Library not found: " + libraryId);
         }
 
+        // Calculate checksum for duplicate detection
+        String checksum = calculateChecksum(conteudoMarkdown);
+        log.debug("Calculated checksum: {} for document: {}", checksum, titulo);
+
+        // Check for duplicate document (same checksum + biblioteca_id)
+        if (checksum != null) {
+            Optional<Documento> duplicate = findDuplicateDocument(checksum, libraryId);
+            if (duplicate.isPresent()) {
+                log.warn("Duplicate document detected: {} (ID: {}). Checksum: {}",
+                        duplicate.get().getTitulo(), duplicate.get().getId(), checksum);
+                throw new IllegalArgumentException(
+                        String.format("Document with identical content already exists in this library: '%s' (ID: %d)",
+                                duplicate.get().getTitulo(), duplicate.get().getId()));
+            }
+        }
+
+        // Initialize metadata if null
+        if (metadata == null) {
+            metadata = new MetaDoc();
+        }
+
         // Create documento entity
         Documento documento = Documento.builder()
                 .bibliotecaId(libraryId)
@@ -106,16 +241,19 @@ public class DocumentoService {
                 .conteudoMarkdown(conteudoMarkdown)
                 .flagVigente(true)
                 .dataPublicacao(java.time.LocalDate.now())
-                .metadados(metadata != null ? metadata : new MetaDoc())
+                .metadados(metadata)
                 .build();
 
         // Calculate token count
         int tokenCount = estimateTokenCount(conteudoMarkdown);
         documento.setTokensTotal(tokenCount);
 
+        // Store checksum in metadata
+        storeChecksum(documento, checksum);
+
         // Save documento
         Documento saved = documentoRepository.save(documento);
-        log.info("Document uploaded with ID: {}", saved.getId());
+        log.info("Document uploaded with ID: {} and checksum: {}", saved.getId(), checksum);
 
         return toDTO(saved);
     }

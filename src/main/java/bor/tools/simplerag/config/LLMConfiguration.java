@@ -332,9 +332,12 @@ public class LLMConfiguration {
 
         // Build configuration
         LLMConfig config;
-        if (useDefaults) {            
-            config = LLMServiceFactory.getDefaultLLMConfig(provider);
-             // Override API URL and key if provided
+        if (useDefaults) {
+            // TODO: Aguardando implementação de LLMServiceFactory.getDefaultLLMConfig() no JSimpleLLM
+            // config = LLMServiceFactory.getDefaultLLMConfig(provider);
+            // Using buildConfigFromScratch as fallback
+            config = buildConfigFromScratch(apiUrl, apiKey);
+             // Override API URL and key if provided (redundant now, but kept for when TODO is resolved)
             if (apiUrl != null) {
 		config.setBaseUrl(apiUrl);
 	    }

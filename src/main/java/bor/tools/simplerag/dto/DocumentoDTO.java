@@ -3,7 +3,6 @@ package bor.tools.simplerag.dto;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.zip.Adler32;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -179,7 +178,7 @@ public class DocumentoDTO {
      */
     public String getChecksum() {
         if (this.checksum == null) {
-            this.checksum = calculateAdler32Checksum();
+            this.checksum = calculateCRC64Checksum();
         }
         return this.checksum;
     }
@@ -194,7 +193,7 @@ public class DocumentoDTO {
             this.checksum = null;
             this.tokensTotal = 0;
         } else {
-            this.checksum = calculateAdler32Checksum();
+            this.checksum = calculateCRC64Checksum();
             this.tokensTotal = countTokens(conteudoMarkdown);
         }
     }
@@ -234,16 +233,18 @@ public class DocumentoDTO {
     }
 
     /**
-     * Calculate Adler32 checksum of content for quick comparison
+     * Calculate CRC64 checksum of content using RAGUtil.
+     * CRC64 is faster and more reliable than Adler32 for duplicate detection.
+     *
+     * @return CRC64 checksum in hexadecimal format, or null if content is null
      */
-    private String calculateAdler32Checksum() {
+    private String calculateCRC64Checksum() {
         if (conteudoMarkdown == null) {
             return null;
         }
 
         String textoNormalizado = normalizeText(conteudoMarkdown);
-        Adler32 adler = new Adler32();
-        adler.update(textoNormalizado.getBytes(StandardCharsets.UTF_8));
-        return Long.toHexString(adler.getValue());
+        byte[] bytes = textoNormalizado.getBytes(StandardCharsets.UTF_8);
+        return RAGUtil.getCRC64Checksum(bytes);
     }
 }
