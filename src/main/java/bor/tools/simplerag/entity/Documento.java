@@ -64,7 +64,6 @@ public class Documento extends Updatable {
     private MetaDoc metadados;
 
 
-
     /**
      * Convenience method to check if document is active
      */
