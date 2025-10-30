@@ -679,7 +679,7 @@ public class RAGConverter {
 	 * @return
 	 */
 	public static String quote(Object obj) {
-		if(RAGUtil.isEmpty(obj))
+		if(RagUtils.isEmpty(obj))
 			return "";
 		if(obj instanceof String) {
 			String s = obj.toString();

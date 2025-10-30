@@ -317,57 +317,51 @@ public class LLMConfiguration {
      * @param apiKey API key (optional)
      * @return Configured LLMService instance
      */
-    private LLMService createLLMService(
-            String serviceKey,
-            String providerName,
-            boolean useDefaults,
-            String llmModels,
-            String embeddingModel,
-            Integer embeddingContextLength,
-            String apiUrl,
-            String apiKey) {
+    private LLMService createLLMService(String serviceKey, String providerName, boolean useDefaults, String llmModels,
+	    String embeddingModel, Integer embeddingContextLength, String apiUrl, String apiKey) {
 
-        // Parse provider name using utility class
-        SERVICE_PROVIDER provider = LLMProviderParser.parseProviderName(providerName);
+	// Parse provider name using utility class
+	SERVICE_PROVIDER provider = LLMProviderParser.parseProviderName(providerName);
 
-        // Build configuration
-        LLMConfig config;
-        if (useDefaults) {
-            // TODO: Aguardando implementação de LLMServiceFactory.getDefaultLLMConfig() no JSimpleLLM
-            // config = LLMServiceFactory.getDefaultLLMConfig(provider);
-            // Using buildConfigFromScratch as fallback
-            config = buildConfigFromScratch(apiUrl, apiKey);
-             // Override API URL and key if provided (redundant now, but kept for when TODO is resolved)
-            if (apiUrl != null) {
+	// Build configuration
+	LLMConfig config;
+	if (useDefaults) {
+	    // TODO: Aguardando implementação de LLMServiceFactory.getDefaultLLMConfig() no
+	    // JSimpleLLM
+	    config = LLMServiceFactory.getDefaultLLMConfig(provider);
+
+	    // Override API URL and key if provided (redundant now, but kept for when TODO
+	    // is resolved)
+	    if (apiUrl != null) {
 		config.setBaseUrl(apiUrl);
 	    }
-            if (apiKey != null) {
-        	config.setApiToken(apiKey);
-            }
-        } else {
-            config = buildConfigFromScratch(apiUrl, apiKey);
-        }
+	    if (apiKey != null) {
+		config.setApiToken(apiKey);
+	    }
+	} else {
+	    config = buildConfigFromScratch(apiUrl, apiKey);
+	}
 
-        // Add models to configuration
-        if (llmModels != null && !llmModels.isEmpty()) {
-            parseLLMModelsToArray(llmModels, config);
-        }
+	// Add models to configuration
+	if (llmModels != null && !llmModels.isEmpty()) {
+	    parseLLMModelsToArray(llmModels, config);
+	}
 
-        if (embeddingModel != null && !embeddingModel.isEmpty()) {
-            parseEmbeddingModelsToArray(embeddingModel, embeddingContextLength, config);
-        }
+	if (embeddingModel != null && !embeddingModel.isEmpty()) {
+	    parseEmbeddingModelsToArray(embeddingModel, embeddingContextLength, config);
+	}
 
-        // Create service
-        LLMService service = LLMServiceFactory.createLLMService(provider, config);
+	// Create service
+	LLMService service = LLMServiceFactory.createLLMService(provider, config);
 
-        // Store in active services map
-        String mapKey = provider.name() + "-" + (apiUrl != null ? apiUrl : "default");
-        activeLLMServices.put(mapKey, service);
+	// Store in active services map
+	String mapKey = provider.name() + "-" + (apiUrl != null ? apiUrl : "default");
+	activeLLMServices.put(mapKey, service);
 
-        log.debug("Created LLMService: key={}, provider={}, baseUrl={}",
-                 serviceKey, provider, config.getBaseUrl());
+	log.debug("Created LLMService: key={}, provider={}, baseUrl={}", 
+	          serviceKey, provider, config.getBaseUrl());
 
-        return service;
+	return service;
     }
 
     /**

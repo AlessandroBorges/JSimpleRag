@@ -23,13 +23,13 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
      * Busca todos os chats de um cliente/usuário
      */
     @Query("SELECT c FROM Chat c WHERE c.user_uuid = :userUuid")
-    List<Chat> findByUserUuid(UUID userUuid);
+    List<Chat> findByUserUuid(@Param("userUuid") UUID userUuid);
 
     /**
      * Busca chats por UUID da biblioteca privativa
      */
     @Query("SELECT c FROM Chat c WHERE c.biblioteca_privativa = :bibliotecaPrivativa")
-    List<Chat> findByBibliotecaPrivativa(UUID bibliotecaPrivativa);
+    List<Chat> findByBibliotecaPrivativa(@Param("bibliotecaPrivativa") UUID bibliotecaPrivativa);
 
     /**
      * Busca chats por título (contendo texto, case-insensitive)
@@ -39,13 +39,13 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
     /**
      * Busca chats de um cliente ordenados por data de atualização (mais recente primeiro)
      */
-    @Query("SELECT c FROM Chat c WHERE c.user_uuid = :userUuiid ORDER BY c.updatedAt DESC")
-    List<Chat> findByUserUuidOrderByUpdatedAtDesc(@Param("userUuiid") UUID userUuiid);
+    @Query("SELECT c FROM Chat c WHERE c.user_uuid = :userUuid ORDER BY c.updatedAt DESC")
+    List<Chat> findByUserUuidOrderByUpdatedAtDesc(@Param("userUuid") UUID userUuid);
 
     /**
      * Busca chats de um cliente criados após uma data específica
      */
-    @Query("SELECT c FROM Chat c WHERE c.user_uuid = :userUuiid AND c.createdAt >= :fromDate ORDER BY c.createdAt DESC")
+    @Query("SELECT c FROM Chat c WHERE c.user_uuid = :userUuid AND c.createdAt >= :fromDate ORDER BY c.createdAt DESC")
     List<Chat> findRecentChats(@Param("userUuid") UUID userUuid, @Param("fromDate") java.time.LocalDateTime fromDate);
 
     /**
@@ -58,13 +58,13 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
      * Verifica se existe chat com título específico para um cliente
      */
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Chat c WHERE c.user_uuid = :userUuid AND LOWER(c.titulo) = LOWER(:titulo)")	
-    boolean existsByUserUuidAndTitulo(UUID userUuid, String titulo);
+    boolean existsByUserUuidAndTitulo(@Param("userUuid") UUID userUuid, @Param("titulo") String titulo);
 
     /**
      * Conta quantos chats um cliente possui
      */
     @Query("SELECT COUNT(c) FROM Chat c WHERE c.user_uuid = :userUuid")
-    long countByUserUuid(UUID userUuid);
+    long countByUserUuid(@Param("userUuid") UUID userUuid);
 
     /**
      * Busca chats de um cliente com resumo preenchido
@@ -82,11 +82,11 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
      * Remove todos os chats de um cliente
      */
     @Query("DELETE FROM Chat c WHERE c.user_uuid = :userUuid")
-    void deleteByUserUuid(UUID userUuid);
+    void deleteByUserUuid(@Param("userUuid") UUID userUuid);
 
     /**
      * Remove todos os chats que usam uma biblioteca privativa específica
      */
     @Query("DELETE FROM Chat c WHERE c.biblioteca_privativa = :bibliotecaPrivativa")
-    void deleteByBibliotecaPrivativa(UUID bibliotecaPrivativa);
+    void deleteByBibliotecaPrivativa(@Param("bibliotecaPrivativa") UUID bibliotecaPrivativa);
 }

@@ -1,15 +1,13 @@
 package bor.tools.simplerag.integration;
 
-import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
-import bor.tools.simplerag.dto.LibraryDTO;
-import bor.tools.simplerag.entity.Library;
-import bor.tools.simplerag.entity.MetaBiblioteca;
-import bor.tools.simplerag.entity.MetaDoc;
-import bor.tools.simplerag.entity.enums.TipoBiblioteca;
-import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
-import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
-import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +15,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.*;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
+import bor.tools.simplerag.dto.LibraryDTO;
+import bor.tools.simplerag.entity.MetaBiblioteca;
+import bor.tools.simplerag.entity.MetaDoc;
+import bor.tools.simplerag.entity.enums.TipoBiblioteca;
+import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
+import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
+import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 
 /**
  * Integration tests for EmbeddingOrchestrator.

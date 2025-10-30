@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 import jakarta.persistence.Transient;
 
 /**
@@ -232,7 +232,7 @@ public class MetaDoc extends Metadata {
     @JsonIgnore
     @Transient
     public void setDataPublicao(Date dataPublicao) {
-	String dataStr = RAGUtil.format(dataPublicao);
+	String dataStr = RagUtils.format(dataPublicao);
 	this.put(DATA_PUBLICAO_KEY, dataStr);	
     }
     

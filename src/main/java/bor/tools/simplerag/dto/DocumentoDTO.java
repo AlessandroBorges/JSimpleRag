@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,10 +33,13 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "id", "bibliotecaId", "titulo", "flagVigente", "dataPublicacao",
-                     "tokensTotal", "metadados", "checksum", "createdAt", "updatedAt", "deletedAt",
+                     "tokensTotal",
                      "contentLength",
+                     "checksum",
                      "url",
                      "vigente",
+                     "createdAt", "updatedAt", "deletedAt",
+                     "metadados",                                          
                      "conteudoMarkdown" })	
 public class DocumentoDTO {
 
@@ -199,7 +202,7 @@ public class DocumentoDTO {
     }
 
     /**
-     * Count tokens in text using RAGUtil.countTokens().
+     * Count tokens in text using RagUtils.countTokens().
      *
      * Uses OpenAI's cl100k_base tokenizer (used in embedding models and gpt-3.5 to gpt-4),
      * which estimates 3.8 characters per token on average.
@@ -213,7 +216,7 @@ public class DocumentoDTO {
         }
 
         try {
-            return RAGUtil.countTokens(text);
+            return RagUtils.countTokens(text);
         } catch (LLMException e) {
             e.printStackTrace();
             // Fallback estimate: 3.8 chars per token
@@ -233,7 +236,7 @@ public class DocumentoDTO {
     }
 
     /**
-     * Calculate CRC64 checksum of content using RAGUtil.
+     * Calculate CRC64 checksum of content using RagUtils.
      * CRC64 is faster and more reliable than Adler32 for duplicate detection.
      *
      * @return CRC64 checksum in hexadecimal format, or null if content is null
@@ -245,6 +248,6 @@ public class DocumentoDTO {
 
         String textoNormalizado = normalizeText(conteudoMarkdown);
         byte[] bytes = textoNormalizado.getBytes(StandardCharsets.UTF_8);
-        return RAGUtil.getCRC64Checksum(bytes);
+        return RagUtils.getCRC64Checksum(bytes);
     }
 }

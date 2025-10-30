@@ -82,7 +82,7 @@ public class XHTMLToMarkdownParser {
      * @throws SAXException
      */
     public String convertToMarkdown(String content) throws IOException, Exception {
-	String contentType = RAGUtil.detectMimeTypeTika(content);
+	String contentType = RagUtils.detectMimeTypeTika(content);
 	return convertToMarkdown(content, contentType);
     }
 

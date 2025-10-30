@@ -15,7 +15,7 @@ import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 
 /**
  * Serviço de processamento assíncrono para operações de splitting.
@@ -244,7 +244,7 @@ public class AsyncSplitterService {
                     }
 
                     // Sumário se solicitado
-                    int tokens = capitulo.getConteudo() != null ? RAGUtil.countTokens(capitulo.getConteudo()) : 0;
+                    int tokens = capitulo.getConteudo() != null ? RagUtils.countTokens(capitulo.getConteudo()) : 0;
                     
                     if (includeSummary && capitulo.getConteudo() != null && tokens > MIN_TOKENS_FOR_SUMMARY) {
                         List<DocumentEmbeddingDTO> summaryEmbeddings = generateSummaryAsync(

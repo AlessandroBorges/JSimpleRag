@@ -18,7 +18,7 @@ import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.splitter.DocumentSplitter;
 import bor.tools.splitter.SplitterFactory;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -260,7 +260,7 @@ public class EmbeddingOrchestrator {
     /**
      * Estimates token count for text.
      *
-     * Uses RAGUtil.countTokens() when possible, falls back to simple estimation.
+     * Uses RagUtils.countTokens() when possible, falls back to simple estimation.
      */
     private int estimateTokenCount(String text) {
         if (text == null) {
@@ -268,7 +268,7 @@ public class EmbeddingOrchestrator {
         }
 
         try {
-            return RAGUtil.countTokens(text);
+            return RagUtils.countTokens(text);
         } catch (Exception e) {
             // Fallback: simple estimation (words / 0.75)
             log.debug("Failed to count tokens, using estimation: {}", e.getMessage());

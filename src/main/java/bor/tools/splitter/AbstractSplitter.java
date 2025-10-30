@@ -30,7 +30,7 @@ import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 import lombok.Data;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -254,7 +254,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @return texto sem repetições
      */
     public String removerRepeticoes(String src) {
-	return RAGUtil.removerRepeticoes(src);
+	return RagUtils.removerRepeticoes(src);
     }
 
     /**
@@ -264,7 +264,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @return texto sem tachados
      */
     public String removerTachado(String src) {
-	return RAGUtil.removeStrikeThrough(src);
+	return RagUtils.removeStrikeThrough(src);
     }
 
     /**
@@ -283,7 +283,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      */
     public static Properties getHtmlMetadata(String html) {
 	Properties props = new Properties();
-	if (!RAGUtil.isHtml(html)) {
+	if (!RagUtils.isHtml(html)) {
 	    return props;
 	}
 
@@ -397,7 +397,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @return nome do arquivo
      */
     public static String detectaNome(String pathName) {
-	return RAGUtil.detectaNome(pathName);
+	return RagUtils.detectaNome(pathName);
     }
 
     /**
@@ -416,7 +416,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
     public DocumentoWithAssociationDTO carregaDocumento(@NonNull URL urlDocumento, DocumentoWithAssociationDTO docStub) throws Exception {
 	DocumentoWithAssociationDTO doc = docStub == null ? new DocumentoWithAssociationDTO() : docStub;
 	doc.setUrl(urlDocumento.toString());
-	OkHttpClient client = RAGUtil.getUnsafeOkHttpClient();
+	OkHttpClient client = RagUtils.getUnsafeOkHttpClient();
 	Request request = new Request.Builder().url(urlDocumento).get().header("User-Agent",
 		"Mozilla/5.0 (Windows NT 10; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36")
 		.header("Accept", "text/html,application/xhtml+xml,application/xml,text/json;").build();
@@ -446,7 +446,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 		    if (contentType != null
 			    && (contentType.contains("text/html") || contentType.contains("application/xhtml+xml"))) {
 			String content = handler.toString();
-			String md = RAGUtil.convertToMarkdown(content);
+			String md = RagUtils.convertToMarkdown(content);
 			doc.setTexto(md);
 		    } else {
 			doc.setTexto(handler.toString());
@@ -486,8 +486,8 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 		String titulo = AbstractSplitter.detectaNome(path);
 		doc.setTitulo(titulo);
 	    }
-	    byte[] data = RAGUtil.lerArquivoBinario(path);
-	    String textoMD = RAGUtil.convertToMarkdown(data);
+	    byte[] data = RagUtils.lerArquivoBinario(path);
+	    String textoMD = RagUtils.convertToMarkdown(data);
 	    String[] lines = textoMD.split("\n");
 	    List<TitleTag> titles = detectTitles(lines);
 	    List<ChapterDTO> partes = splitByTitles(doc, lines, titles);

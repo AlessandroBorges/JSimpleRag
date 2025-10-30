@@ -12,7 +12,7 @@ public class WikipediaArticleFetcher {
 
     public static String wikiArticleDownloader(String articleTitle, String language){
         // Configura o cliente HTTP
-        OkHttpClient client = RAGUtil.getUnsafeOkHttpClient();
+        OkHttpClient client = RagUtils.getUnsafeOkHttpClient();
 
         // Monta a URL da API da Wikipedia para obter o conteúdo do artigo
         String url = String.format("https://%s.wikipedia.org/w/api.php?action=parse&page=%s&format=json&prop=text", language, articleTitle);

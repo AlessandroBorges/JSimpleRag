@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplerag.dto.*;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 
 
 
@@ -29,7 +29,7 @@ public class ContentSplitter {
      * @see Chapter
      */
     public List<ChapterDTO> splitContent(String content) {
-    	boolean isMarkDown = RAGUtil.isMarkdown(content);
+    	boolean isMarkDown = RagUtils.isMarkdown(content);
     	return splitContent(content, isMarkDown);
     }
 

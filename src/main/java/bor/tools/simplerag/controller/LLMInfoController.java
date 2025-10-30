@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @Tag(name = "LLM Info", description = "LLM Service information and status endpoints")
 public class LLMInfoController {
 
-    private final LLMService llmService;
+   // private final LLMService llmService;
 
     private final LLMConfiguration llmConfiguration;
 

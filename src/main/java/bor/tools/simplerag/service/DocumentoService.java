@@ -35,7 +35,7 @@ import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -98,18 +98,23 @@ public class DocumentoService {
         String normalized = normalizeTextForChecksum(content);
         byte[] bytes = normalized.getBytes(StandardCharsets.UTF_8);
 
-        // Use CRC64 from RAGUtil - fast and good enough for duplicate detection
-        return RAGUtil.getCRC64Checksum(bytes);
+        // Use CRC64 from RagUtils - fast and good enough for duplicate detection
+        return RagUtils.getCRC64Checksum(bytes);
     }
 
     /**
+     * @TODO FUTURE IMPROVEMENT: Implement SHA-256 checksum calculation
+     * 
      * Calculate SHA-256 checksum for document content (more secure, slower).
      * Use this for critical documents where collision resistance is paramount.
      *
      * @param content Document content
      * @return SHA-256 checksum in hexadecimal format, or null if content is null/empty
+     * 
+     * @see RagUtils#getSHA256Checksum(byte[])
+     * @see RagUtils#isChecksumValid(byte[], String)
      */
-    private String calculateSecureChecksum(String content) {
+    protected String calculateSecureChecksum(String content) {
         if (content == null || content.trim().isEmpty()) {
             return null;
         }
@@ -117,7 +122,7 @@ public class DocumentoService {
         try {
             String normalized = normalizeTextForChecksum(content);
             byte[] bytes = normalized.getBytes(StandardCharsets.UTF_8);
-            return RAGUtil.getSHA256Checksum(bytes);
+            return RagUtils.getSHA256Checksum(bytes);
         } catch (Exception e) {
             log.error("Failed to calculate SHA-256 checksum: {}", e.getMessage());
             // Fallback to CRC64
@@ -326,17 +331,19 @@ public class DocumentoService {
       
         String detectedFormat = simpleFormatDetector(fileName);
         
+        if (detectedFormat != null && detectedFormat.contains("text/plain")) {
+		detectedFormat = "markdown"; // Fallback to txt
+	    }
+        
 	if (detectedFormat == null || detectedFormat.isEmpty()) {
 	    // Try to detect from byte sample
 	    byte[] sample = new byte[Math.min(fileContent.length, 256)];
 	    System.arraycopy(fileContent, 0, sample, 0, sample.length);
 	    detectedFormat = documentConverter.detectFormat(sample);
 	    log.debug("Detected format: {} for file: {}", detectedFormat, fileName);
-	    
-	    if (detectedFormat != null || detectedFormat.contains("text/plain")) {
-		detectedFormat = "markdown"; // Fallback to txt
-	    }
 	}
+	
+	
         // Convert to Markdown (Fluxo step c)
         String markdown = documentConverter.convertToMarkdown(fileContent, detectedFormat);
 

@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -390,7 +390,7 @@ public class DocumentoWithAssociationDTO {
     }
     
     /**
-     * Count tokens in text using RAGUtil.countTokens(). <br>
+     * Count tokens in text using RagUtils.countTokens(). <br>
      * 
      * It uses the traditional OpenAI's cl100k_base, 
      * used on OpenAI's embedding models and gpt-3.5 to gpt-4, 
@@ -406,7 +406,7 @@ public class DocumentoWithAssociationDTO {
 	// Simple tokenization by splitting on whitespace
 	int tokens;
 	try {
-	    tokens = RAGUtil.countTokens(text);
+	    tokens = RagUtils.countTokens(text);
 	} catch (LLMException e) {	    
 	    e.printStackTrace();
 	    tokens = Math.round((text.length() * 1.0f) / 3.8f); // fallback estimate
@@ -463,7 +463,7 @@ public class DocumentoWithAssociationDTO {
     }
 
     /**
-     * Calculate CRC64 checksum of content using RAGUtil.
+     * Calculate CRC64 checksum of content using RagUtils.
      * CRC64 is faster and more reliable than Adler32 for duplicate detection.
      *
      * @return CRC64 checksum in hexadecimal format, or null if content is null
@@ -474,6 +474,6 @@ public class DocumentoWithAssociationDTO {
         }
         String textoNormalizado = normalizeText(conteudoMarkdown);
         byte[] bytes = textoNormalizado.getBytes(StandardCharsets.UTF_8);
-        return RAGUtil.getCRC64Checksum(bytes);
+        return RagUtils.getCRC64Checksum(bytes);
     }
 }

@@ -5,7 +5,7 @@ import lombok.Data;
 /**
  * Classe para WikiParse.
  *
- * @see RAGUtil#wikiArticleXtract(String, String)
+ * @see RagUtils#wikiArticleXtract(String, String)
  */
 @Deprecated
 @Data

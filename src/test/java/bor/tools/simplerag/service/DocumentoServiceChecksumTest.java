@@ -1,13 +1,22 @@
 package bor.tools.simplerag.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -16,14 +25,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.mockito.Mockito.lenient;
 
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.repository.DocumentoRepository;
-import bor.tools.utils.RAGUtil;
+import bor.tools.utils.RagUtils;
 
 /**
  * Unit tests for checksum calculation and duplicate detection in DocumentoService.
@@ -391,7 +399,7 @@ class DocumentoServiceChecksumTest {
         }
         String normalized = content.toLowerCase().replaceAll("\\s+", " ").trim();
         byte[] bytes = normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        return RAGUtil.getCRC64Checksum(bytes);
+        return RagUtils.getCRC64Checksum(bytes);
     }
 
     /**

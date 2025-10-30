@@ -66,7 +66,7 @@ import java.security.NoSuchAlgorithmException;
  *       separada RAGParser.
  *
  */
-public class RAGUtil {
+public class RagUtils {
 
     /**
      * Tamanho máximo de conversão para Tika
@@ -96,7 +96,7 @@ public class RAGUtil {
     /**
      * Logger
      */
-    private static final Logger logger = LoggerFactory.getLogger(RAGUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(RagUtils.class);
 
     /**
      * Valor do cliente HTTP ACCEPT
@@ -296,7 +296,7 @@ public class RAGUtil {
 
 	// return false;
 	throw new UnsupportedOperationException(
-		"Erro em RAGUtil#isEmpty() \n Objeto desconhecido: " + obj.getClass() + " - " + obj.toString());
+		"Erro em RagUtils#isEmpty() \n Objeto desconhecido: " + obj.getClass() + " - " + obj.toString());
     }
 
     /**
@@ -1462,7 +1462,7 @@ public class RAGUtil {
     @Deprecated
     public static WikiParse wikiArticleXtract(String articleTitle, String language) {
 	// Configura o cliente HTTP
-	OkHttpClient client = RAGUtil.getUnsafeOkHttpClient();
+	OkHttpClient client = RagUtils.getUnsafeOkHttpClient();
 
 	// Monta a URL da API da Wikipedia para obter o conteúdo do artigo
 	String url = String.format("https://%s.wikipedia.org/w/api.php?action=parse&page=%s&format=json&prop=text",
