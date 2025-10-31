@@ -3,7 +3,7 @@ package bor.tools.splitter;
 import java.util.List;
 
 import bor.tools.simplerag.entity.*;
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplerag.dto.*;
 
 

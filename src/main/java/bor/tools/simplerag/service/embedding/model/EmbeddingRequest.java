@@ -1,6 +1,6 @@
 package bor.tools.simplerag.service.embedding.model;
 
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import lombok.Builder;

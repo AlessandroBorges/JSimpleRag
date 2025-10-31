@@ -8,9 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.dto.ChapterDTO;

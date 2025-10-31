@@ -1,8 +1,8 @@
 package bor.tools.simplerag.service.embedding.strategy;
 
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
 import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;

@@ -18,8 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import bor.tools.simplellm.CompletionResponse;
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.service.llm.LLMServiceManager.LLMServiceStats;
 

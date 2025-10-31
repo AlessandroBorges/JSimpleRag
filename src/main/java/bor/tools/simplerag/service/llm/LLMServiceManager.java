@@ -3,11 +3,11 @@ package bor.tools.simplerag.service.llm;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapModels;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model;
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
 import bor.tools.simplellm.Model_Type;
 import bor.tools.simplellm.exceptions.LLMException;
 import lombok.extern.slf4j.Slf4j;

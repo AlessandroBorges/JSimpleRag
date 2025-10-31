@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplellm.CompletionResponse;
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
+import bor.tools.simplellm.Model;
+import bor.tools.simplellm.Reasoning_Effort;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
@@ -56,7 +58,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
     // Q&A generation defaults
     private static final int DEFAULT_QA_PAIRS = 3;
     private static final int MAX_TEXT_LENGTH = 6000;
-    private static final int TOKENS_PER_QA = 150;
+    private static final int TOKENS_PER_QA = 340;
 
     @Override
     public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
@@ -151,13 +153,27 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
         // Get appropriate LLMService from pool
         LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
-
+        
+        
         if (llmService == null) {
             throw new IllegalStateException(
                 "No LLM service found for completion model: " + modelName +
                 ". Check if the model is registered in any provider."
             );
         }
+
+        Model model = llmService.getRegisteredModels().get(modelName);
+        
+        if (model == null) {
+            model = llmService.getInstalledModels().get(modelName);
+            if (model == null) {
+		throw new IllegalStateException(
+		    "Completion model not found in installed models: " + modelName +
+		    ". Check if the model is available in the provider."
+		);
+	    }	    
+	}
+        
 
         log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
 
@@ -172,8 +188,8 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         String prompt = String.format(
             "Com base no texto fornecido, gere exatamente %d pares de pergunta e resposta relevantes e informativos. " +
             "As perguntas devem abordar os pontos principais do texto.\n" +
-            "Formato: Q: [pergunta]\\nA: [resposta]\\n\\n" +
-            "Certifique-se de que as respostas sejam concisas mas informativas.",
+            "Formato: Q: [pergunta]\nA: [resposta]\\n\\n" +
+            "Certifique-se de que as respostas sejam concisas e restritas ao texto fornecido.",
             numberOfPairs
         );
 
@@ -182,8 +198,15 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         params.model(modelName);
         params.put("max_tokens", numberOfPairs * TOKENS_PER_QA);
         params.put("temperature", 0.4); // Slightly creative but controlled
-
+        
+        if(model.isTypeReasoning()) {
+            log.warn("The selected model '{}' is a reasoning model. " +
+		     "Enabling medium effort.", modelName);     
+            params.reasoningEffort(Reasoning_Effort.medium);
+        }
+        
         // Generate Q&A pairs
+        // @TODO consider using chat completion
         CompletionResponse response = llmService.completion(prompt, contentForQA, params);
         String result = response.getText();
 

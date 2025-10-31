@@ -2,7 +2,7 @@ package bor.tools.simplerag.service.embedding;
 
 import java.util.List;
 
-import bor.tools.simplellm.ModelEmbedding.Embeddings_Op;
+import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
