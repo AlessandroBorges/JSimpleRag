@@ -515,7 +515,8 @@ public class DocumentoService {
      * ✅ UPDATED VERSION: Uses EmbeddingOrchestrator and DocEmbeddingJdbcRepository
      */
     @Transactional
-    protected void persistProcessingResult(EmbeddingOrchestrator.ProcessingResult result, Documento documento) {
+    protected void persistProcessingResult(EmbeddingOrchestrator.ProcessingResult result, Documento documento) 
+    {
         log.debug("Persisting processing result for document: {}", documento.getId());
 
         // 1. Save chapters (using JPA repository - this is fine)

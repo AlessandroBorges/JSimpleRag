@@ -1,7 +1,9 @@
 package bor.tools.simplerag.service.embedding.strategy;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Component;
 import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
+import bor.tools.simplellm.Model;
+import bor.tools.simplellm.Model_Type;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
@@ -61,6 +65,19 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     // Size constants
     private static final int DEFAULT_CHUNK_SIZE = 2000; // tokens
     private static final int MIN_CHUNK_SIZE = 512; // tokens
+    
+    /**
+     * Not useful on metadata
+     */
+    private String[] negativeKeys = {"crc", "checksum","tamanho", "size","dimensions","dimension",
+	    			    "page_count","pagecount","num_pages","number_of_pages","file_type","filetype",
+	                             "last_modified","modified_date","created_at","updated_at","data_criacao",
+	                            "data_modificacao","id","identificador","documento_id","documentoid",
+	                            "biblioteca_id","bibliotecaid", "file_path","filepath","path",
+	                            "file_size","filesize","encoding","detected_format","format",
+	                            "url","source_url"
+    };        
+    private Set<String> ignoredKeys = Set.of(negativeKeys);
 
     @Override
     public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
@@ -254,15 +271,23 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         log.debug("Using embedding model: {}", modelName);
 
         // Get appropriate LLMService from pool
-        LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
-
+        LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);               
         if (llmService == null) {
             throw new IllegalStateException(
                 "No LLM service found for embedding model: " + modelName +
                 ". Check if the model is registered in any provider."
             );
         }
-
+        
+        var model = llmService.getRegisteredModels().get(modelName);
+        if (model == null || !model.isType(Model_Type.EMBEDDING)) {
+	    throw new IllegalStateException(
+		"Model " + modelName + " from provider " + llmService.getServiceProvider() +
+		" does not support embeddings."
+	    );
+	} else {
+	    modelName = model.getName(); // Use exact registered name
+	}
         log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
 
         // Prepare parameters
@@ -271,7 +296,18 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
         // Add library context
         if (library != null) {
-            params.put("library_context", library.getNome());
+            Integer dimension = library.getEmbeddingDimension();
+            if (dimension != null && model.isType(Model_Type.EMBEDDING_DIMENSION)) {
+		params.put("dimensions", dimension);
+	    }else {
+		log.debug("Library embedding dimension is null or model does not support setting it.");
+	    }
+            
+            if(model!=null) {
+        	params.modelObj(model);
+            }
+            
+           // params.put("library_context", library.getNome());
         }
 
         // Generate embedding
@@ -303,10 +339,10 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     }
 
     private float[] normalizeEmbedding(float[] embedding, EmbeddingContext context) {
-	int length = context != null && context.getEmbeddingDimension() != null ?
+	Integer length = context != null && context.getEmbeddingDimension() != null ?
 		    context.getEmbeddingDimension() : defaultEmbeddingDimension;	
 	// Adjust length if necessary
-	if (embedding != null && embedding.length != length) {
+	if (length!=null && embedding != null && embedding.length != length) {
 	    log.debug("Normalizing embedding from length {} to {}", embedding.length, length);
 	    float[] normalized = new float[length];
 	    System.arraycopy(embedding, 0, normalized, 0, Math.min(embedding.length, length));
@@ -346,11 +382,11 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
      */
     private String buildMetadataText(ChapterDTO chapter) {
         StringBuilder builder = new StringBuilder();
-
+        
         if (chapter.getMetadados() != null) {
             // Add most relevant metadata
             chapter.getMetadados().forEach((key, value) -> {
-                if (value != null && !value.toString().trim().isEmpty()) {
+                if (ignoredKeys.contains(key.toLowerCase())==false && value != null && !value.toString().trim().isEmpty()) {                    
                     builder.append(key).append(": ").append(value).append("\n");
                 }
             });

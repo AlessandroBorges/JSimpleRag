@@ -60,7 +60,8 @@ public class EmbeddingServiceImpl implements EmbeddingService {
     // ========== Chapter Embeddings ==========
 
     @Override
-    public List<DocumentEmbeddingDTO> generateChapterEmbeddings(ChapterDTO chapter, EmbeddingContext context) {
+    public List<DocumentEmbeddingDTO> generateChapterEmbeddings(ChapterDTO chapter, 
+	    							EmbeddingContext context) {
         return generateChapterEmbeddings(chapter, context, ChapterEmbeddingStrategy.FLAG_AUTO);
     }
 

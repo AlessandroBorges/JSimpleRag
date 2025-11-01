@@ -26,14 +26,14 @@ public class VectorUtil {
         double norm = 0.0;
         for (float value : vector) {
             norm += value * value;
-        }
-        norm = Math.sqrt(norm);
+        }        
 
         // If the norm is 0, return the original vector (avoid division by zero)
-        if (Math.abs(norm) <= 0.0001) {
+        if (Math.abs(norm) <= 0.0001 || Math.abs(norm - 1.0) <= 0.0001) {
             return vector;
         }
-
+        
+        norm = Math.sqrt(norm);
         // Normalize each component
         float[] normalized = new float[vector.length];
         for (int i = 0; i < vector.length; i++) {

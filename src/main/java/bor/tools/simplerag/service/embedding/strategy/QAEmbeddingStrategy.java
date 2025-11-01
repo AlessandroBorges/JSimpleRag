@@ -278,6 +278,11 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
         // Add library context
         if (library != null) {
+        	Integer dimensions = library.getEmbeddingDimension();
+        	
+        	if(dimensions != null) {
+		    	params.put("dimensions", dimensions);
+        	}
             params.put("library_context", library.getNome());
         }
 
