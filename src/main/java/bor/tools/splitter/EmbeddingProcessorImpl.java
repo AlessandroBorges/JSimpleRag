@@ -37,8 +37,8 @@ import bor.tools.simplerag.entity.enums.TipoEmbedding;
  * @see bor.tools.simplerag.service.embedding.EmbeddingOrchestrator
  */
 @Deprecated(since = "0.0.2", forRemoval = true)
-@Service
-public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
+public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface 
+{
 
     private static final Logger logger = LoggerFactory.getLogger(EmbeddingProcessorImpl.class);
 
@@ -66,7 +66,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * {@inheritDoc}
      */
-    @Override
+  
     public List<DocumentEmbeddingDTO> createChapterEmbeddings(@NonNull ChapterDTO capitulo,
                                                         @NonNull LibraryDTO biblioteca,
                                                         int flagGeneration) {
@@ -121,7 +121,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * {@inheritDoc}
      */
-    @Override
+  
     public List<DocumentEmbeddingDTO> createChunkEmbeddings(@NonNull DocumentEmbeddingDTO document,
                                                         @NonNull LibraryDTO biblioteca,
                                                         int flagGeneration) {
@@ -140,7 +140,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
      * {@inheritDoc}
      * Gera um embedding por par Q&A, combinando pergunta e resposta em um único embedding
      */
-    @Override
+  
     public List<DocumentEmbeddingDTO> createQAEmbeddings(@NonNull ChapterDTO capitulo,
                                                     @NonNull LibraryDTO biblioteca,
                                                     Integer k) {
@@ -218,7 +218,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * {@inheritDoc}
      */
-    @Override
+  
     public float[] createSearchEmbeddings(@NonNull String pesquisa,
                                          @NonNull LibraryDTO biblioteca) {
         return createEmbeddings(Embeddings_Op.QUERY, pesquisa, biblioteca);
@@ -226,8 +226,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
 
     /**
      * {@inheritDoc}
-     */
-    @Override
+     */    
     public float[] createEmbeddings(@NonNull Embeddings_Op operation,
                                    @NonNull String text,
                                    @NonNull LibraryDTO biblioteca) {
@@ -477,7 +476,7 @@ public class EmbeddingProcessorImpl implements EmbeddingProcessorInterface {
     /**
      * {@inheritDoc}
      */
-    @Override
+  
     public List<DocumentEmbeddingDTO> createSummaryEmbeddings(ChapterDTO chapter, 
                                                         LibraryDTO library,
                                                         Integer maxSummaryLength, 

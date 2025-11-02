@@ -515,13 +515,14 @@ public class LLMConfiguration {
 	    types.add(Model_Type.IMAGE);	  
 	}
 	
-
 	return types.toArray(new Model_Type[0]);
     }
 
     /**
      * Static utility method to parse embeddingModel string and add ModelEmbedding objects to config.
      * Each embedding model is created with the provided context length and Model_Type.EMBEDDING.
+     * 
+     * It uses a default embedding dimension of 768, which is the default size for BERT models.	
      *
      * @param embeddingModel Comma-separated embedding model names
      * @param embeddingContextLength Context length for embedding models
@@ -544,6 +545,7 @@ public class LLMConfiguration {
             ModelEmbedding embedding = new ModelEmbedding(
                 embeddingModelNameArray[i],
                 embeddingContextLength,
+                768,
                 Model_Type.EMBEDDING
             );
             embeddings[i] = embedding;

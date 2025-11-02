@@ -7,15 +7,15 @@
 
 ## 📋 Índice
 
-1. [Visão Geral](#visão-geral)
+1. [Visão Geral](#visao-geral)
 2. [Fluxo Atual de Processamento](#fluxo-atual-de-processamento)
 3. [Gargalos Identificados](#gargalos-identificados)
-4. [Análise de Impacto](#análise-de-impacto)
-5. [Recomendações de Otimização](#recomendações-de-otimização)
+4. [Análise de Impacto](#analise-de-impacto)
+5. [Recomendações de Otimização](#recomendacoes-de-otimizacao)
 
 ---
 
-## Visão Geral
+## Visao Geral
 
 ### Problema Identificado
 
@@ -596,7 +596,7 @@ Ideal: 27s + 0s + 3s = ~30s
 
 ---
 
-## Análise de Impacto
+## Analise de Impacto
 
 ### Cenário Base: Documento com 10 Capítulos
 
@@ -690,7 +690,7 @@ Otimizado:   ████████████████ 35-85s (↓ 40-50%
 
 ---
 
-## Recomendações de Otimização
+## Recomendacoes de Otimizacao
 
 ### 🎯 Prioridade 1 (CRÍTICA): Cache de Modelos Disponíveis
 

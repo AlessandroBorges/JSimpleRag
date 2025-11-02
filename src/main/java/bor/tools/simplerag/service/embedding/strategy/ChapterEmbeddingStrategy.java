@@ -1,7 +1,6 @@
 package bor.tools.simplerag.service.embedding.strategy;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Component;
 import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
-import bor.tools.simplellm.Model;
 import bor.tools.simplellm.Model_Type;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;

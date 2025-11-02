@@ -33,6 +33,7 @@ import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
+import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
 import bor.tools.utils.RagUtils;
@@ -79,6 +80,9 @@ public class DocumentoService {
     private final DocumentConverter documentConverter;
     private final DocumentRouter documentRouter;
     private final EmbeddingOrchestrator embeddingOrchestrator;
+
+    // ✅ NEW: Sequential processing service (v0.0.3+)
+    private final DocumentProcessingService documentProcessingService;
 
     // ========== Checksum Utility Methods ==========
 
@@ -428,6 +432,81 @@ public class DocumentoService {
 	}
     }
 
+    // ========== NEW SEQUENTIAL PROCESSING (v0.0.3+) ==========
+
+    /**
+     * Process document asynchronously using new sequential flow (v0.0.3+).
+     *
+     * <p>This method uses {@link DocumentProcessingService} which provides:</p>
+     * <ul>
+     *   <li>Sequential processing (no complex retry logic)</li>
+     *   <li>Context-based approach (creates contexts once, reuses)</li>
+     *   <li>Batch embedding generation (up to 10 texts per call)</li>
+     *   <li>Dynamic context length handling</li>
+     *   <li>Fault-tolerant (individual failures don't stop processing)</li>
+     * </ul>
+     *
+     * @param documentId Document ID to process
+     * @return CompletableFuture with processing status
+     * @since 0.0.3
+     */
+    @Async
+    public CompletableFuture<ProcessingStatus> processDocumentAsyncV2(Integer documentId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.info("Starting NEW async processing (v2) for document ID: {}", documentId);
+
+                // Load document
+                Documento documento = documentoRepository.findById(documentId)
+                        .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+
+                // Load library
+                Optional<bor.tools.simplerag.entity.Library> libraryOpt =
+                        libraryService.findById(documento.getBibliotecaId());
+                if (libraryOpt.isEmpty()) {
+                    throw new IllegalArgumentException("Library not found: " + documento.getBibliotecaId());
+                }
+
+                LibraryDTO biblioteca = LibraryDTO.from(libraryOpt.get());
+
+                // Delegate to new processing service
+                DocumentProcessingService.ProcessingResult result =
+                        documentProcessingService.processDocument(documento, biblioteca).get();
+
+                // Create status response
+                ProcessingStatus status = new ProcessingStatus();
+                status.setDocumentId(documentId);
+                status.setStatus(result.isSuccess() ? "COMPLETED" : "FAILED");
+                status.setChaptersCount(result.getChaptersCount());
+                status.setEmbeddingsCount(result.getEmbeddingsCount());
+                status.setProcessedAt(LocalDateTime.now());
+                if (!result.isSuccess()) {
+                    status.setErrorMessage(result.getErrorMessage());
+                }
+
+                log.info("Document {} processing completed (v2): {} chapters, {}/{} embeddings processed, duration={}",
+                        documentId, result.getChaptersCount(),
+                        result.getEmbeddingsProcessed(), result.getEmbeddingsCount(),
+                        result.getDuration());
+
+                return status;
+
+            } catch (Exception e) {
+                log.error("Failed to process document {} (v2): {}", documentId, e.getMessage(), e);
+
+                ProcessingStatus status = new ProcessingStatus();
+                status.setDocumentId(documentId);
+                status.setStatus("FAILED");
+                status.setErrorMessage(e.getMessage());
+                status.setProcessedAt(LocalDateTime.now());
+
+                return status;
+            }
+        });
+    }
+
+    // ========== OLD PROCESSING (DEPRECATED) ==========
+
     /**
      * Process document asynchronously (Fluxo steps d, e, f, g)
      *
@@ -441,7 +520,9 @@ public class DocumentoService {
      * @param includeQA Whether to include Q&A generation
      * @param includeSummary Whether to include summary generation
      * @return CompletableFuture with processing result
+     * @deprecated Use {@link #processDocumentAsyncV2(Integer)} instead (v0.0.3+)
      */
+    @Deprecated(since = "0.0.3", forRemoval = true)
     @Async
     public CompletableFuture<ProcessingStatus> processDocumentAsync(Integer documentId,
                                                                     boolean includeQA,

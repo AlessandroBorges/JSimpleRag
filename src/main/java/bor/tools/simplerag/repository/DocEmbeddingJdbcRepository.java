@@ -618,6 +618,97 @@ public class DocEmbeddingJdbcRepository {
     }
 
     /**
+     * Batch insert de DocumentEmbeddings com vetores NULL.
+     *
+     * <p>Otimizado para persistência inicial - vetores são calculados posteriormente.
+     * Este método é usado no novo fluxo de processamento sequencial (v0.0.3+) onde
+     * os chunks são primeiro persistidos e então os vetores são calculados em batch.</p>
+     *
+     * <p><b>Performance:</b> Muito mais eficiente que múltiplas chamadas a save(),
+     * reduzindo round-trips ao banco de dados.</p>
+     *
+     * @param embeddings Lista de embeddings (vetor pode ser NULL)
+     * @return Lista de IDs gerados na ordem dos embeddings fornecidos
+     * @throws DataAccessException se a operação falhar
+     * @throws SQLException se houver erro SQL
+     * @since 0.0.3
+     */
+    public List<Integer> saveAll(@NonNull List<DocumentEmbedding> embeddings)
+            throws DataAccessException, SQLException {
+        if (embeddings == null || embeddings.isEmpty()) {
+            return List.of();
+        }
+
+        doOnce(); // Ensure initialization
+
+        final String sql = """
+            INSERT INTO doc_embedding
+            (library_id, documento_id, chapter_id, tipo_embedding,
+             texto, order_chapter, embedding_vector, metadados, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
+            """;
+
+        List<Integer> generatedIds = new java.util.ArrayList<>();
+
+        for (DocumentEmbedding doc : embeddings) {
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                ps.setInt(1, doc.getLibraryId());
+                ps.setInt(2, doc.getDocumentoId());
+                ps.setObject(3, doc.getChapterId());
+                ps.setString(4, doc.getTipoEmbedding().getDbValue());
+                ps.setString(5, doc.getTexto());
+                ps.setObject(6, doc.getOrderChapter());
+
+                // Vector can be NULL (calculated later)
+                if (doc.getEmbeddingVector() != null) {
+                    ps.setObject(7, new PGvector(doc.getEmbeddingVector()));
+                } else {
+                    ps.setObject(7, null);
+                }
+
+                // Metadados as JSON
+                ps.setString(8, doc.getMetadados() != null ? "{}" : null);
+
+                return ps;
+            }, keyHolder);
+
+            // Retrieve generated ID
+            Map<String, Object> map = keyHolder.getKeys();
+            Object pk = map.get("id");
+            if (pk instanceof Number) {
+                int id = ((Number) pk).intValue();
+                doc.setId(id); // Update the object with generated ID
+                generatedIds.add(id);
+            }
+        }
+
+        return generatedIds;
+    }
+
+    /**
+     * Atualiza apenas o vetor de embedding de um registro
+     *
+     * @param id - PK do registro DocEmbedding
+     * @param embeddingVector - vetor de embedding a ser atualizado
+     *
+     * @throws DataAccessException
+     * @throws SQLException
+     */
+    public void updateEmbeddingVector(int id, float[] embeddingVector)
+	    throws DataAccessException, SQLException {
+	final String sql = "UPDATE doc_embedding SET embedding_vector = ?, "
+		         + "updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+
+	jdbcTemplate.update(sql,
+	    embeddingVector != null ? new PGvector(embeddingVector) : null,
+	    id
+	);
+    }
+    
+    /**
      * Deleta um registro da tabela doc_embedding
      * 
      */

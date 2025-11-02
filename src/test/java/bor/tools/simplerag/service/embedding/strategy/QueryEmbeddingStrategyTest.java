@@ -90,7 +90,7 @@ class QueryEmbeddingStrategyTest {
 
         // Verify parameters
         ArgumentCaptor<MapParam> paramsCaptor = ArgumentCaptor.forClass(MapParam.class);
-        verify(mockLLMService).embeddings(any(), any(), paramsCaptor.capture());
+        verify(mockLLMService).embeddings(any(), (String)any(), paramsCaptor.capture());
         MapParam capturedParams = paramsCaptor.getValue();
         assertNotNull(capturedParams, "Params should not be null");
     }
@@ -103,7 +103,7 @@ class QueryEmbeddingStrategyTest {
         when(llmServiceManager.getLLMServiceByRegisteredModel("nomic-embed-text"))
                 .thenReturn(mockLLMService);
         when(mockLLMService.getServiceProvider()).thenReturn(SERVICE_PROVIDER.OPENAI);
-        when(mockLLMService.embeddings(any(), any(), any()))
+        when(mockLLMService.embeddings(any(), (String)any(), any()))
                 .thenReturn(mockEmbedding);
 
         // Act
@@ -146,7 +146,7 @@ class QueryEmbeddingStrategyTest {
         when(llmServiceManager.getLLMServiceByRegisteredModel(modelName))
                 .thenReturn(mockLLMService);
         when(mockLLMService.getServiceProvider()).thenReturn(SERVICE_PROVIDER.OPENAI);
-        when(mockLLMService.embeddings(any(), any(), any()))
+        when(mockLLMService.embeddings(any(), (String)any(), any()))
                 .thenThrow(new LLMException("LLM service error"));
 
         // Act & Assert
@@ -170,7 +170,7 @@ class QueryEmbeddingStrategyTest {
         when(llmServiceManager.getLLMServiceByRegisteredModel(anyString()))
                 .thenReturn(mockLLMService);
         when(mockLLMService.getServiceProvider()).thenReturn(SERVICE_PROVIDER.OPENAI);
-        when(mockLLMService.embeddings(any(), any(), any()))
+        when(mockLLMService.embeddings(any(), (String)any(), any()))
                 .thenReturn(mockEmbedding);
 
         // Act
@@ -297,7 +297,7 @@ class QueryEmbeddingStrategyTest {
         when(llmServiceManager.getLLMServiceByRegisteredModel(anyString()))
                 .thenReturn(mockLLMService);
         when(mockLLMService.getServiceProvider()).thenReturn(SERVICE_PROVIDER.OPENAI);
-        when(mockLLMService.embeddings(any(), any(), any()))
+        when(mockLLMService.embeddings(any(), (String)any(), any()))
                 .thenReturn(mockEmbedding);
 
         // Act
@@ -305,7 +305,7 @@ class QueryEmbeddingStrategyTest {
 
         // Assert - Verify library context was passed
         ArgumentCaptor<MapParam> paramsCaptor = ArgumentCaptor.forClass(MapParam.class);
-        verify(mockLLMService).embeddings(any(), any(), paramsCaptor.capture());
+        verify(mockLLMService).embeddings(any(), (String)any(), paramsCaptor.capture());
 
         MapParam capturedParams = paramsCaptor.getValue();
         assertNotNull(capturedParams, "Params should not be null");
