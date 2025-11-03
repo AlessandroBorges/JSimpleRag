@@ -168,5 +168,31 @@ public interface ChapterRepository extends JpaRepository<Chapter, Integer> {
         """, nativeQuery = true)
     List<Chapter> findByBiblioteca(@Param("bibliotecaId") Integer bibliotecaId);
 
+    // ========== OVERWRITE FEATURE (v1.0) ==========
+
+    /**
+     * Counts chapters for a document.
+     *
+     * Used by overwrite feature to check if document has existing processing.
+     *
+     * @param documentoId Document ID
+     * @return Number of chapters
+     * @since 1.0 (overwrite feature)
+     */
+    int countByDocumentoId(Integer documentoId);
+
+    /**
+     * Deletes all chapters for a document.
+     *
+     * Uses ON DELETE CASCADE to automatically delete related DocEmbeddings.
+     * Used by overwrite feature to clear existing processing before reprocessing.
+     *
+     * @param documentoId Document ID
+     * @return Number of deleted chapters
+     * @since 1.0 (overwrite feature)
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    int deleteByDocumentoId(Integer documentoId);
 
 }

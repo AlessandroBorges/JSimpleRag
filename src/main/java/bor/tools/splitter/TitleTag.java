@@ -25,11 +25,31 @@ public class TitleTag {
      */
     private int level;
     /**
-     * Optional The position of the title in the document (e.g., character index).
+     * Optional the position of the title in the document (e.g., line index).
      */
-    private int position;
+    private Integer position;
     
+    /**
+     * Optional the amount of lines belonging to this title.
+     */
+    private Integer linesLength;
+    
+    /**
+     * Constructor
+     */
     public TitleTag() {	
+    }
+    
+    /**
+     * The position of the title in the document (e.g., line index).
+     * @return
+     */
+    public Integer getPosition() {
+	return position;
+    }
+    
+    public void setPosition(Integer position) {
+	this.position = position;
     }
 
 }

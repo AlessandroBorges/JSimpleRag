@@ -199,7 +199,7 @@ public class SplitterWiki extends AbstractSplitter {
      * Split em capítulos baseado em parágrafos (modo padrão para Wiki)
      */
     private List<ChapterDTO> splitIntoChaptersByParagraphs(DocumentoWithAssociationDTO doc) {
-        logger.debug("Splitting Wiki content by paragraphs with maxWords: {}", maxWordsPerChapter);
+        logger.debug("Splitting Wiki content by paragraphs with chapterMaxTokens: {}", maxWordsPerChapter);
 
         String content = doc.getTexto();
         // Usar o splitIntoParagraphs() como base para separação

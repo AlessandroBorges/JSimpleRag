@@ -27,6 +27,7 @@ import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.embedding.EmbeddingService;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
+import bor.tools.simplerag.service.llm.LLMServiceManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -122,6 +123,7 @@ public class SearchController {
     private final DocumentoRepository documentoRepository;
     private final ChapterRepository chapterRepository;
     private final LibraryService libraryService;
+    private final LLMServiceManager llmServiceManager;
 
     /**
      * Hybrid search combining semantic (embedding-based) and textual (full-text) search
@@ -166,8 +168,9 @@ public class SearchController {
 
             LibraryDTO library = loadLibrary(request.getLibraryIds());
 
-	    // Create embedding context with library defaults
-	    EmbeddingContext context = EmbeddingContext.fromLibrary(library);
+                      
+	    // Create embedding context with library defaults            
+	    EmbeddingContext context = EmbeddingContext.create(library, llmServiceManager);
 
 	    // Generate query embedding using new service
             float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);
@@ -312,9 +315,9 @@ public class SearchController {
         try {
             // Generate query embedding
             LibraryDTO library = loadLibrary(request.getLibraryIds());
-
+                     
 	    // Create embedding context with library defaults
-	    EmbeddingContext context = EmbeddingContext.fromLibrary(library);
+	    EmbeddingContext context = EmbeddingContext.create(library, llmServiceManager);
 
 	    // Generate query embedding using new service
             float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);

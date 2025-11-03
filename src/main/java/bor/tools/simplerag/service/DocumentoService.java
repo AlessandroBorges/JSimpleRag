@@ -33,6 +33,7 @@ import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
+import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
@@ -80,6 +81,7 @@ public class DocumentoService {
     private final DocumentConverter documentConverter;
     private final DocumentRouter documentRouter;
     private final EmbeddingOrchestrator embeddingOrchestrator;
+    private final LLMServiceManager llmServiceManager;
 
     // ✅ NEW: Sequential processing service (v0.0.3+)
     private final DocumentProcessingService documentProcessingService;
@@ -333,7 +335,7 @@ public class DocumentoService {
             throw new IllegalArgumentException("Library not found: " + libraryId);
         }
       
-        String detectedFormat = simpleFormatDetector(fileName);
+        String detectedFormat = RagUtils.simpleFormatDetector(fileName);
         
         if (detectedFormat != null && detectedFormat.contains("text/plain")) {
 		detectedFormat = "markdown"; // Fallback to txt
@@ -366,72 +368,6 @@ public class DocumentoService {
         return uploadFromText(titulo, markdown, libraryId, metadata);
     }
 
-    /**
-     * Simple format detector based on file extension
-     * @param fileName
-     * @return MIME Types or null if unknown
-     */
-    private String simpleFormatDetector(String fileName) {
-	String ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
-	
-	switch (ext) {
-	    case "pdf":
-		return "application/pdf";
-		
-	    case "doc":
-		return "application/msword";
-		
-	    case "docx":
-		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-		
-	    case "txt":
-	    case "sql":
-	    case "log":
-		return "text/plain";
-		
-	    case "java":
-		return "text/x-java-source";
-		
-	    case "py":
-		return "text/x-python";
-		
-	    case "js":	
-		return "application/javascript";
-		
-	    case "csv":
-		return "text/csv";
-		
-	    case "md":
-	    case "markdown":
-		return "text/markdown";
-		
-	    case "html":
-	    case "htm":
-		return "text/html";
-		
-	    case "xml":
-		return "application/xml";
-		
-	    case "xhtml":	
-		return "application/xhtml+xml";
-		
-	    case "ppt":
-		return "application/vnd.ms-powerpoint";
-		
-	    case "pptx":
-		return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-		
-	    case "xls":
-	    case "xlm":
-		return "application/vnd.ms-excel";
-		
-	    case "xlsx":
-		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";	    
-	    default:
-		return null;
-	}
-    }
-
     // ========== NEW SEQUENTIAL PROCESSING (v0.0.3+) ==========
 
     /**
@@ -446,6 +382,8 @@ public class DocumentoService {
      *   <li>Fault-tolerant (individual failures don't stop processing)</li>
      * </ul>
      *
+     * @TODO - Add support for includeQA and includeSummary options
+     *  
      * @param documentId Document ID to process
      * @return CompletableFuture with processing status
      * @since 0.0.3
@@ -485,12 +423,13 @@ public class DocumentoService {
                 }
 
                 log.info("Document {} processing completed (v2): {} chapters, {}/{} embeddings processed, duration={}",
-                        documentId, result.getChaptersCount(),
-                        result.getEmbeddingsProcessed(), result.getEmbeddingsCount(),
+                        documentId, 
+                        result.getChaptersCount(),
+                        result.getEmbeddingsProcessed(), 
+                        result.getEmbeddingsCount(),
                         result.getDuration());
 
                 return status;
-
             } catch (Exception e) {
                 log.error("Failed to process document {} (v2): {}", documentId, e.getMessage(), e);
 
@@ -501,6 +440,72 @@ public class DocumentoService {
                 status.setProcessedAt(LocalDateTime.now());
 
                 return status;
+            }
+        });
+    }
+
+    /**
+     * Enriches a document with Q&A and/or summary embeddings (Phase 2 processing).
+     *
+     * <p>This is a wrapper method that:</p>
+     * <ol>
+     *   <li>Loads the document entity</li>
+     *   <li>Loads the library configuration</li>
+     *   <li>Delegates to {@link DocumentProcessingService#enrichDocument(Documento, LibraryDTO, bor.tools.simplerag.service.processing.EnrichmentOptions)}</li>
+     * </ol>
+     *
+     * <p><b>Prerequisites:</b> Document must have been processed (Phase 1) to have chapters.</p>
+     *
+     * @param documentId Document ID to enrich
+     * @param options Enrichment configuration (Q&A, summary, etc.)
+     * @return CompletableFuture with enrichment result and statistics
+     * @since 0.0.3
+     * @see bor.tools.simplerag.service.processing.DocumentProcessingService#enrichDocument(Documento, LibraryDTO, bor.tools.simplerag.service.processing.EnrichmentOptions)
+     */
+    @Async
+    public CompletableFuture<bor.tools.simplerag.service.processing.EnrichmentResult> enrichDocumentAsync(
+            Integer documentId,
+            bor.tools.simplerag.service.processing.EnrichmentOptions options) {
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.info("Starting document enrichment (async wrapper) for document ID: {}", documentId);
+
+                // Load document
+                Documento documento = documentoRepository.findById(documentId)
+                        .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+
+                // Load library
+                Optional<bor.tools.simplerag.entity.Library> libraryOpt =
+                        libraryService.findById(documento.getBibliotecaId());
+                if (libraryOpt.isEmpty()) {
+                    throw new IllegalArgumentException("Library not found: " + documento.getBibliotecaId());
+                }
+
+                LibraryDTO biblioteca = LibraryDTO.from(libraryOpt.get());
+
+                // Delegate to enrichment service
+                bor.tools.simplerag.service.processing.EnrichmentResult result =
+                        documentProcessingService.enrichDocument(documento, biblioteca, options).get();
+
+                log.info("Document {} enrichment completed: {} Q&A, {} summaries, {} chapters processed, duration={}",
+                        documentId,
+                        result.getQaEmbeddingsGenerated(),
+                        result.getSummaryEmbeddingsGenerated(),
+                        result.getChaptersProcessed(),
+                        result.getDuration());
+
+                return result;
+
+            } catch (Exception e) {
+                log.error("Failed to enrich document {}: {}", documentId, e.getMessage(), e);
+
+                return bor.tools.simplerag.service.processing.EnrichmentResult.builder()
+                        .documentId(documentId)
+                        .success(false)
+                        .errorMessage(e.getMessage())
+                        .duration("0s")
+                        .build();
             }
         });
     }
@@ -522,6 +527,7 @@ public class DocumentoService {
      * @return CompletableFuture with processing result
      * @deprecated Use {@link #processDocumentAsyncV2(Integer)} instead (v0.0.3+)
      */
+    /*
     @Deprecated(since = "0.0.3", forRemoval = true)
     @Async
     public CompletableFuture<ProcessingStatus> processDocumentAsync(Integer documentId,
@@ -547,7 +553,8 @@ public class DocumentoService {
                 documentoDTO.setBiblioteca(biblioteca);
 
                 // Create embedding context with library defaults
-                EmbeddingContext context = EmbeddingContext.fromLibrary(biblioteca);
+                EmbeddingContext context = EmbeddingContext.create(biblioteca, 
+                							llmServiceManager);
 
                 // Create processing options
                 ProcessingOptions options = ProcessingOptions.builder()
@@ -588,7 +595,7 @@ public class DocumentoService {
             }
         });
     }
-
+*/
     /**
      * Persist processing results (chapters + embeddings)
      * Implements Fluxo_carga_documents.md steps (e) and (g)
@@ -699,6 +706,7 @@ public class DocumentoService {
     private Chapter toEntity(ChapterDTO dto, Documento documento) {
         return Chapter.builder()
                 .documentoId(documento.getId())
+                .bibliotecaId(documento.getBibliotecaId())
                 .titulo(dto.getTitulo())
                 .conteudo(dto.getConteudo())
                 .ordemDoc(dto.getOrdemDoc())
@@ -711,38 +719,14 @@ public class DocumentoService {
      * Convert Documento Entity to simple DTO (without associations)
      */
     private DocumentoDTO toDTO(Documento entity) {
-        return DocumentoDTO.builder()
-                .id(entity.getId())
-                .bibliotecaId(entity.getBibliotecaId())
-                .titulo(entity.getTitulo())
-                .conteudoMarkdown(entity.getConteudoMarkdown())
-                .flagVigente(entity.getFlagVigente())
-                .dataPublicacao(entity.getDataPublicacao())
-                .tokensTotal(entity.getTokensTotal())
-                .metadados(entity.getMetadados() != null ? new Metadata(entity.getMetadados()) : null)
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .deletedAt(entity.getDeletedAt())
-                .build();
+        return DocumentoDTO.from(entity);
     }
 
     /**
      * Convert Documento Entity to DTO with associations (for processing workflows)
      */
     private DocumentoWithAssociationDTO toDTOWithAssociation(Documento entity) {
-        return DocumentoWithAssociationDTO.builder()
-                .id(entity.getId())
-                .bibliotecaId(entity.getBibliotecaId())
-                .titulo(entity.getTitulo())
-                .conteudoMarkdown(entity.getConteudoMarkdown())
-                .flagVigente(entity.getFlagVigente())
-                .dataPublicacao(entity.getDataPublicacao())
-                .tokensTotal(entity.getTokensTotal())
-                .metadados(entity.getMetadados() != null ? new Metadata(entity.getMetadados()) : null)
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .deletedAt(entity.getDeletedAt())
-                .build();
+        return DocumentoWithAssociationDTO.from(entity);
     }
 
     /**
@@ -884,5 +868,101 @@ public class DocumentoService {
 
         public LocalDateTime getProcessedAt() { return processedAt; }
         public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
+    }
+
+    // ========== OVERWRITE FEATURE (v1.0) ==========
+
+    /**
+     * Result of checking existing processing data.
+     *
+     * Used by overwrite feature to determine if document needs reprocessing.
+     *
+     * @since 1.0 (overwrite feature)
+     */
+    @lombok.Data
+    @lombok.Builder
+    public static class ProcessingCheckResult {
+        private Integer documentId;
+        private int chaptersCount;
+        private int embeddingsCount;
+        private boolean hasChapters;
+        private boolean hasEmbeddings;
+    }
+
+    /**
+     * Checks if document has existing Chapters and DocEmbeddings.
+     *
+     * Used by overwrite feature to determine processing strategy.
+     *
+     * @param documentId Document ID
+     * @return Result with counts and flags
+     * @since 1.0 (overwrite feature)
+     */
+    public ProcessingCheckResult checkExistingProcessing(Integer documentId) {
+        log.debug("Checking existing processing for document: {}", documentId);
+
+        // Count chapters
+        int chaptersCount = chapterRepository.countByDocumentoId(documentId);
+
+        // Count embeddings
+        int embeddingsCount = 0;
+        try {
+            embeddingsCount = embeddingRepository.countByDocumentoId(documentId);
+        } catch (Exception e) {
+            log.warn("Failed to count embeddings for document {}: {}", documentId, e.getMessage());
+        }
+
+        log.debug("Document {} has {} chapters and {} embeddings",
+                documentId, chaptersCount, embeddingsCount);
+
+        return ProcessingCheckResult.builder()
+                .documentId(documentId)
+                .chaptersCount(chaptersCount)
+                .embeddingsCount(embeddingsCount)
+                .hasChapters(chaptersCount > 0)
+                .hasEmbeddings(embeddingsCount > 0)
+                .build();
+    }
+
+    /**
+     * Deletes all Chapters and DocEmbeddings for a document.
+     *
+     * Uses ON DELETE CASCADE to automatically delete related DocEmbeddings.
+     *
+     * IMPORTANT: This method ONLY deletes existing data. The caller (DocumentController)
+     * is responsible for continuing the processing flow to create NEW Chapters and
+     * DocEmbeddings from the existing Documento.conteudoMarkdown.
+     *
+     * @param documentId Document ID
+     * @throws RuntimeException if deletion fails
+     * @since 1.0 (overwrite feature)
+     */
+    @Transactional
+    public void deleteExistingProcessing(Integer documentId) {
+        log.info("Deleting existing processing data for document: {}", documentId);
+
+        try {
+            // Count before deletion (for logging)
+            int chaptersCount = chapterRepository.countByDocumentoId(documentId);
+            int embeddingsCount = 0;
+            try {
+                embeddingsCount = embeddingRepository.countByDocumentoId(documentId);
+            } catch (Exception e) {
+                log.warn("Failed to count embeddings before deletion: {}", e.getMessage());
+            }
+
+            // Delete chapters (CASCADE will delete embeddings automatically)
+            int deletedChapters = chapterRepository.deleteByDocumentoId(documentId);
+
+            log.info("Deleted {} chapters and {} embeddings (via CASCADE) for document {}",
+                    deletedChapters, embeddingsCount, documentId);
+
+            // Note: Processing will continue in DocumentController to create NEW entities
+
+        } catch (Exception e) {
+            log.error("Failed to delete processing data for document {}: {}",
+                    documentId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete existing processing data: " + e.getMessage(), e);
+        }
     }
 }

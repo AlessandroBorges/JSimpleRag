@@ -44,4 +44,7 @@
     <!-- Phase 13: Remove database triggers for updated_at (managed by JPA @PreUpdate) -->
     <include file="db/changelog/013-remove-update-triggers.xml"/>
 
+    <!-- Phase 14: Add biblioteca_id to chapter table (fix modeling gap) -->
+    <include file="db/changelog/014-add-biblioteca-id-to-chapter.xml"/>
+
 </databaseChangeLog>

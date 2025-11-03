@@ -12,8 +12,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
+import bor.tools.simplerag.entity.enums.TipoEmbedding;
+import bor.tools.utils.RagUtils;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -31,9 +35,61 @@ public class SplitterGenerico extends AbstractSplitter {
     private static final Logger logger = LoggerFactory.getLogger(SplitterNorma.class);
 
     /**
-     * Número máximo de palavras em uma parte. Default é 6KB
+     * Chunck ideal de tokens.
      */
-    protected int maxWords = 1024 * 6;
+    private static final int IDEAL_TOKENS = 512;
+
+    /**
+     * Número máximo de tokens em um chunk.
+     */
+    private static final int MAX_TOKENS = 2048;
+
+    /**
+     * Número mínimo de tokens em um chunk.
+     */
+    private static final int MIN_TOKENS = 300;
+
+    /**
+     * Número máximo de tokens em um capitulo. 
+     * Default é 16Kt
+     */
+    protected static final int CHAPTER_MAX_TOKENS = 1024 * 16; 
+
+    /**
+     * Número mínimo de tokens em um capitulo. 
+     * Default é 4 kt.
+     */
+    protected static final int CHAPTER_MIN_TOKENS = 1024 * 2;
+    
+    /**
+     * Número ideal de tokens em um capitulo. 
+     * Default é 8 kt.
+     */
+    protected static final int CHAPTER_IDEAL_TOKENS = 1024 * 8;
+    
+    /**
+     * Número ideal de tokens em um chunk. 
+     * Default é 2 kt.
+     */
+    protected static final int CHUNK_IDEAL_TOKENS = 512;
+    
+    /**
+     * Número máximo de tokens em um chunk. 
+     * Default é 2 kt.
+     */
+    protected static final int CHUNK_MAX_TOKENS = 1024 * 2;
+    
+   /** 
+    * Número máximo de tokens em um chunk. 
+    * Default é 256 tokens.
+    */
+   protected static final int CHUNK_MIN_TOKENS = 256;
+    
+    /**
+     * Número mínimo de tokens em um documento para considerar mais de um capítulo.
+     * Default é 8 kt.
+     */
+    protected static final int DOCUMENT_WITH_CHAPTERS_MIN_TOKENS = 1024 * 4; 
 
     protected boolean removerTachado = true;
 
@@ -55,15 +111,38 @@ public class SplitterGenerico extends AbstractSplitter {
     @Override
     public List<ChapterDTO> splitDocumento(@NonNull DocumentoWithAssociationDTO DocumentoWithAssociationDTO) {
 	String text = DocumentoWithAssociationDTO.getTexto();
+	
+	int tokenCount = text.length() / 4; // estimativa inicial
+	
+	try {
+	    tokenCount = getLlmServices().tokenCount(text, "fast");
+	} catch (LLMException e) {
+	    logger.warn("Failed to count tokens, using estimated count based on text length.", e);
+	}
+	
+	if(tokenCount < DOCUMENT_WITH_CHAPTERS_MIN_TOKENS) {
+	    // Se o documento for pequeno, não dividir em capítulos
+	    List<ChapterDTO> capitulos = new ArrayList<>();
+	    ChapterDTO capitulo = new ChapterDTO();
+	    capitulo.setTitulo(DocumentoWithAssociationDTO.getTitulo() != null ? DocumentoWithAssociationDTO.getTitulo() : "Documento");
+	    capitulo.setConteudo(text);
+	    capitulo.setOrdemDoc(1);
+	    DocumentoWithAssociationDTO.addParte(capitulo);
+	    capitulos.add(capitulo);
+	    return capitulos;
+	}
+	
 	String[] lines = text.split("\n");
 	List<TitleTag> titles = detectTitles(lines);
 	if (titles.isEmpty()) {
 	    // Se não houver títulos, dividir o texto em partes de tamanho fixo
-	    return splitBySize(DocumentoWithAssociationDTO, this.maxWords);
+	    return splitBySize(DocumentoWithAssociationDTO, CHAPTER_MAX_TOKENS);
 	} else {
 	    return splitByTitles(DocumentoWithAssociationDTO, lines, titles);
 	}
     }
+    
+    
 
     /**
      * Divide DocumentoWithAssociationDTO por titulos.
@@ -77,7 +156,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	logger.debug("Splitting document by titles. Found {} titles", titles.size());
 
 	if (titles.isEmpty()) {
-	    return splitBySize(docDTO, maxWords);
+	    return splitBySize(docDTO, CHAPTER_MAX_TOKENS);
 	}
 
 	if (lines == null) {
@@ -135,19 +214,22 @@ public class SplitterGenerico extends AbstractSplitter {
     /**
      * Divide DocumentoWithAssociationDTO em sentenças, respeitando o limite de máximo
      * de palavras por parte.
+     *
+     * <p><b>UPDATED v0.0.3:</b> Removed dependency on ContentSplitter. Now uses internal
+     * implementation via {@link #splitTextIntoInitialChapters(String)}.</p>
      */
     public List<ChapterDTO> splitBySize(DocumentoWithAssociationDTO docDTO, int maxWords) {
-	logger.debug("Splitting document by size with maxWords: {}", maxWords);
+	logger.debug("Splitting document by size with chapterMaxTokens: {}", maxWords);
 
-	ContentSplitter contentSplitter = new ContentSplitter();
-	List<ChapterDTO> chapters = contentSplitter.splitContent(docDTO.getTexto(), false);
+	// Use internal implementation instead of ContentSplitter
+	List<ChapterDTO> chapters = splitTextIntoInitialChapters(docDTO.getTexto());
 
 	List<ChapterDTO> adjustedChapters = new ArrayList<>();
 	int chapterNumber = 1;
 
 	for (ChapterDTO chapter : chapters) {
 	    configureChapterMetadata(chapter, docDTO);
-	    
+
 	    int wordCount = countWords(chapter.getConteudo());
 
 	    if (wordCount <= maxWords) {
@@ -163,6 +245,174 @@ public class SplitterGenerico extends AbstractSplitter {
 	logger.debug("Split completed. Generated {} chapters", adjustedChapters.size());
 	return adjustedChapters;
     }
+
+    /**
+     * Split a chapter into smaller chunks (DocEmbeddings).
+     *
+     * <p><b>MERGED from ContentSplitter (v0.0.3):</b> This method replaces the incomplete
+     * {@code splitBySize(ChapterDTO, int)} and incorporates the full chunking logic
+     * from ContentSplitter with improvements:</p>
+     * <ul>
+     *   <li>Real token counting via {@link LLMService} (not heuristic)</li>
+     *   <li>Split by detected titles first</li>
+     *   <li>Fallback to size-based splitting with paragraph handling</li>
+     *   <li>Sophisticated merge/split logic for optimal chunk sizes</li>
+     * </ul>
+     *
+     * @param chapter the chapter to split into chunks
+     * @return list of DocumentEmbeddingDTO chunks with tipo=TRECHO or CAPITULO
+     * @since 0.0.3
+     */
+    public List<DocumentEmbeddingDTO> splitChapterIntoChunks(ChapterDTO chapter) {
+	String conteudo = chapter.getConteudo();
+
+	List<DocumentEmbeddingDTO> chunks = new ArrayList<>();
+
+	// Count tokens using real LLM tokenizer
+	int tokenCount;
+	try {
+	    tokenCount = getLlmServices().tokenCount(conteudo, "fast");
+	    logger.debug("Chapter '{}' has {} tokens (real count)", chapter.getTitulo(), tokenCount);
+	} catch (Exception e) {
+	    // Fallback to estimation if LLM service fails
+	    tokenCount = conteudo.length() / 4;
+	    logger.warn("Failed to count tokens via LLM, using estimation: {}", tokenCount);
+	}
+
+	// Small chapter, no need to split
+	if(tokenCount <= CHAPTER_MIN_TOKENS) {
+	    DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+		    .documentoId(chapter.getDocumentoId())
+		    .bibliotecaId(chapter.getBibliotecaId())
+		    .capituloId(chapter.getId())
+		    .trechoTexto(conteudo)
+		    .ordemCap(1)
+		    .tipoEmbedding(TipoEmbedding.CAPITULO)
+		    .build();
+	    chunks.add(newChunk);
+	    return chunks;
+	}
+
+	// Try to split by detected titles first
+	String[] lines = conteudo.split("\n");
+	List<TitleTag> titles = detectTitles(lines);
+
+	if (titles != null && !titles.isEmpty()) {
+	    // Split by titles
+	    int count = 1;
+	    for (TitleTag title : titles) {
+		Integer start = title.getPosition();
+		Integer end = title.getLinesLength();
+		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
+
+		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+			.documentoId(chapter.getDocumentoId())
+			.bibliotecaId(chapter.getBibliotecaId())
+			.capituloId(chapter.getId())
+			.trechoTexto(textBlock)
+			.ordemCap(count++)
+			.tipoEmbedding(TipoEmbedding.TRECHO)
+			.build();
+		chunks.add(newChunk);
+	    }
+	} else {
+	    // Fallback: split by size if no titles found
+	    int idealChunkSize = IDEAL_TOKENS * 4; // Approximate character count
+
+	    // Split by paragraphs to avoid cutting in the middle
+	    String[] textBlocks = conteudo.split("\\n\\s*\\n");
+
+	    // Check for very big paragraphs
+	    int maxBlockSize = (MAX_TOKENS * 4);
+	    List<String> refinedBlocks = new ArrayList<>();
+
+	    for(int i=0; i<textBlocks.length; i++) {
+		String block = textBlocks[i].trim();
+		if(block.length() >= maxBlockSize) {
+		    // Further split by sentences
+		    String[] sentences = block.split("(?<=[.!?])\\s+");
+		    StringBuilder tempBlock = new StringBuilder();
+		    for(String sentence : sentences) {
+			if((tempBlock.length() + sentence.length()) <= maxBlockSize) {
+			    tempBlock.append(sentence).append(" ");
+			    continue;
+			} else {
+			    refinedBlocks.add(tempBlock.toString().trim());
+			    tempBlock.setLength(0);
+			    tempBlock.append(sentence).append(" ");
+			}
+		    }
+		    // Add remaining content
+		    if(tempBlock.length() > 0) {
+			refinedBlocks.add(tempBlock.toString().trim());
+		    }
+		} else {
+		    // Too small block, try to merge with next
+		    if(block.length() <= (CHUNK_MIN_TOKENS * 4)) {
+			if(i < textBlocks.length - 1) {
+			    String nextBlock = textBlocks[i+1].trim();
+			    String mergedBlock = block + " " + nextBlock;
+			    if(mergedBlock.length() <= (idealChunkSize + 200)) {
+				refinedBlocks.add(mergedBlock.trim());
+				i++; // Skip next block
+			    } else {
+				refinedBlocks.add(block);
+			    }
+			} else {
+			    refinedBlocks.add(block);
+			}
+		    } else {
+			// Normal block
+			refinedBlocks.add(block);
+		    }
+		}
+	    }
+
+	    // Group refined blocks into chunks
+	    StringBuilder currentChunk = new StringBuilder();
+	    int count = 1;
+	    for (String nextBlock : refinedBlocks) {
+		if((currentChunk.length() + nextBlock.length()) <= idealChunkSize) {
+		    currentChunk.append(nextBlock).append(" ");
+		    continue;
+		} else {
+		    String textBlock = currentChunk.toString().trim();
+		    if(!textBlock.isEmpty()) {
+			currentChunk.setLength(0);
+			currentChunk.append(nextBlock).append(" ");
+
+			DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+				.documentoId(chapter.getDocumentoId())
+				.bibliotecaId(chapter.getBibliotecaId())
+				.capituloId(chapter.getId())
+				.trechoTexto(textBlock)
+				.ordemCap(count++)
+				.tipoEmbedding(TipoEmbedding.TRECHO)
+				.build();
+
+			chunks.add(newChunk);
+		    }
+		}
+	    }
+
+	    // Add final chunk if any
+	    if(currentChunk.length() > 0) {
+		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+			.documentoId(chapter.getDocumentoId())
+			.bibliotecaId(chapter.getBibliotecaId())
+			.capituloId(chapter.getId())
+			.trechoTexto(currentChunk.toString().trim())
+			.ordemCap(count)
+			.tipoEmbedding(TipoEmbedding.TRECHO)
+			.build();
+		chunks.add(newChunk);
+	    }
+	}
+
+	logger.debug("Split chapter '{}' into {} chunks", chapter.getTitulo(), chunks.size());
+	return chunks;
+    }
+
 
     /**
      * Configura metadados básicos do capítulo
@@ -230,6 +480,64 @@ public class SplitterGenerico extends AbstractSplitter {
     }
 
     /**
+     * Splits plain text content into initial chapters based on paragraph structure and size.
+     * This method replaces the functionality previously provided by ContentSplitter.splitContent().
+     *
+     * <p>The algorithm:</p>
+     * <ul>
+     *   <li>Splits text on double line breaks (paragraphs)</li>
+     *   <li>Groups paragraphs into chapters targeting IDEAL_TOKENS size</li>
+     *   <li>Creates chapters with minimum MIN_TOKENS tokens</li>
+     *   <li>Assigns sequential titles "Section 1", "Section 2", etc.</li>
+     * </ul>
+     *
+     * @param content the text content to split
+     * @return list of ChapterDTO with initial split (may need further size adjustment)
+     * @since 0.0.3
+     */
+    private List<ChapterDTO> splitTextIntoInitialChapters(String content) {
+	List<ChapterDTO> chapters = new ArrayList<>();
+
+	// Split on double line breaks (paragraphs)
+	String[] paragraphs = content.split("\\n\\s*\\n");
+
+	StringBuilder currentChapter = new StringBuilder();
+	int currentTokenCount = 0;
+	int chapterNumber = 1;
+
+	for (String paragraph : paragraphs) {
+	    int paragraphTokens =  RagUtils.countTokensFast(paragraph); //countWords(paragraph);
+
+	    // Create new chapter if we've reached ideal size and have minimum content
+	    if ((currentTokenCount + paragraphTokens) >= CHAPTER_IDEAL_TOKENS 
+		 && currentTokenCount >= CHUNK_MIN_TOKENS /*CHAPTER_MIN_TOKENS*/) 
+	    {
+		ChapterDTO chapter = new ChapterDTO();
+		chapter.setTitulo("Section " + chapterNumber++);
+		chapter.setConteudo(currentChapter.toString().trim());
+		chapters.add(chapter);
+
+		currentChapter = new StringBuilder();
+		currentTokenCount = 0;
+	    }
+
+	    currentChapter.append(paragraph).append("\n\n");
+	    currentTokenCount += paragraphTokens;
+	}
+
+	// Add final chapter if there's content remaining
+	if (currentChapter.length() > 0) {
+	    ChapterDTO chapter = new ChapterDTO();
+	    chapter.setTitulo("Section " + chapterNumber);
+	    chapter.setConteudo(currentChapter.toString().trim());
+	    chapters.add(chapter);
+	}
+
+	logger.debug("Split text into {} initial chapters", chapters.size());
+	return chapters;
+    }
+
+    /**
      * Detecta títulos no texto do DocumentoWithAssociationDTO.
      * 
      *
@@ -237,6 +545,18 @@ public class SplitterGenerico extends AbstractSplitter {
      * @return Map com numero da linha e títulos
      **/
     public List<TitleTag> detectTitles(String[] lines) {
+	return detectTitlesStatic(lines);
+    }
+    
+    /**
+     * <h1>Versão static</h1>
+     *  Detecta títulos no texto do DocumentoWithAssociationDTO.
+     * 
+     *
+     * @param text texto do DocumentoWithAssociationDTO, em formato MarkDown ou texto plano
+     * @return Map com numero da linha e títulos
+     **/
+    protected static List<TitleTag> detectTitlesStatic(String[] lines) {
 	List<TitleTag> titles = new ArrayList<>();
 	// Define regex patterns for different title formats
 	Pattern uppercasePattern = Pattern.compile("^[A-Z\\s]+$");
@@ -304,13 +624,142 @@ public class SplitterGenerico extends AbstractSplitter {
 	    mergedTitles.add(currentTitle); // Add the last processed title
 	    return mergedTitles;
 	}
+	
+	// populate TitleTag#linesLength field, by check the number of lines until the next title	
+	for (int i = 0; i < titles.size(); i++) {
+	    TitleTag title = titles.get(i);
+	    int startLine = title.getPosition();
+	    int endLine = (i < titles.size() - 1) ? titles.get(i + 1).getPosition() : lines.length;
+	    title.setLinesLength(endLine - startLine - 1); // Exclude the title line itself
+	}
 
 	return titles;
     }
 
+    /**
+     * Split chapter content into smaller chunks based on titles or size
+     * @param chapter The chapter to split
+     * @return List of DocumentEmbeddingDTO chunks
+     */
+    public List<DocumentEmbeddingDTO> splitChapterContent(ChapterDTO chapter) {
+	String conteudo = chapter.getConteudo();
+	
+	List<DocumentEmbeddingDTO> chunks = new ArrayList<>();
+	int tokenCount = conteudo.length() / 4; // Rough estimate: 1 token ~ 4 characters
+	
+	// small chapter, no need to split
+	if(tokenCount <= CHUNK_IDEAL_TOKENS) {
+	    DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+		    .documentoId(chapter.getDocumentoId())
+		    .bibliotecaId(chapter.getBibliotecaId())
+		    .capituloId(chapter.getId())
+		    .trechoTexto(conteudo)
+		    .ordemCap(1).tipoEmbedding(TipoEmbedding.CAPITULO)
+		    .build();
+	    chunks.add(newChunk);
+	    return chunks;
+	}		
+	
+	String[] lines = conteudo.split("\n");
+	List<TitleTag> titles = detectTitles(lines);
+
+	if (titles != null && !titles.isEmpty()) {
+	    int count = 1;
+	    for (TitleTag title : titles) {
+		Integer start = title.getPosition();
+		Integer end = title.getLinesLength();
+		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
+
+		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+			.documentoId(chapter.getDocumentoId())
+			.bibliotecaId(chapter.getBibliotecaId())
+			.capituloId(chapter.getId())
+			.trechoTexto(textBlock)
+			.ordemCap(count++).tipoEmbedding(TipoEmbedding.TRECHO).build();
+		chunks.add(newChunk);
+	    }
+	} else {
+	    // Fallback: split by size if no titles found
+	    int idealChunckSize = CHUNK_IDEAL_TOKENS * 4; // Approximate character count
+	    
+	    // Split by paragraphs to avoid cutting in the middle
+	    String[] textBlocks = conteudo.split("\\n\\s*\\n");
+	    
+	    // check the very big paragraphs
+	    int maxBlockSize = (MAX_TOKENS * 4) / 2; // half of max size - in characters
+	    List<String> refinedBlocks = new ArrayList<>();
+	    
+	    for(int i=0; i<textBlocks.length; i++) {
+		String block = textBlocks[i].trim();
+		if(block.length() >= maxBlockSize) {
+		    // further split by sentences
+		    String[] sentences = block.split("(?<=[.!?])\\s+");
+		    StringBuilder tempBlock = new StringBuilder();
+		    for(String sentence : sentences) {
+			if((tempBlock.length() + sentence.length()) <= maxBlockSize) {
+			    tempBlock.append(sentence).append(" ");
+			    continue;
+			}else {
+			    refinedBlocks.add(tempBlock.toString().trim());
+			    tempBlock.setLength(0); // reset
+			    tempBlock.append(sentence).append(" ");
+			}
+		    }
+		} else {
+		    // too small block, merge it with next
+		    if(block.length() <= (CHUNK_MIN_TOKENS * 4)) {
+			//merge with next block if possible
+			if(i < textBlocks.length -1) {
+			    String nextBlock = textBlocks[i+1].trim();
+			    String mergedBlock = block + " " + nextBlock;
+			    if(mergedBlock.length() <= (idealChunckSize + 200)) {
+				refinedBlocks.add(mergedBlock.trim());
+				i++; // skip next block
+			    } else {
+				// cannot merge, add current block
+				refinedBlocks.add(block);
+			    }
+			}			
+		    } else {
+			// normal block
+			refinedBlocks.add(block);
+		    }
+		}
+	    }//for
+	    
+	    StringBuilder currentChunk = new StringBuilder();
+	    int count = 1;
+	    for (String nextBlock : refinedBlocks) {		
+		if((currentChunk.length() + nextBlock.length()) <= idealChunckSize) {
+		    currentChunk.append(nextBlock).append(" ");
+		    continue;
+		} else {				
+		String textBlock = currentChunk.toString().trim();
+		currentChunk.setLength(0); // Reset for next chunk
+		currentChunk.append(nextBlock).append(" "); // Start new chunk with current sentence
+
+		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+			.documentoId(chapter.getDocumentoId())
+			.bibliotecaId(chapter.getBibliotecaId())
+			.capituloId(chapter.getId())
+			.trechoTexto(textBlock)
+			.ordemCap(count++)
+			.tipoEmbedding(TipoEmbedding.TRECHO).build();
+
+		chunks.add(newChunk);
+		}
+	    }//for
+	}//else
+	return chunks;
+    }
 
    
-
+    /**
+     * Remove repetições no texto.
+     * 
+     * @param text texto a ser processado
+     * @return texto sem repetições
+     */
     @Override
     public String removeRepetitions(String text) {
 	logger.debug("Removing repetitions from text of length: {}", text.length());
@@ -388,9 +837,9 @@ public class SplitterGenerico extends AbstractSplitter {
 	    paragraphs.add(paragraph.toString().trim());
 	}
 
-	int maxWords = this.maxWords; // Define your maximum words per paragraph limit
+	int maxWords = CHAPTER_MAX_TOKENS; // Define your maximum words per paragraph limit
 	// verifique se a quantidade de palavras em um paragrafo excede o limite maximo
-	// maxWords
+	// CHAPTER_MAX_TOKENS
 	// caso exceda, realizar a divisão do paragrafo em 2 paragrafos menores,
 	// considerando sentenças
 	// como ponto de divisão.

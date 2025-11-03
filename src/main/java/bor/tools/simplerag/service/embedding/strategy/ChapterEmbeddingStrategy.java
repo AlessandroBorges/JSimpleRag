@@ -21,11 +21,14 @@ import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
-import bor.tools.splitter.ContentSplitter;
+import bor.tools.splitter.SplitterFactory;
+import bor.tools.splitter.SplitterGenerico;
 import lombok.RequiredArgsConstructor;
 
 /**
  * Strategy for generating chapter embeddings with automatic chunking.
+ *
+ * <p><b>UPDATED v0.0.3:</b> Migrated from ContentSplitter to SplitterGenerico via Factory.</p>
  *
  * Supports multiple generation modes:
  * - FLAG_FULL_TEXT_METADATA (1): Full text + metadata
@@ -45,7 +48,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private static final Logger log = LoggerFactory.getLogger(ChapterEmbeddingStrategy.class);
 
     private final LLMServiceManager llmServiceManager;
-    private final ContentSplitter contentSplitter;
+    private final SplitterFactory splitterFactory;
 
     @Value("${rag.embedding.default-model:snowflake}")
     private String defaultEmbeddingModel;
@@ -185,33 +188,36 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     }
 
     /**
-     * Creates multiple embeddings by splitting text into chunks
+     * Creates multiple embeddings by splitting text into chunks.
+     *
+     * <p><b>UPDATED v0.0.3:</b> Uses SplitterGenerico.splitChapterIntoChunks() instead of ContentSplitter.</p>
      */
     private List<DocumentEmbeddingDTO> createSplitTextEmbeddings(ChapterDTO chapter, LibraryDTO library,
                                                                  EmbeddingRequest request) {
         List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
 
         try {
-            // Use ContentSplitter to split into optimized chunks
-            List<ChapterDTO> chunks = contentSplitter.splitContent(chapter.getConteudo(), false);
+            // Use SplitterGenerico via Factory to split into optimized chunks
+            SplitterGenerico splitter = splitterFactory.createGenericSplitter(library);
+            List<DocumentEmbeddingDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapter);
 
-            for (int i = 0; i < chunks.size(); i++) {
-                ChapterDTO chunk = chunks.get(i);
-                String chunkTitle = chapter.getTitulo() + " - Chunk " + (i + 1);
+            // Generate embeddings for each chunk
+            for (int i = 0; i < chunkDTOs.size(); i++) {
+                DocumentEmbeddingDTO chunkDTO = chunkDTOs.get(i);
 
                 DocumentEmbeddingDTO embedding = createEmbeddingFromText(
-                        chunk.getConteudo(),
-                        chunkTitle,
+                        chunkDTO.getTrechoTexto(),
+                        chapter.getTitulo() + " - Chunk " + (i + 1),
                         library,
                         chapter.getDocumentoId(),
                         chapter.getId(),
-                        TipoEmbedding.TRECHO,
+                        chunkDTO.getTipoEmbedding(),
                         request
                 );
 
                 // Add chunk-specific metadata
                 embedding.getMetadados().put("chunk_index", String.valueOf(i));
-                embedding.getMetadados().put("total_chunks", String.valueOf(chunks.size()));
+                embedding.getMetadados().put("total_chunks", String.valueOf(chunkDTOs.size()));
                 embedding.getMetadados().put("parent_chapter", chapter.getTitulo());
 
                 embeddings.add(embedding);

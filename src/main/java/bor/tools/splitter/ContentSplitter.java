@@ -7,39 +7,275 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
-import bor.tools.simplerag.dto.*;
+import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.entity.Chapter;
+import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.utils.RagUtils;
 
 
 
 /**
- * Split content into chapters, handling both Markdown and plain text
+ * Split content into chapters, handling both Markdown and plain text.
+ *
+ * <p><b>DEPRECATED:</b> This class has been deprecated in favor of {@link SplitterGenerico}
+ * which provides the same functionality with improvements:</p>
+ * <ul>
+ *   <li>Real token counting via {@link bor.tools.simplellm.LLMService} instead of heuristic estimation</li>
+ *   <li>Integration with {@link SplitterFactory} pattern for better dependency management</li>
+ *   <li>Elimination of circular dependency with SplitterGenerico</li>
+ *   <li>Consistent behavior across all splitter implementations</li>
+ * </ul>
+ *
+ * <h3>Migration Guide:</h3>
+ * <table border="1">
+ *   <tr>
+ *     <th>Old Code (ContentSplitter)</th>
+ *     <th>New Code (SplitterGenerico via Factory)</th>
+ *   </tr>
+ *   <tr>
+ *     <td>
+ *       <pre>
+ * &#64;Autowired
+ * private ContentSplitter contentSplitter;
+ *
+ * List&lt;DocumentEmbeddingDTO&gt; chunks =
+ *     contentSplitter.splitContent(chapter);
+ *       </pre>
+ *     </td>
+ *     <td>
+ *       <pre>
+ * &#64;Autowired
+ * private SplitterFactory splitterFactory;
+ *
+ * SplitterGenerico splitter =
+ *     splitterFactory.createGenericSplitter(library);
+ * List&lt;DocumentEmbeddingDTO&gt; chunks =
+ *     splitter.splitChapterIntoChunks(chapter);
+ *       </pre>
+ *     </td>
+ *   </tr>
+ *   <tr>
+ *     <td>
+ *       <pre>
+ * List&lt;ChapterDTO&gt; chapters =
+ *     contentSplitter.splitContent(text, false);
+ *       </pre>
+ *     </td>
+ *     <td>
+ *       <pre>
+ * // Use DocumentProcessingService or
+ * // SplitterGenerico.splitBySize() for
+ * // document-level splitting
+ *       </pre>
+ *     </td>
+ *   </tr>
+ * </table>
+ *
+ * @deprecated since 0.0.3, scheduled for removal in 0.1.0.
+ *             Use {@link SplitterGenerico#splitChapterIntoChunks(ChapterDTO)} instead.
+ * @see SplitterGenerico#splitChapterIntoChunks(ChapterDTO)
+ * @see SplitterFactory
  */
+@Deprecated(since = "0.0.3", forRemoval = true)
 @Component
 public class ContentSplitter {
-    private static final int MIN_TOKENS = 512;
-    private static final int IDEAL_TOKENS = 2000;
-    private static final int MAX_TOKENS = 8192;
+    
+    /**
+     * Chunck ideal de tokens.
+     */
+    protected static final int IDEAL_TOKENS = 2000;
 
     /**
-     * Split content into chapters, handling both Markdown and plain text
+     * Número máximo de tokens em um chunk.
+     */
+    protected static final int MAX_TOKENS = 4096;
+
+    /**
+     * Número mínimo de tokens em um chunk.
+     */
+    protected static final int MIN_TOKENS = 512;
+    
+    /**
+     * Número máximo de tokens em um capitulo. 
+     * Default é 16Kt
+     */
+    protected static final int CHAPTER_MAX_TOKENS = 1024 * 16; 
+    
+    /**
+     * Número ideal de tokens em um capitulo. 
+     * Default é 8 kt.
+     */
+    protected static final int CHAPTER_IDEAL_TOKENS = 1024 * 8;
+
+    /**
+     * Split content into chapters, handling both Markdown and plain text.
+     *
      * @param content The content to split
-     * @param isMarkdown Whether the content is in Markdown format
      * @return A list of chapters with titles and content
      * @see Chapter
+     * @deprecated Use {@link SplitterGenerico#splitBySize(bor.tools.simplerag.dto.DocumentoWithAssociationDTO, int)} instead
      */
+    @Deprecated(since = "0.0.3", forRemoval = true)
     public List<ChapterDTO> splitContent(String content) {
     	boolean isMarkDown = RagUtils.isMarkdown(content);
     	return splitContent(content, isMarkDown);
     }
 
     /**
-     * Split content into chapters, handling both Markdown and plain text
+     * Split chapter into smaller embedding chunks.
+     *
+     * @param chapter The chapter to split
+     * @return List of DocumentEmbeddingDTO chunks
+     * @deprecated Use {@link SplitterGenerico#splitChapterIntoChunks(ChapterDTO)} instead
+     */
+    @Deprecated(since = "0.0.3", forRemoval = true)
+    public List<DocumentEmbeddingDTO> splitContent(ChapterDTO chapter) {
+	List<DocumentEmbeddingDTO> chunks = splitChapterContent(chapter);
+	return chunks;
+    }
+
+
+    /**
+     * Split chapter content into smaller chunks based on titles or size
+     * @param chapter The chapter to split
+     * @return List of DocumentEmbeddingDTO chunks
+     */
+    private List<DocumentEmbeddingDTO> splitChapterContent(ChapterDTO chapter) {
+	String conteudo = chapter.getConteudo();
+	
+	List<DocumentEmbeddingDTO> chunks = new ArrayList<>();
+	int tokenCount = conteudo.length() / 4; // Rough estimate: 1 token ~ 4 characters
+	
+	// small chapter, no need to split
+	if(tokenCount <= IDEAL_TOKENS) {
+	    DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+		    .documentoId(chapter.getDocumentoId())
+		    .bibliotecaId(chapter.getBibliotecaId())
+		    .capituloId(chapter.getId())
+		    .trechoTexto(conteudo)
+		    .ordemCap(1).tipoEmbedding(TipoEmbedding.CAPITULO)
+		    .build();
+	    chunks.add(newChunk);
+	    return chunks;
+	}		
+	
+	String[] lines = conteudo.split("\n");
+	List<TitleTag> titles = detectTitles(lines);
+
+	if (titles != null && !titles.isEmpty()) {
+	    int count = 1;
+	    for (TitleTag title : titles) {
+		Integer start = title.getPosition();
+		Integer end = title.getLinesLength();
+		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
+
+		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+			.documentoId(chapter.getDocumentoId())
+			.bibliotecaId(chapter.getBibliotecaId())
+			.capituloId(chapter.getId())
+			.trechoTexto(textBlock)
+			.ordemCap(count++).tipoEmbedding(TipoEmbedding.TRECHO).build();
+		chunks.add(newChunk);
+	    }
+	} else {
+	    // Fallback: split by size if no titles found
+	    int idealChunckSize = IDEAL_TOKENS * 4; // Approximate character count
+	    
+	    // Split by paragraphs to avoid cutting in the middle
+	    String[] textBlocks = conteudo.split("\\n\\s*\\n");
+	    
+	    // check the very big paragraphs
+	    int maxBlockSize = (MAX_TOKENS * 4); // half of max size - in characters
+	    List<String> refinedBlocks = new ArrayList<>();
+	    
+	    for(int i=0; i<textBlocks.length; i++) {
+		String block = textBlocks[i].trim();
+		if(block.length() >= maxBlockSize) {
+		    // further split by sentences
+		    String[] sentences = block.split("(?<=[.!?])\\s+");
+		    StringBuilder tempBlock = new StringBuilder();
+		    for(String sentence : sentences) {
+			if((tempBlock.length() + sentence.length()) <= maxBlockSize) {
+			    tempBlock.append(sentence).append(" ");
+			    continue;
+			}else {
+			    refinedBlocks.add(tempBlock.toString().trim());
+			    tempBlock.setLength(0); // reset
+			    tempBlock.append(sentence).append(" ");
+			}
+		    }
+		} else {
+		    // too small block, merge it with next
+		    if(block.length() <= (MIN_TOKENS * 4)) {
+			//merge with next block if possible
+			if(i < textBlocks.length -1) {
+			    String nextBlock = textBlocks[i+1].trim();
+			    String mergedBlock = block + " " + nextBlock;
+			    if(mergedBlock.length() <= (idealChunckSize + 200)) {
+				refinedBlocks.add(mergedBlock.trim());
+				i++; // skip next block
+			    } else {
+				// cannot merge, add current block
+				refinedBlocks.add(block);
+			    }
+			}			
+		    } else {
+			// normal block
+			refinedBlocks.add(block);
+		    }
+		}
+	    }//for
+	    
+	    StringBuilder currentChunk = new StringBuilder();
+	    int count = 1;
+	    for (String nextBlock : refinedBlocks) {		
+		if((currentChunk.length() + nextBlock.length()) <= idealChunckSize) {
+		    currentChunk.append(nextBlock).append(" ");
+		    continue;
+		} else {				
+		String textBlock = currentChunk.toString().trim();
+		currentChunk.setLength(0); // Reset for next chunk
+		currentChunk.append(nextBlock).append(" "); // Start new chunk with current sentence
+
+		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+			.documentoId(chapter.getDocumentoId())
+			.bibliotecaId(chapter.getBibliotecaId())
+			.capituloId(chapter.getId())
+			.trechoTexto(textBlock)
+			.ordemCap(count++)
+			.tipoEmbedding(TipoEmbedding.TRECHO).build();
+
+		chunks.add(newChunk);
+		}
+	    }//for
+	}//else
+	return chunks;
+    }
+
+    /**
+     * Detect titles in the given lines.
+     *
+     * @param lines source lines
+     * @return list of detected titles
+     * @see TitleTag
+     * @deprecated Use {@link SplitterGenerico#detectTitles(String[])} instead
+     */
+    @Deprecated(since = "0.0.3", forRemoval = true)
+    public List<TitleTag> detectTitles(String[] lines) {
+	return SplitterGenerico.detectTitlesStatic(lines);
+    }
+
+    /**
+     * Split content into chapters, handling both Markdown and plain text.
+     *
      * @param content The content to split
      * @param isMarkdown Whether the content is in Markdown format
      * @return A list of chapters with titles and content
      * @see Chapter
+     * @deprecated Use {@link SplitterGenerico#splitBySize(bor.tools.simplerag.dto.DocumentoWithAssociationDTO, int)} instead
      */
+    @Deprecated(since = "0.0.3", forRemoval = true)
     public List<ChapterDTO> splitContent(String content, boolean isMarkdown) {
         List<ChapterDTO> chapters = new ArrayList<>();
 
@@ -153,7 +389,7 @@ public class ContentSplitter {
                     current.getConteudo() + "\n\n" + next.getConteudo()
                 ));
                 i++; // Skip next chapter since we merged it
-            } else if (tokenCount > MAX_TOKENS) {
+            } else if (tokenCount >= CHAPTER_IDEAL_TOKENS) {
                 // Split large chapters
                 optimizedChapters.addAll(splitLargeChapter(current));
             } else {

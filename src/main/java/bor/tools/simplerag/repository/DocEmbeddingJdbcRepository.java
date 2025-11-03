@@ -722,4 +722,27 @@ public class DocEmbeddingJdbcRepository {
     public int deleteAll()  throws DataAccessException, SQLException {
         return jdbcTemplate.update("DELETE FROM doc_embedding WHERE id >= ?", 1);
     }
+
+    // ========== OVERWRITE FEATURE (v1.0) ==========
+
+    /**
+     * Counts embeddings for a document.
+     *
+     * Used by overwrite feature to check if document has existing embeddings.
+     *
+     * @param documentoId Document ID
+     * @return Number of embeddings
+     * @throws SQLException if query fails
+     * @since 1.0 (overwrite feature)
+     */
+    public int countByDocumentoId(Integer documentoId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM doc_embedding WHERE documento_id = ?";
+
+        try {
+            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, documentoId);
+            return count != null ? count : 0;
+        } catch (DataAccessException e) {
+            throw new SQLException("Failed to count embeddings for document " + documentoId, e);
+        }
+    }
 }

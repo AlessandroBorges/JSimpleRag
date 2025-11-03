@@ -946,4 +946,41 @@ public class LLMServiceManager {
 	}
 	
     }
+
+    /**
+     * Finds all models across all providers that match the specified model types.
+     * 
+     * @param features one or more of Model_Type enum values to filter models
+     * @return List of Models matching the specified types
+     * 
+     * @see LLMService#getInstalledModels()
+     * @see Model_Type
+     */
+    public List<Model> findModelsByModelType(Model_Type... features) {
+	List<Model> matchedModels = new java.util.ArrayList<>();	
+	for (LLMService service : services) {
+	    try {
+		MapModels models = service.getInstalledModels();
+		if (models != null && !models.isEmpty()) {
+		    for (var entry : models.entrySet()) {
+			Model model = entry.getValue();
+			boolean matchesAll = true;
+			for (var feature : features) {
+			    if (!model.isType(feature)) {
+				matchesAll = false;
+				break;
+			    }
+			}
+			if (matchesAll) {
+			    matchedModels.add(model);
+			}
+		    }
+		}
+	    } catch (Exception e) {
+		log.debug("Error getting models from service {}: {}", service.getServiceProvider(), e.getMessage());
+	    }
+	}	
+	return matchedModels;	
+    }
+    
 }

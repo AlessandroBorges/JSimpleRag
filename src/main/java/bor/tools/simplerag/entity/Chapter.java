@@ -61,5 +61,23 @@ public class Chapter extends Updatable {
     @Column(columnDefinition = "jsonb")
     private MetaDoc metadados;
 
-
+    /**
+     * FK to the library this chapter belongs to.
+     * Inherited from parent Documento.bibliotecaId during chapter creation.
+     * This field maintains the hierarchy: Library -> Documento -> Chapter -> DocEmbedding.
+     */
+    @Column(name = "biblioteca_id", nullable = false)
+    private Integer bibliotecaId;
+    
+    /**
+     * 
+     * @return
+     */
+    public MetaDoc getMetadados() {
+	if (metadados == null) {
+	    metadados = new MetaDoc();
+	}
+	return metadados;
+    }
+    
 }

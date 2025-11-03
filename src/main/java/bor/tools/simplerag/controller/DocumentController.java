@@ -26,6 +26,9 @@ import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.service.DocumentoService;
 import bor.tools.simplerag.service.ProcessingStatusTracker;
 import bor.tools.simplerag.service.ProcessingStatusTracker.ProcessingStatus;
+import bor.tools.simplerag.service.processing.DocumentProcessingService;
+import bor.tools.simplerag.service.processing.EnrichmentOptions;
+import bor.tools.simplerag.service.processing.EnrichmentResult;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -57,6 +60,7 @@ public class DocumentController {
     private final DocumentoService documentoService;
     private final ObjectMapper objectMapper;
     private final ProcessingStatusTracker statusTracker;
+    private final DocumentProcessingService documentProcessingService;
 
     /**
      * Upload document from text content
@@ -310,56 +314,118 @@ public class DocumentController {
      */
     @PostMapping("/{documentId}/process")
     @Operation(
-        summary = "Process document asynchronously",
+        summary = "Process document asynchronously (Phase 1 + optional Phase 2)",
         description = """
             Initiates asynchronous document processing:
-            1. Splits document into chapters (~8k tokens each)
-            2. Generates embeddings for document, chapters, and chunks
-            3. Persists embeddings to database for search
 
-            **Processing time:** 1-10 minutes depending on document size
-            **Returns immediately** with 202 Accepted status
+            **Phase 1 (Required):**
+            1. Splits document into chapters (~8k tokens each)
+            2. Splits chapters into chunks (~2k tokens each)
+            3. Generates embeddings for chunks (tipo=CAPITULO/TRECHO)
+            4. Persists embeddings to database for search
+
+            **Phase 2 (Optional - if includeQA or includeSummary are enabled):**
+            5. Generates Q&A embeddings (tipo=PERGUNTAS_RESPOSTAS)
+            6. Generates summary embeddings (tipo=RESUMO)
+
+            **Overwrite Behavior (NEW):**
+            - overwrite=false (default): Preserves existing Chapters/DocEmbeddings
+              - If already processed: Returns 200 with status ALREADY_PROCESSED
+              - If Chapters exist but no embeddings: Generates embeddings only
+            - overwrite=true: Deletes ALL existing Chapters and DocEmbeddings before reprocessing
+              - WARNING: This is destructive and cannot be undone!
+              - After deletion, creates NEW Chapters and DocEmbeddings from Documento.conteudoMarkdown
+
+            **Processing time:**
+            - Phase 1 only: 1-10 minutes
+            - Phase 1 + Phase 2: 3-30 minutes (depends on document size and options)
+
+            **Returns immediately** with 202 Accepted status (or 200 if already processed)
             **Monitor progress:** Use GET /api/v1/documents/{id}/status
 
             **Optional Parameters:**
-            - includeQA: Generate Q&A pairs from content (experimental)
-            - includeSummary: Generate chapter summaries (experimental)
+            - includeQA: Generate Q&A pairs from content (uses completion model, more expensive)
+            - includeSummary: Generate chapter summaries (uses completion model, more expensive)
+            - overwrite: Delete existing processing and reprocess from scratch (default: false)
+
+            **Note:** For more control over enrichment (Q&A/Summary), use the separate
+            POST /api/v1/documents/{id}/enrich endpoint instead.
             """
     )
     public ResponseEntity<Map<String, Object>> processDocument(
             @PathVariable Integer documentId,
             @RequestParam(defaultValue = "false") boolean includeQA,
-            @RequestParam(defaultValue = "false") boolean includeSummary) {
+            @RequestParam(defaultValue = "false") boolean includeSummary,
+            @RequestParam(defaultValue = "false") boolean overwrite) {
 
-        log.info("Starting document processing: id={}, includeQA={}, includeSummary={}",
-                documentId, includeQA, includeSummary);
+        log.info("Starting document processing: id={}, includeQA={}, includeSummary={}, overwrite={}",
+                documentId, includeQA, includeSummary, overwrite);
 
         try {
             // Verify document exists and get title
             DocumentoDTO documento = documentoService.findById(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
 
+            // ⭐ OVERWRITE FEATURE: Check existing processing
+            DocumentoService.ProcessingCheckResult checkResult =
+                    documentoService.checkExistingProcessing(documentId);
+
+            if (checkResult.isHasChapters() && !overwrite) {
+                // Document already processed and overwrite=false
+                log.info("Document {} already processed with {} chapters and {} embeddings. " +
+                        "Skipping reprocessing. Use overwrite=true to reprocess.",
+                        documentId, checkResult.getChaptersCount(), checkResult.getEmbeddingsCount());
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "Document already processed");
+                response.put("documentId", documentId);
+                response.put("titulo", documento.getTitulo());
+                response.put("status", "ALREADY_PROCESSED");
+                response.put("chaptersCount", checkResult.getChaptersCount());
+                response.put("embeddingsCount", checkResult.getEmbeddingsCount());
+                response.put("hint", "Use overwrite=true to reprocess");
+
+                return ResponseEntity.ok(response);  // HTTP 200
+            }
+
+            if (overwrite && checkResult.isHasChapters()) {
+                // ⭐ OVERWRITE ENABLED: Delete existing THEN reprocess
+                log.warn("Overwrite enabled. Deleting {} chapters and {} embeddings for document {}",
+                        checkResult.getChaptersCount(), checkResult.getEmbeddingsCount(), documentId);
+
+                documentoService.deleteExistingProcessing(documentId);
+
+                log.info("Existing processing deleted. Will now reprocess document {} from scratch", documentId);
+            }
+
             // Start status tracking
             statusTracker.startProcessing(documentId, documento.getTitulo());
 
-            // Start async processing
+            // PHASE 1: Start async processing using NEW method
             CompletableFuture<DocumentoService.ProcessingStatus> future =
-                    documentoService.processDocumentAsync(documentId, includeQA, includeSummary);
+                    documentoService.processDocumentAsyncV2(documentId);
 
-            // Add success and error handlers for async processing
+            // Add success and error handlers for Phase 1
             future.thenAccept(status -> {
-                log.info("Async processing completed for document {}: status={}, chapters={}, embeddings={}",
+                log.info("Phase 1 processing completed for document {}: status={}, chapters={}, embeddings={}",
                         documentId, status.getStatus(), status.getChaptersCount(), status.getEmbeddingsCount());
+
                 if ("COMPLETED".equals(status.getStatus())) {
                     statusTracker.markCompleted(documentId,
-                            "Processed: " + status.getChaptersCount() + " chapters, " +
+                            "Phase 1 completed: " + status.getChaptersCount() + " chapters, " +
                             status.getEmbeddingsCount() + " embeddings");
+
+                    // PHASE 2: If enrichment requested, start it automatically
+                    if (includeQA || includeSummary) {
+                        log.info("Phase 1 successful, starting Phase 2 enrichment for document {}", documentId);
+                        startEnrichmentPhase(documentId, includeQA, includeSummary);
+                    }
                 } else if ("FAILED".equals(status.getStatus())) {
-                    statusTracker.markFailed(documentId, status.getErrorMessage());
+                    statusTracker.markFailed(documentId, "Phase 1 failed: " + status.getErrorMessage());
                 }
             }).exceptionally(error -> {
-                log.error("Async processing failed for document {}: {}", documentId, error.getMessage(), error);
-                statusTracker.markFailed(documentId, error.getMessage());
+                log.error("Phase 1 processing failed for document {}: {}", documentId, error.getMessage(), error);
+                statusTracker.markFailed(documentId, "Phase 1 error: " + error.getMessage());
                 return null;
             });
 
@@ -368,8 +434,18 @@ public class DocumentController {
             response.put("message", "Document processing started");
             response.put("documentId", documentId);
             response.put("titulo", documento.getTitulo());
+            response.put("phase1", "Splitting and generating embeddings");
+
+            if (includeQA || includeSummary) {
+                response.put("phase2", "Q&A and/or summary enrichment will start after Phase 1");
+                response.put("enrichmentOptions", Map.of(
+                    "includeQA", includeQA,
+                    "includeSummary", includeSummary
+                ));
+            }
+
             response.put("statusUrl", "/api/v1/documents/" + documentId + "/status");
-            response.put("estimatedTime", "1-10 minutes");
+            response.put("estimatedTime", (includeQA || includeSummary) ? "3-30 minutes" : "1-10 minutes");
 
             log.info("Document processing started: id={}", documentId);
 
@@ -381,6 +457,197 @@ public class DocumentController {
         } catch (Exception e) {
             log.error("Error starting document processing: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao iniciar processamento: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Starts Phase 2 enrichment after Phase 1 completes successfully.
+     * This is called automatically when includeQA or includeSummary are enabled.
+     *
+     * @param documentId Document ID
+     * @param includeQA Whether to generate Q&A embeddings
+     * @param includeSummary Whether to generate summary embeddings
+     */
+    private void startEnrichmentPhase(Integer documentId, boolean includeQA, boolean includeSummary) {
+        try {
+            // Update status tracker
+            statusTracker.startProcessing(documentId, "Phase 2: Enrichment");
+
+            // Build enrichment options
+            EnrichmentOptions options = EnrichmentOptions.builder()
+                    .generateQA(includeQA)
+                    .numberOfQAPairs(3)  // Default value
+                    .generateSummary(includeSummary)
+                    .maxSummaryLength(500)  // Default value
+                    .continueOnError(true)  // Be fault-tolerant
+                    .build();
+
+            // Start async enrichment
+            CompletableFuture<EnrichmentResult> enrichmentFuture =
+                    documentoService.enrichDocumentAsync(documentId, options);
+
+            // Add handlers for Phase 2
+            enrichmentFuture.thenAccept(result -> {
+                log.info("Phase 2 enrichment completed for document {}: qa={}, summary={}, duration={}",
+                        documentId, result.getQaEmbeddingsGenerated(),
+                        result.getSummaryEmbeddingsGenerated(), result.getDuration());
+
+                if (result.isSuccess()) {
+                    statusTracker.markCompleted(documentId,
+                            String.format("Phase 2 completed: %d Q&A, %d summaries",
+                                    result.getQaEmbeddingsGenerated(),
+                                    result.getSummaryEmbeddingsGenerated()));
+                } else {
+                    statusTracker.markFailed(documentId, "Phase 2 failed: " + result.getErrorMessage());
+                }
+            }).exceptionally(error -> {
+                log.error("Phase 2 enrichment failed for document {}: {}", documentId, error.getMessage(), error);
+                statusTracker.markFailed(documentId, "Phase 2 error: " + error.getMessage());
+                return null;
+            });
+
+        } catch (Exception e) {
+            log.error("Failed to start enrichment phase for document {}: {}", documentId, e.getMessage(), e);
+            statusTracker.markFailed(documentId, "Phase 2 startup error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Enrich document with Q&A and/or summary embeddings (Phase 2 processing)
+     *
+     * This is an optional post-processing step that generates additional embeddings
+     * beyond the standard chapter/chunk embeddings from Phase 1 processing.
+     *
+     * @param documentId Document ID (must have been processed with Phase 1)
+     * @param generateQA Whether to generate Q&A embeddings
+     * @param numberOfQAPairs Number of Q&A pairs per chapter (default: 3)
+     * @param generateSummary Whether to generate summary embeddings
+     * @param maxSummaryLength Maximum summary length in tokens (default: 500)
+     * @param continueOnError Continue if individual chapters fail (default: true)
+     * @return Enrichment result with statistics
+     */
+    @PostMapping("/{documentId}/enrich")
+    @Operation(
+        summary = "Enrich document with Q&A and summaries (Phase 2)",
+        description = """
+            Generates additional embeddings for improved retrieval quality:
+
+            **Q&A Embeddings (PERGUNTAS_RESPOSTAS):**
+            - Synthetic question-answer pairs extracted from content
+            - Improves conversational query matching
+            - Cost: Uses completion model (~expensive)
+
+            **Summary Embeddings (RESUMO):**
+            - Condensed summaries of chapter content
+            - Improves conceptual/high-level retrieval
+            - Cost: Uses completion model (~expensive)
+
+            **Prerequisites:**
+            - Document must have been processed (Phase 1) to have chapters
+            - Library must have configured completion models
+
+            **Processing time:** 2-20 minutes depending on document size and options
+            **Returns immediately** with 202 Accepted status
+            **Monitor progress:** Use GET /api/v1/documents/{id}/status
+
+            **Parameters:**
+            - generateQA: Enable Q&A generation (default: false)
+            - numberOfQAPairs: Pairs per chapter (default: 3, max: 20)
+            - generateSummary: Enable summary generation (default: false)
+            - maxSummaryLength: Summary tokens (default: 500, max: 2000)
+            - continueOnError: Keep processing if chapters fail (default: true)
+
+            **Example:**
+            POST /api/v1/documents/123/enrich?generateQA=true&numberOfQAPairs=5&generateSummary=true
+            """
+    )
+    public ResponseEntity<Map<String, Object>> enrichDocument(
+            @PathVariable Integer documentId,
+            @RequestParam(defaultValue = "false") boolean generateQA,
+            @RequestParam(defaultValue = "3") Integer numberOfQAPairs,
+            @RequestParam(defaultValue = "false") boolean generateSummary,
+            @RequestParam(defaultValue = "500") Integer maxSummaryLength,
+            @RequestParam(defaultValue = "true") boolean continueOnError) {
+
+        log.info("Starting document enrichment: id={}, generateQA={}, numberOfQAPairs={}, generateSummary={}, maxSummaryLength={}",
+                documentId, generateQA, numberOfQAPairs, generateSummary, maxSummaryLength);
+
+        try {
+            // Verify document exists
+            DocumentoDTO documentoDTO = documentoService.findById(documentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+
+            // Build enrichment options
+            EnrichmentOptions options = EnrichmentOptions.builder()
+                    .generateQA(generateQA)
+                    .numberOfQAPairs(numberOfQAPairs)
+                    .generateSummary(generateSummary)
+                    .maxSummaryLength(maxSummaryLength)
+                    .continueOnError(continueOnError)
+                    .build();
+
+            // Validate options
+            String validationError = options.validate();
+            if (validationError != null) {
+                log.error("Invalid enrichment options: {}", validationError);
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Invalid enrichment options");
+                errorResponse.put("message", validationError);
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Start status tracking for enrichment
+            statusTracker.startProcessing(documentId, documentoDTO.getTitulo() + " (enrichment)");
+
+            // Start async enrichment - need to get Documento entity and LibraryDTO
+            CompletableFuture<EnrichmentResult> future = documentoService.enrichDocumentAsync(
+                    documentId, options);
+
+            // Add success and error handlers
+            future.thenAccept(result -> {
+                log.info("Async enrichment completed for document {}: success={}, qa={}, summary={}",
+                        documentId, result.isSuccess(), result.getQaEmbeddingsGenerated(),
+                        result.getSummaryEmbeddingsGenerated());
+
+                if (result.isSuccess()) {
+                    statusTracker.markCompleted(documentId,
+                            String.format("Enriched: %d Q&A, %d summaries (%d chapters)",
+                                    result.getQaEmbeddingsGenerated(),
+                                    result.getSummaryEmbeddingsGenerated(),
+                                    result.getChaptersProcessed()));
+                } else {
+                    statusTracker.markFailed(documentId, result.getErrorMessage());
+                }
+            }).exceptionally(error -> {
+                log.error("Async enrichment failed for document {}: {}", documentId, error.getMessage(), error);
+                statusTracker.markFailed(documentId, error.getMessage());
+                return null;
+            });
+
+            // Return immediately with status URL
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Document enrichment started");
+            response.put("documentId", documentId);
+            response.put("titulo", documentoDTO.getTitulo());
+            response.put("options", Map.of(
+                    "generateQA", generateQA,
+                    "numberOfQAPairs", numberOfQAPairs,
+                    "generateSummary", generateSummary,
+                    "maxSummaryLength", maxSummaryLength
+            ));
+            response.put("statusUrl", "/api/v1/documents/" + documentId + "/status");
+            response.put("estimatedTime", "2-20 minutes");
+
+            log.info("Document enrichment started: id={}", documentId);
+
+            return ResponseEntity.accepted().body(response);
+
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error enriching document: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Error starting document enrichment: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao iniciar enriquecimento: " + e.getMessage(), e);
         }
     }
 

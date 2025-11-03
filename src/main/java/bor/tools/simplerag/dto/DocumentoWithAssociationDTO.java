@@ -104,8 +104,6 @@ public class DocumentoWithAssociationDTO {
                 //.conteudoMarkdown(src.getConteudoMarkdown())
                 .flagVigente(src.getFlagVigente())
                 .dataPublicacao(src.getDataPublicacao())
-                //.checksum(null) // we don't set checksum here to avoid recalculation
-                //.tokensTotal(src.getTokensTotal()) 
                 .metadados(new Metadata(src.getMetadados()))
                 .createdAt(src.getCreatedAt())
                 .updatedAt(src.getUpdatedAt())

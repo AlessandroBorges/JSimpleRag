@@ -71,5 +71,15 @@ public class Documento extends Updatable {
         return Boolean.TRUE.equals(flagVigente);
     }
 
+    /**
+     * Ensure metadados is initialized
+     * @return
+     */
+    public MetaDoc getMetadados() {
+	if (metadados == null) {
+	    metadados = new MetaDoc();
+	}
+	return metadados;
+    }
 
 }

@@ -148,7 +148,17 @@ public class DocumentEmbedding extends Updatable {
     @Column(columnDefinition = "jsonb")
     private MetaDoc metadados;
 
-
+    /**
+     * 
+     * @return
+     */
+    public MetaDoc getMetadados() {
+	if (metadados == null) {
+	    metadados = new MetaDoc();	 
+	}
+	return metadados;    
+    }
+	
     /**
      * Validates the consistency constraints based on tipo_embedding
      */

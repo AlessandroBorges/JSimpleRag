@@ -594,6 +594,74 @@ public class RagUtils {
 	}
     }
 
+    
+    /**
+     * Simple format detector based on file extension
+     * @param fileName
+     * @return MIME Types or null if unknown
+     */
+    public static  String simpleFormatDetector(String fileName) {
+	String ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+	
+	switch (ext) {
+	    case "pdf":
+		return "application/pdf";
+		
+	    case "doc":
+		return "application/msword";
+		
+	    case "docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+		
+	    case "txt":
+	    case "sql":
+	    case "log":
+		return "text/plain";
+		
+	    case "java":
+		return "text/x-java-source";
+		
+	    case "py":
+		return "text/x-python";
+		
+	    case "js":	
+		return "application/javascript";
+		
+	    case "csv":
+		return "text/csv";
+		
+	    case "md":
+	    case "markdown":
+		return "text/markdown";
+		
+	    case "html":
+	    case "htm":
+		return "text/html";
+		
+	    case "xml":
+		return "application/xml";
+		
+	    case "xhtml":	
+		return "application/xhtml+xml";
+		
+	    case "ppt":
+		return "application/vnd.ms-powerpoint";
+		
+	    case "pptx":
+		return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+		
+	    case "xls":
+	    case "xlm":
+		return "application/vnd.ms-excel";
+		
+	    case "xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";	    
+	    default:
+		return null;
+	}
+    }
+
+    
     /**
      * Extrai texto de um arquivo MS-Office
      * 
@@ -1271,6 +1339,19 @@ public class RagUtils {
 	}	
 	LLMService service = getLLMService(null);
 	return service.tokenCount(texto,"gpt-3.5");
+    }
+    
+    /**
+     * Fast token count estimation
+     * @param texto
+     * @return
+     * @throws LLMException 
+     */
+    public static int countTokensFast(String texto) {
+	if (texto == null || texto.isEmpty()) {
+	    return 0;
+	}	
+	return texto.length() / 4; // estimativa simples
     }
 
     /**

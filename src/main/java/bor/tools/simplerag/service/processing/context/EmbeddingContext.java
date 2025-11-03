@@ -269,4 +269,5 @@ public class EmbeddingContext {
                            getContextLength(),
                            isValid());
     }
-}
+    
+}// End of EmbeddingContext.java

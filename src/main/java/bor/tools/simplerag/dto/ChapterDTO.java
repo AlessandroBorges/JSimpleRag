@@ -34,6 +34,8 @@ public class ChapterDTO {
 
     private Integer documentoId;
 
+    private Integer bibliotecaId;
+
     private String titulo;
 
     private String conteudo;
@@ -101,11 +103,12 @@ public class ChapterDTO {
         ChapterDTO dto = ChapterDTO.builder()
                 .id(src.getId())
                 .documentoId(src.getDocumentoId())
+                .bibliotecaId(src.getBibliotecaId())
                 .titulo(src.getTitulo())
                 .conteudo(src.getConteudo())
                 .ordemDoc(src.getOrdemDoc())
                 .tokenInicio(src.getTokenInicio())
-                .tokenFim(src.getTokenFim())  
+                .tokenFim(src.getTokenFim())
                 .metadados(src.getMetadados())
                 .createdAt(src.getCreatedAt())
                 .updatedAt(src.getUpdatedAt())
@@ -130,12 +133,13 @@ public class ChapterDTO {
         Chapter entity = new Chapter();
         entity.setId(this.id);
         entity.setDocumentoId(this.documentoId);
+        entity.setBibliotecaId(this.bibliotecaId);
         entity.setTitulo(this.titulo);
         entity.setConteudo(this.conteudo);
         entity.setOrdemDoc(this.ordemDoc);
         entity.setTokenInicio(this.tokenInicio);
         entity.setTokenFim(this.tokenFim);
-        entity.setMetadados(this.metadados);
+        entity.setMetadados(new MetaDoc(this.metadados));
         entity.setCreatedAt(this.createdAt);
         entity.setUpdatedAt(this.updatedAt);
         entity.setDeletedAt(this.deletedAt);

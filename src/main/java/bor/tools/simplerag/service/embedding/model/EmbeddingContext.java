@@ -1,11 +1,21 @@
 package bor.tools.simplerag.service.embedding.model;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import bor.tools.simplellm.Embeddings_Op;
+import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.MapParam;
+import bor.tools.simplellm.ModelEmbedding;
+import bor.tools.simplellm.Model_Type;
+import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.LibraryDTO;
+import bor.tools.simplerag.service.llm.LLMServiceManager;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+
 
 /**
  * Context object for embedding operations.
@@ -19,8 +29,31 @@ import lombok.Data;
  */
 @Data
 @Builder
+@Slf4j
 public class EmbeddingContext {
-
+    
+    /**
+     * Manager for LLM services and models.
+     *
+     * Used to resolve model details and configurations.
+     */
+    private LLMServiceManager llmServiceManager;
+    
+    /**
+     * LLM Service used for embedding operations.
+     */
+    private LLMService llmServiceEmbedding;
+    
+    
+    
+    /**
+     * Additional parameters for embedding operations.
+     *
+     * Must include model and size details.
+     */
+    @Builder.Default
+    private MapParam mapParams = new MapParam();
+    
     /**
      * Library context for the embedding operation.
      * Provides access to library-specific configurations including
@@ -54,10 +87,10 @@ public class EmbeddingContext {
      * Maximum tokens for Embedding operations.
      * Can less, as 2048 or 512, depending on the model used.
      * 
-     * Default is 8192 tokens.
+     * Default is 2048	 tokens.
      */	
     @Builder.Default
-    private Integer maxTokens = 8192;
+    private Integer contenxtLength = 4096;
     
     /**
      * Dimension of the embedding vectors.
@@ -83,8 +116,9 @@ public class EmbeddingContext {
      * fields from library metadata that weren't explicitly overridden.
      *
      * @return this context for method chaining
+     * @throws LLMException 
      */
-    public EmbeddingContext enrichFromLibrary() {
+    public EmbeddingContext enrich() throws LLMException {
         if (library != null) {
             // Only populate if not explicitly set (check if still equals default)
             if ( mustUpdate(embeddingModelName, library.getEmbeddingModel()) ) {
@@ -95,14 +129,35 @@ public class EmbeddingContext {
                 embeddingDimension = library.getEmbeddingDimension();
             }
 
-            if (mustUpdate(maxTokens, library.getMaxTokens())) {	
-                maxTokens = library.getMaxTokens();
+            if (mustUpdate(contenxtLength, library.getMaxTokens())) {	
+                contenxtLength = library.getMaxTokens();
             }
 
             if (mustUpdate(completionQAModelName, library.getCompletionQAModel())) {
                 completionQAModelName = library.getCompletionQAModel();
             }
         }
+        
+        // Resolve LLMService for embedding model
+        if(llmServiceManager != null) {
+            this.llmServiceEmbedding = llmServiceManager.getLLMServiceByRegisteredModel(this.embeddingModelName);        
+        }
+        
+        
+        
+        // mapParams population
+        this.mapParams.model(getEmbeddingModelName());
+
+        ModelEmbedding modelEmbed = (ModelEmbedding)llmServiceEmbedding.getRegisteredModels().getModel(embeddingModelName);
+        if(modelEmbed != null) {
+            if(mustUpdate(embeddingDimension, modelEmbed.getEmbeddingDimension())) {
+        	if(modelEmbed.isEmbeddingDimensionable()) {
+        	    this.mapParams.dimension(embeddingDimension);
+        	}
+            }
+	}
+        
+        
         return this;
     }
     
@@ -229,6 +284,25 @@ public class EmbeddingContext {
             && this.additionalMetadata.containsKey(key);
     }
 
+    public void setLibrary(LibraryDTO library) throws LLMException {
+	this.library = library;
+	enrich();
+    }
+    
+    /**
+     * Gets the embedding context length (max tokens).
+     */
+    public int getContextLength() {
+	return contenxtLength;
+    }
+    
+    /**
+     * Sets the embedding context length (max tokens).
+     */
+    public void setContextLength(int maxTokens) {
+	this.contenxtLength = maxTokens;
+    }
+    
     /**
      * Creates a simple context with just a library.
      *
@@ -236,30 +310,66 @@ public class EmbeddingContext {
      *
      * @param library Library context
      * @return EmbeddingContext with library defaults applied
+     * @throws LLMException 
      */
-    public static EmbeddingContext fromLibrary(LibraryDTO library) {	
+    public static EmbeddingContext fromLibrary(LibraryDTO library) throws LLMException {	
         var obj = EmbeddingContext.builder()
                 .library(library)
                 .build()
-                .enrichFromLibrary();        
-        obj.enrichFromLibrary();        
+                .enrich();       
+              
         return obj;
     }
 
+
+    public static EmbeddingContext create(LibraryDTO library, LLMServiceManager llmServiceManager) throws LLMException {
+	var obj = EmbeddingContext.builder()
+		.llmServiceManager(llmServiceManager)
+		.library(library)     
+		.build()
+		.enrich();
+	
+	try {
+	    var llmServiceEmb = llmServiceManager.getLLMServiceByRegisteredModel(obj.getEmbeddingModelName());
+	    ModelEmbedding modelEmbed = (ModelEmbedding) llmServiceEmb.getRegisteredModels()
+		    .getModel(obj.getEmbeddingModelName());
+	    Integer contextLength = modelEmbed.getContextLength();
+	    obj.setContextLength(contextLength);
+	    if (obj.getEmbeddingDimension() == null || obj.getEmbeddingDimension() == 0) {
+		obj.setEmbeddingDimension(modelEmbed.getEmbeddingDimension());
+	    }
+	} catch (Exception ex) {
+	    // log and continue with defaults
+	    log.error("Warning: Unable to resolve embedding model details for '" + obj.getEmbeddingModelName() + "': "
+		    + ex.getMessage());
+	}
+	if(obj.getCompletionQAModelName()==null || obj.getCompletionQAModelName().isEmpty()) {	    
+	    var modelsQA = llmServiceManager.findModelsByModelType(Model_Type.LANGUAGE, 
+    									Model_Type.FAST, 
+    									Model_Type.REASONING);
+	    
+	    if(obj.getCompletionQAModelName() == null || obj.getCompletionQAModelName().isEmpty()) {
+		obj.setCompletionQAModelName(modelsQA.get(0).getName());	
+	    }
+	}
+	return obj;
+    }
+
     /**
-     * Creates a context with library and explicit embedding model override.
+     * Generates embeddings for a batch of texts.
      *
-     * The explicit embedding model takes precedence over library defaults.
-     *
-     * @param library Library context
-     * @param embeddingModel Embedding model name (overrides library default)
-     * @return EmbeddingContext configured
+     * @param texts Array of input texts to embed
+     * @param document Embeddings_Op document configuration
+     * @return List of embedding vectors
+     * @throws LLMException if embedding generation fails
      */
-    public static EmbeddingContext withEmbeddingModel(LibraryDTO library, String embeddingModel) {
-        return EmbeddingContext.builder()
-                .library(library)
-                .embeddingModelName(embeddingModel)
-                .build()
-                .enrichFromLibrary();
+    public List<float[]> generateEmbeddingsBatch(String[] texts, Embeddings_Op document) throws LLMException {
+	
+	if(this.llmServiceEmbedding != null) {
+	    return this.llmServiceEmbedding.embeddings(document, texts, this.mapParams);
+	}else {
+	    log.error("LLM Service for embeddings is not configured.");
+	    throw new LLMException("LLM Service for embeddings is not configured.");
+	}
     }
 }

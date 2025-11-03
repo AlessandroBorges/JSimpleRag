@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplerag.dto.ChapterDTO;
+import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.DocumentEmbedding;
@@ -22,13 +23,16 @@ import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
 import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
-import bor.tools.simplerag.service.processing.context.EmbeddingContext;
 import bor.tools.simplerag.service.processing.context.LLMContext;
+import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
+import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
+import bor.tools.simplerag.service.embedding.strategy.QAEmbeddingStrategy;
+import bor.tools.simplerag.service.embedding.strategy.SummaryEmbeddingStrategy;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.splitter.AbstractSplitter;
-import bor.tools.splitter.ContentSplitter;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.splitter.SplitterFactory;
+import bor.tools.splitter.SplitterGenerico;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -69,11 +73,12 @@ public class DocumentProcessingService {
 
     private final DocumentRouter documentRouter;
     private final SplitterFactory splitterFactory;
-    private final ContentSplitter contentSplitter;
     private final ChapterRepository chapterRepository;
     private final DocEmbeddingJdbcRepository embeddingRepository;
     private final LLMServiceManager llmServiceManager;
-    private final LibraryService libraryService;
+ // private final LibraryService libraryService;
+    private final QAEmbeddingStrategy qaEmbeddingStrategy;
+    private final SummaryEmbeddingStrategy summaryEmbeddingStrategy;
 
     // ========== Constants (REVISED v1.1) ==========
 
@@ -139,7 +144,7 @@ public class DocumentProcessingService {
 
             log.info("Contexts created: llm={}, embedding={}, contextLength={}",
                     llmContext.getModelName(),
-                    embeddingContext.getModelName(),
+                    embeddingContext.getEmbeddingModelName(),
                     embeddingContext.getContextLength());
 
             // ETAPA 2.2: Split and persist (uses llmContext for token counting)
@@ -240,44 +245,47 @@ public class DocumentProcessingService {
         // Convert to entities and persist
         List<Chapter> chapters = new ArrayList<>();
         List<DocumentEmbedding> allEmbeddings = new ArrayList<>();
-
-        int ordem = 0;
+        List<Integer> embeddingsPerChapter = new ArrayList<>(); // Track count per chapter
+       
         for (ChapterDTO chapterDTO : chapterDTOs) {
             // Create chapter entity
-            Chapter chapter = Chapter.builder()
-                    .documentoId(documento.getId())
-                    .titulo(chapterDTO.getTitulo())
-                    .conteudo(chapterDTO.getConteudo())
-                    .ordemDoc(ordem++)
-                    .build();
+            Chapter chapter = chapterDTO.toEntity();
 
             chapters.add(chapter);
 
             // Create embeddings for this chapter (will be persisted after chapter)
             List<DocumentEmbedding> chapterEmbeddings = createChapterEmbeddings(
-                    chapter,
-                    chapterDTO,
-                    documento,
-                    library,
-                    llmContext);
+                                                                        chapter,
+                                                                        chapterDTO,
+                                                                        documento,
+                                                                        library,
+                                                                        llmContext);
 
+            // Track how many embeddings this chapter generated
+            embeddingsPerChapter.add(chapterEmbeddings.size());
             allEmbeddings.addAll(chapterEmbeddings);
         }
 
         // Persist chapters (generates IDs)
-        chapterRepository.saveAll(chapters);
+        chapters = chapterRepository.saveAll(chapters);
         log.debug("Persisted {} chapters", chapters.size());
 
-        // Update chapter IDs in embeddings
+        // Update chapter IDs in embeddings using the count tracking
         int embIndex = 0;
-        for (Chapter chapter : chapters) {
-            // Find embeddings belonging to this chapter
-            while (embIndex < allEmbeddings.size()) {
-                DocumentEmbedding emb = allEmbeddings.get(embIndex);
-                if (emb.getChapterId() == null) {
+        for (int i = 0; i < chapters.size(); i++) {
+            Chapter chapter = chapters.get(i);
+            int embCount = embeddingsPerChapter.get(i);
+
+            log.trace("Assigning {} embeddings to chapter: {}", embCount, chapter.getTitulo());
+
+            // Assign chapter ID to the exact number of embeddings for this chapter
+            for (int j = 0; j < embCount; j++) {
+                if (embIndex < allEmbeddings.size()) {
+                    DocumentEmbedding emb = allEmbeddings.get(embIndex);
                     emb.setChapterId(chapter.getId());
                     embIndex++;
                 } else {
+                    log.error("Embedding index out of bounds: {} >= {}", embIndex, allEmbeddings.size());
                     break;
                 }
             }
@@ -285,7 +293,8 @@ public class DocumentProcessingService {
 
         // Persist embeddings with NULL vectors
         embeddingRepository.saveAll(allEmbeddings);
-        log.debug("Persisted {} embeddings (vectors=NULL)", allEmbeddings.size());
+        log.debug("Persisted {} embeddings (vectors=NULL) across {} chapters",
+                allEmbeddings.size(), chapters.size());
 
         return SplitResult.builder()
                 .chapters(chapters)
@@ -355,32 +364,32 @@ public class DocumentProcessingService {
             }
         }
 
-        // Step 2: Split chapter into chunks using ContentSplitter
-        List<ChapterDTO> chunks = contentSplitter.splitContent(
-                chapterDTO.getConteudo(),
-                true // Assume markdown format for better splitting
-        );
+        // Step 2: Split chapter into chunks using SplitterGenerico
+        // Get SplitterGenerico via Factory
+        SplitterGenerico splitter = splitterFactory.createGenericSplitter(library);
 
-        log.debug("Chapter split into {} chunks", chunks.size());
+        // Split chapter into DocumentEmbeddingDTOs
+        List<DocumentEmbeddingDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapterDTO);
 
-        // Step 3: Create TRECHO embedding for each chunk
+        log.debug("Chapter split into {} chunks", chunkDTOs.size());
+
+        // Step 3: Convert DTOs to entities
         int orderChapter = 0;
-        for (ChapterDTO chunk : chunks) {
+        for (DocumentEmbeddingDTO chunkDTO : chunkDTOs) {
             DocumentEmbedding trecho = DocumentEmbedding.builder()
                     .libraryId(documento.getBibliotecaId())
                     .documentoId(documento.getId())
                     .chapterId(null) // Will be set after chapter persistence
-                    .tipoEmbedding(TipoEmbedding.TRECHO)
-                    .texto(chunk.getConteudo())
+                    .tipoEmbedding(chunkDTO.getTipoEmbedding())
+                    .texto(chunkDTO.getTrechoTexto())
                     .orderChapter(orderChapter)
                     .embeddingVector(null) // NULL - calculated later
                     .build();
 
             // Add metadata
             trecho.getMetadados().put("chunk_index", orderChapter);
-            trecho.getMetadados().put("total_chunks", chunks.size());
+            trecho.getMetadados().put("total_chunks", chunkDTOs.size());
             trecho.getMetadados().put("parent_chapter_title", chapterDTO.getTitulo());
-            trecho.getMetadados().put("chunk_title", chunk.getTitulo());
 
             embeddings.add(trecho);
             orderChapter++;
@@ -436,6 +445,7 @@ public class DocumentProcessingService {
                 .chapterId(null) // Will be set after chapter persistence
                 .tipoEmbedding(TipoEmbedding.RESUMO)
                 .texto(summary)
+                .metadados(new bor.tools.simplerag.entity.MetaDoc(chapterDTO.getMetadados())) // Copy chapter metadata
                 .orderChapter(-1) // RESUMO comes before chunks
                 .embeddingVector(null) // NULL - calculated later
                 .build();
@@ -533,8 +543,8 @@ public class DocumentProcessingService {
 
                 // Generate embeddings
                 List<float[]> vectors = embeddingContext.generateEmbeddingsBatch(
-                        texts,
-                        Embeddings_Op.DOCUMENT);
+                                                        texts,
+                                                        Embeddings_Op.DOCUMENT);
 
                 // Update each embedding (fault-tolerant)
                 for (int i = 0; i < batch.size(); i++) {
@@ -675,6 +685,262 @@ public class DocumentProcessingService {
     private String formatDuration(Duration duration) {
         double seconds = duration.toMillis() / 1000.0;
         return String.format("%.1fs", seconds);
+    }
+
+    // ========== PHASE 2: Document Enrichment ==========
+
+    /**
+     * Enriches a document with Q&A and/or summary embeddings (Phase 2 processing).
+     *
+     * <p>This is an optional post-processing step that generates additional embeddings
+     * beyond the standard chapter/chunk embeddings. Enrichment improves retrieval quality
+     * but uses more expensive completion models.</p>
+     *
+     * <p><b>Prerequisites:</b></p>
+     * <ul>
+     *   <li>Document must have been processed (Phase 1) to have chapters</li>
+     *   <li>Library must have configured completion models for Q&A/summary generation</li>
+     * </ul>
+     *
+     * <p><b>Processing Flow:</b></p>
+     * <ol>
+     *   <li>Load document chapters from database</li>
+     *   <li>For each chapter: generate Q&A and/or summary embeddings</li>
+     *   <li>Persist embeddings with tipo=PERGUNTAS_RESPOSTAS or RESUMO</li>
+     *   <li>Return statistics</li>
+     * </ol>
+     *
+     * <p><b>Fault Tolerance:</b> By default, continues processing if individual chapters fail
+     * (controlled by {@link EnrichmentOptions#isContinueOnError()}).</p>
+     *
+     * @param documento the document to enrich (must have chapters)
+     * @param library the library configuration
+     * @param options enrichment configuration (Q&A, summary, etc.)
+     * @return CompletableFuture with enrichment results and statistics
+     * @since 0.0.3
+     */
+    @Async
+    public CompletableFuture<EnrichmentResult> enrichDocument(
+            Documento documento,
+            LibraryDTO library,
+            EnrichmentOptions options) {
+
+        log.info("Starting document enrichment: docId={}, library={}, qa={}, summary={}",
+                documento.getId(), library.getNome(), options.isGenerateQA(), options.isGenerateSummary());
+
+        Instant startTime = Instant.now();
+
+        try {
+            // Validate options
+            String validationError = options.validate();
+            if (validationError != null) {
+                log.error("Invalid enrichment options: {}", validationError);
+                return CompletableFuture.completedFuture(EnrichmentResult.builder()
+                        .documentId(documento.getId())
+                        .success(false)
+                        .errorMessage("Invalid options: " + validationError)
+                        .duration(formatDuration(Duration.between(startTime, Instant.now())))
+                        .build());
+            }
+
+            // Load chapters for this document
+            List<Chapter> chapters = chapterRepository.findByDocumentoIdOrderByOrdemDoc(documento.getId());
+
+            if (chapters.isEmpty()) {
+                log.warn("No chapters found for document {}. Document must be processed (Phase 1) before enrichment.",
+                        documento.getId());
+                return CompletableFuture.completedFuture(EnrichmentResult.builder()
+                        .documentId(documento.getId())
+                        .success(false)
+                        .errorMessage("No chapters found. Run Phase 1 processing first.")
+                        .duration(formatDuration(Duration.between(startTime, Instant.now())))
+                        .build());
+            }
+
+            log.debug("Found {} chapters to enrich", chapters.size());
+
+            // Create contexts
+            EmbeddingContext embeddingContext = EmbeddingContext.builder()
+                    .library(library)
+                    .embeddingModelName(library.getEmbeddingModel())
+                    .embeddingDimension(library.getEmbeddingDimension())
+                    .build();
+
+            // Process each chapter
+            EnrichmentResult result = EnrichmentResult.builder()
+                    .documentId(documento.getId())
+                    .chaptersProcessed(chapters.size())
+                    .build();
+
+            int totalQA = 0;
+            int totalSummary = 0;
+
+            for (Chapter chapter : chapters) {
+                try {
+                    ChapterEnrichmentResult chapterResult = enrichChapter(
+                            chapter,
+                            documento,
+                            library,
+                            embeddingContext,
+                            options);
+
+                    totalQA += chapterResult.qaEmbeddingsCount;
+                    totalSummary += chapterResult.summaryEmbeddingsCount;
+
+                } catch (Exception e) {
+                    log.error("Failed to enrich chapter {}: {}", chapter.getId(), e.getMessage(), e);
+
+                    if (options.isContinueOnError()) {
+                        result.addChapterError(chapter.getId(), e.getMessage());
+                    } else {
+                        // Fail fast mode
+                        throw new RuntimeException("Chapter enrichment failed: " + e.getMessage(), e);
+                    }
+                }
+            }
+
+            Duration duration = Duration.between(startTime, Instant.now());
+
+            result.setQaEmbeddingsGenerated(totalQA);
+            result.setSummaryEmbeddingsGenerated(totalSummary);
+            result.setDuration(formatDuration(duration));
+            result.setSuccess(true);
+
+            log.info("Document enrichment completed: {}", result.getSummary());
+
+            return CompletableFuture.completedFuture(result);
+
+        } catch (Exception e) {
+            log.error("Document enrichment failed for docId={}: {}", documento.getId(), e.getMessage(), e);
+
+            Duration duration = Duration.between(startTime, Instant.now());
+
+            EnrichmentResult result = EnrichmentResult.builder()
+                    .documentId(documento.getId())
+                    .success(false)
+                    .errorMessage(e.getMessage())
+                    .duration(formatDuration(duration))
+                    .build();
+
+            return CompletableFuture.completedFuture(result);
+        }
+    }
+
+    /**
+     * Enriches a single chapter with Q&A and/or summary embeddings.
+     *
+     * @param chapter the chapter to enrich
+     * @param documento parent document
+     * @param library library configuration
+     * @param embeddingContext embedding context
+     * @param options enrichment options
+     * @return result with count of embeddings generated
+     */
+    private ChapterEnrichmentResult enrichChapter(
+            Chapter chapter,
+            Documento documento,
+            LibraryDTO library,
+            EmbeddingContext embeddingContext,
+            EnrichmentOptions options) {
+
+        log.debug("Enriching chapter {}: {}", chapter.getId(), chapter.getTitulo());
+
+        int qaCount = 0;
+        int summaryCount = 0;
+
+        // Convert Chapter entity to ChapterDTO
+        ChapterDTO chapterDTO = ChapterDTO.from(chapter);
+
+        // Generate Q&A embeddings if requested
+        if (options.isGenerateQA()) {
+            try {
+                EmbeddingRequest qaRequest = EmbeddingRequest.builder()
+                        .chapter(chapterDTO)
+                        .context(embeddingContext)
+                        .operation(Embeddings_Op.DOCUMENT)
+                        .tipoEmbedding(TipoEmbedding.PERGUNTAS_RESPOSTAS)
+                        .numberOfQAPairs(options.getNumberOfQAPairs())
+                        .documentId(documento.getId())
+                        .chapterId(chapter.getId())
+                        .build();
+
+                List<DocumentEmbeddingDTO> qaEmbeddings = qaEmbeddingStrategy.generate(qaRequest);
+
+                // Persist Q&A embeddings
+                for (DocumentEmbeddingDTO embDTO : qaEmbeddings) {
+                    DocumentEmbedding embedding = toEmbeddingEntity(embDTO, documento, chapter);
+                    embeddingRepository.save(embedding);
+                    qaCount++;
+                }
+
+                log.debug("Generated {} Q&A embeddings for chapter {}", qaCount, chapter.getId());
+
+            } catch (Exception e) {
+                log.error("Failed to generate Q&A for chapter {}: {}", chapter.getId(), e.getMessage());
+                throw new RuntimeException("Q&A generation failed", e);
+            }
+        }
+
+        // Generate summary embedding if requested
+        if (options.isGenerateSummary()) {
+            try {
+                EmbeddingRequest summaryRequest = EmbeddingRequest.builder()
+                        .chapter(chapterDTO)
+                        .context(embeddingContext)
+                        .operation(Embeddings_Op.DOCUMENT)
+                        .tipoEmbedding(TipoEmbedding.RESUMO)
+                        .maxSummaryLength(options.getMaxSummaryLength())
+                        .customSummaryInstructions(options.getSummaryInstructions())
+                        .documentId(documento.getId())
+                        .chapterId(chapter.getId())
+                        .build();
+
+                List<DocumentEmbeddingDTO> summaryEmbeddings = summaryEmbeddingStrategy.generate(summaryRequest);
+
+                // Persist summary embeddings
+                for (DocumentEmbeddingDTO embDTO : summaryEmbeddings) {
+                    DocumentEmbedding embedding = toEmbeddingEntity(embDTO, documento, chapter);
+                    embeddingRepository.save(embedding);
+                    summaryCount++;
+                }
+
+                log.debug("Generated {} summary embeddings for chapter {}", summaryCount, chapter.getId());
+
+            } catch (Exception e) {
+                log.error("Failed to generate summary for chapter {}: {}", chapter.getId(), e.getMessage());
+                throw new RuntimeException("Summary generation failed", e);
+            }
+        }
+
+        return new ChapterEnrichmentResult(qaCount, summaryCount);
+    }
+
+    /**
+     * Converts DocumentEmbeddingDTO to DocumentEmbedding entity.
+     */
+    private DocumentEmbedding toEmbeddingEntity(DocumentEmbeddingDTO dto, Documento documento, Chapter chapter) {
+        return DocumentEmbedding.builder()
+                .libraryId(documento.getBibliotecaId())
+                .documentoId(documento.getId())
+                .chapterId(chapter.getId())
+                .tipoEmbedding(dto.getTipoEmbedding())
+                .texto(dto.getTrechoTexto())
+                .embeddingVector(dto.getEmbeddingVector())
+                .metadados(dto.getMetadados())
+                .build();
+    }
+
+    /**
+     * Helper class for chapter enrichment result.
+     */
+    private static class ChapterEnrichmentResult {
+        final int qaEmbeddingsCount;
+        final int summaryEmbeddingsCount;
+
+        ChapterEnrichmentResult(int qaCount, int summaryCount) {
+            this.qaEmbeddingsCount = qaCount;
+            this.summaryEmbeddingsCount = summaryCount;
+        }
     }
 
     // ========== Result Classes ==========

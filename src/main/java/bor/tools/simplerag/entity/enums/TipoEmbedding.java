@@ -40,6 +40,12 @@ public enum TipoEmbedding {
      */
     METADADOS("metadados"),
     
+    
+    /**
+     * Analysis embedding (for analytical content)
+     */
+    ANALISE("analise"),
+    
     /**
      * Other types of embeddings
      */
