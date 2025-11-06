@@ -64,8 +64,8 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     public static final int FLAG_AUTO = 5;
 
     // Size constants
-    private static final int DEFAULT_CHUNK_SIZE = 2000; // tokens
-    private static final int MIN_CHUNK_SIZE = 512; // tokens
+    private static final int DEFAULT_CHUNK_SIZE = 512; // tokens
+    private static final int MIN_CHUNK_SIZE = 256; // tokens
     
     /**
      * Not useful on metadata

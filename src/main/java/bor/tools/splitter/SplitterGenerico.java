@@ -324,7 +324,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	}
 
 	// Small chapter, no need to split
-	if(tokenCount <= CHAPTER_MIN_TOKENS) {
+	if(tokenCount <= CHUNK_IDEAL_TOKENS) {
 	    DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(conteudo,
 		    							0, 
 		    							TipoEmbedding.CAPITULO);	  
@@ -342,13 +342,16 @@ public class SplitterGenerico extends AbstractSplitter {
 	    for (TitleTag title : titles) {
 		Integer start = title.getPosition();
 		Integer end = title.getLinesLength();
+		
 		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
-
-		DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(textBlock,
+               
+		String[] textChunks = splitLargeTextIntoChunks(textBlock, IDEAL_TOKENS, MAX_TOKENS, MIN_TOKENS);
+		for(String textChunk : textChunks) {
+		    DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(textChunk,
 									    count++);	
-				
-		chunks.add(newChunk);
-	    }
+		    chunks.add(newChunk);
+		}		
+	    }		
 	} else {
 	    // Fallback: split by size if no titles found
 	    int idealChunkSize = IDEAL_TOKENS * 4; // Approximate character count
@@ -433,6 +436,32 @@ public class SplitterGenerico extends AbstractSplitter {
 	return chunks;
     }
 
+    /**
+     * Split large text into chunks based on token limits.<br>
+     * Best-effort split respecting ideal, max, and min token counts.
+     * 
+     * 
+     * @param textBlock - text to split
+     * @param idealTokens - ideal number of tokens per chunk
+     * @param maxTokens - maximum number of tokens per chunk
+     * @param minTokens - minimum number of tokens per chunk
+     * @return array of text chunks
+     */
+    private String[] splitLargeTextIntoChunks(String textBlock, int idealTokens, int maxTokens, int minTokens) {
+	List<String> chunks = new ArrayList<>();
+	// check token count
+	int tokenCount = RagUtils.countTokensFast(textBlock);
+	
+	if(tokenCount <= idealTokens) {
+	    chunks.add(textBlock);
+	    return chunks.toArray(new String[chunks.size()]);
+	}
+	// check paragraphs
+	
+	
+	
+	return chunks.toArray(new String[chunks.size()]);
+    }
 
     /**
      * Configura metadados básicos do capítulo
