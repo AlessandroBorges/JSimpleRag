@@ -1,5 +1,7 @@
 package bor.tools.utils;
 
+import java.util.Map;
+
 import lombok.Data;
 
 /**
@@ -7,7 +9,7 @@ import lombok.Data;
  *
  * @see RagUtils#wikiArticleXtract(String, String)
  */
-@Deprecated
+
 @Data
 public class WikiParse {
 
@@ -18,9 +20,9 @@ public class WikiParse {
 
     public String title;
     Integer pageid;
-    public String text;
+    public Map<String,Object> text;
 
-    public String getText() {
+    public Map<String,Object> getText() {
         if (this.text != null)
             return text;
         else if (parse != null) {

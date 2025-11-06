@@ -44,7 +44,8 @@ public class DocumentEmbeddingDTO {
 
     private String textoIndexado;
 
-    private MetaDoc metadados;
+    @Builder.Default
+    private MetaDoc metadados = new MetaDoc();
 
     private LocalDateTime createdAt;
 
@@ -97,7 +98,7 @@ public class DocumentEmbeddingDTO {
         entity.setTexto(this.trechoTexto);
         entity.setOrderChapter(this.ordemCap);
         entity.setEmbeddingVector(this.embeddingVector);
-        entity.setMetadados(this.metadados);
+        entity.setMetadados(getMetadados());
         entity.setCreatedAt(this.createdAt);
         entity.setUpdatedAt(this.updatedAt);
         entity.setDeletedAt(this.deletedAt);

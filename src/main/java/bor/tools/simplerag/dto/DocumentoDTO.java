@@ -224,6 +224,32 @@ public class DocumentoDTO {
         }
     }
 
+    
+    /**
+     * Create and return a new chapter with given title and content,
+     * setting its documentId, bibliotecaId, and ordemDoc automatically.
+     * 
+     * Note: The new chapter is NOT added to the document's chapters list.
+     * You must call addCapitulo() separately to add it.
+     * 
+     * @param titulo - chapter title
+     * @param conteudo - chapter content
+     * @param orderChapter - chapter order number
+     * 
+     * @return newly created ChapterDTO
+     */
+    public ChapterDTO createAndAddNewChapter(String titulo, String conteudo, Integer orderChapter) {
+	ChapterDTO capitulo = ChapterDTO.builder()
+			.documentoId(this.id)
+			.bibliotecaId(bibliotecaId)
+			.ordemDoc(orderChapter)			
+			.titulo(titulo)
+			.conteudo(conteudo)
+			.build();
+	return capitulo;
+    }
+    
+    
     /**
      * Normalize text: lowercase, replace multiple whitespaces with single space, trim
      */

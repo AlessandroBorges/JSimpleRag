@@ -23,10 +23,14 @@ public class OkHttpProvider {
 	/**
 	 * user-agent default
 	 */
-    public  static final String USER_AGENT = "Mozilla/5.0 (Linux; Android 8.0.0)";
+	public  static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0";//"Mozilla/5.0 (Linux; Android 8.0.0)";
+	public  static final String ACCEPT_LANGUAGE = "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3";
+	public  static final String ACCEPT_ENCODING = "gzip, deflate, br";
+	
+	
 	private Cache cache;
 
-	private boolean useCache = true;
+	private boolean useCache = false;
 	private int CACHE_AGE = 2; // 2 * cadias
 	private TimeUnit CACHE_TIME_UNIT = TimeUnit.HOURS;
 	private OkHttpClient client;

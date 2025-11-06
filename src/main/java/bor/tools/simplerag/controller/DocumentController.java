@@ -22,10 +22,13 @@ import org.springframework.web.multipart.MultipartFile;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.UploadTextRequest;
 import bor.tools.simplerag.dto.UploadUrlRequest;
+import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.service.DocumentoService;
+import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.ProcessingStatusTracker;
 import bor.tools.simplerag.service.ProcessingStatusTracker.ProcessingStatus;
+import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.simplerag.service.processing.EnrichmentOptions;
 import bor.tools.simplerag.service.processing.EnrichmentResult;
@@ -60,7 +63,9 @@ public class DocumentController {
     private final DocumentoService documentoService;
     private final ObjectMapper objectMapper;
     private final ProcessingStatusTracker statusTracker;
-    private final DocumentProcessingService documentProcessingService;
+    private final LibraryService libraryService;
+    private final LLMServiceManager llmServiceManager;
+   // private final DocumentProcessingService documentProcessingService;
 
     /**
      * Upload document from text content
@@ -577,6 +582,14 @@ public class DocumentController {
             DocumentoDTO documentoDTO = documentoService.findById(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
 
+            // Get library LLM model name     
+            var optLib = libraryService.findById(documentoDTO.getBibliotecaId());
+            Library lib = optLib.isPresent()? optLib.get() : null;
+		
+            String llmModelName = lib != null && lib.getCompletionQAModel() != null?
+        	    lib.getCompletionQAModel() : llmServiceManager.getDefaultCompletionModelName();
+	    
+            log.debug("Using LLM model '{}' for enrichment of document {}", llmModelName, documentId);
             // Build enrichment options
             EnrichmentOptions options = EnrichmentOptions.builder()
                     .generateQA(generateQA)
@@ -584,6 +597,7 @@ public class DocumentController {
                     .generateSummary(generateSummary)
                     .maxSummaryLength(maxSummaryLength)
                     .continueOnError(continueOnError)
+                    .llmModelName(llmModelName)
                     .build();
 
             // Validate options

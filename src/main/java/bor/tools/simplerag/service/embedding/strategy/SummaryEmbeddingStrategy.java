@@ -52,7 +52,9 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private static final int DEFAULT_SUMMARY_LENGTH = 500; // tokens
     private static final int MAX_TEXT_LENGTH = 8000; // characters
     private static final String DEFAULT_INSTRUCTIONS =
-        "Resuma o texto de forma concisa, mantendo as informações mais importantes e preservando o contexto principal";
+          "Resuma o texto apresentado a seguir de forma concisa, mantendo as informações mais importantes e "
+        + "preservando o contexto principal. O resumo deve ser claro e objetivo. "
+        + "São fornecidos metadados pra melhor contextualização. ";
 
     @Override
     public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
@@ -68,11 +70,15 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
         ChapterDTO chapter = request.getChapter();
         String content = chapter.getConteudo();
+        
+        String metadadosInfo = chapter.getMetadados() != null ? chapter.getMetadados().toString() : "";
 
         if (content == null || content.trim().isEmpty()) {
             log.warn("Empty content for chapter: {}", chapter.getTitulo());
             return new ArrayList<>();
         }
+        
+        String full_content =  metadadosInfo + content;
 
         try {
             LibraryDTO library = request.getContext().getLibrary();
@@ -84,7 +90,7 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
                 : DEFAULT_INSTRUCTIONS;
 
             // Step 1: Generate summary using completion model
-            String summary = generateSummary(content, instructions, maxLength, request);
+            String summary = generateSummary(full_content, instructions, maxLength, request);
 
             if (summary == null || summary.trim().isEmpty()) {
                 log.warn("No summary generated for chapter: {}", chapter.getTitulo());
@@ -197,13 +203,23 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
         MapParam params = new MapParam();
         params.model(modelName);
 
+        Integer dimensions = null;
         // Add library context
         if (library != null) {
-            params.put("library_context", library.getNome());
+            if (library.getEmbeddingDimension() != null) {
+		dimensions = library.getEmbeddingDimension();
+		params.put("dimensions", dimensions);
+	    }
+          //  params.put("library_context", library.getNome());
         }
-
+        
         // Generate embedding
         float[] embedding = llmService.embeddings(Embeddings_Op.DOCUMENT, summary, params);
+        
+        if (dimensions != null && dimensions != embedding.length) {
+	    // Fallback default dimensions
+	    params.put("dimensions", 512);
+	}
 
         // Create DTO
         DocumentEmbeddingDTO docEmbedding = new DocumentEmbeddingDTO();

@@ -155,9 +155,7 @@ public class SplitterWiki extends AbstractSplitter {
 	                                     String[] lines, 
 	                                     List<TitleTag> titles) 
     {
-        List<ChapterDTO> capitulos = new ArrayList<>();
-
-        for (int i = 0; i < titles.size(); i++) {
+          for (int i = 0; i < titles.size(); i++) {
             TitleTag currentTitle = titles.get(i);
             int startLine = currentTitle.getPosition();
             int endLine = (i + 1 < titles.size()) ? titles.get(i + 1).getPosition() : lines.length;
@@ -168,31 +166,25 @@ public class SplitterWiki extends AbstractSplitter {
                 sectionContent.append(lines[j]).append("\n");
             }
 
-            String content = sectionContent.toString().trim();
-            if (!content.isEmpty()) {
-                ChapterDTO capitulo = new ChapterDTO();
-	        capitulo.getMetadados().addMetadata(doc.getMetadados());
-	        capitulo.setDocumentoId(doc.getId());
-                capitulo.setTitulo(currentTitle.getTitle());
-                capitulo.setConteudo(content);
+            String conteudo = sectionContent.toString().trim();
+            if (!conteudo.isEmpty()) {                
+                ChapterDTO capitulo = doc.createAndAddNewChapter( currentTitle.getTitle(),
+									conteudo );
                 capitulo.setOrdemDoc(i + 1);
-
                 // Metadados específicos para Wiki
                 capitulo.getMetadados().put("tipo_conteudo", "wikipedia");
                 capitulo.getMetadados().put("nivel_titulo", String.valueOf(currentTitle.getLevel()));
                 capitulo.getMetadados().put("tag_titulo", currentTitle.getTag());
-
-                capitulos.add(capitulo);
             }
         }
 
         // Se nenhum capítulo foi criado, usar conteúdo completo
-        if (capitulos.isEmpty()) {
+        if (doc.getCapitulos().isEmpty()) {
             return splitIntoChaptersByParagraphs(doc);
         }
 
-        logger.debug("Created {} chapters from Wiki content", capitulos.size());
-        return capitulos;
+        logger.debug("Created {} chapters from Wiki content", doc.getCapitulos().size());
+        return doc.getCapitulos();
     }
 
     /**
@@ -204,8 +196,7 @@ public class SplitterWiki extends AbstractSplitter {
         String content = doc.getTexto();
         // Usar o splitIntoParagraphs() como base para separação
         String[] paragraphs = splitIntoParagraphs(content);
-
-        List<ChapterDTO> capitulos = new ArrayList<>();
+      
         StringBuilder currentChapter = new StringBuilder();
         int currentWords = 0;
         int chapterNumber = 1;
@@ -215,21 +206,15 @@ public class SplitterWiki extends AbstractSplitter {
 
             // Se adicionar este parágrafo exceder o limite, criar novo capítulo
             if (currentWords + paragraphWords > maxWordsPerChapter && currentWords > 0) {
-                ChapterDTO capitulo = new ChapterDTO();
-	        
-                capitulo.getMetadados().addMetadata(doc.getMetadados());
-	        capitulo.setDocumentoId(doc.getId());
-	        
-                capitulo.setTitulo(doc.getTitulo() + " - Parte " + chapterNumber);
-                capitulo.setConteudo(currentChapter.toString().trim());
+                String titulo = doc.getTitulo() + " - Parte " + chapterNumber;                
+                ChapterDTO capitulo = doc.createAndAddNewChapter( titulo,
+                					currentChapter.toString().trim() );
                 capitulo.setOrdemDoc(chapterNumber);
-
+                
                 // Metadados para capítulos criados por parágrafos
                 capitulo.getMetadados().put("tipo_split", "paragrafos");
                 capitulo.getMetadados().put("palavras_aproximadas", String.valueOf(currentWords));
-
-                capitulos.add(capitulo);
-
+                
                 // Reiniciar para próximo capítulo
                 currentChapter = new StringBuilder();
                 currentWords = 0;
@@ -242,22 +227,14 @@ public class SplitterWiki extends AbstractSplitter {
 
         // Adicionar último capítulo se houver conteúdo
         if (currentChapter.length() > 0) {
-            
-            ChapterDTO capitulo = new ChapterDTO();
-	    capitulo.getMetadados().addMetadata(doc.getMetadados());
-	    capitulo.setDocumentoId(doc.getId());
-            capitulo.setTitulo(doc.getTitulo() + " - Parte " + chapterNumber);
-            capitulo.setConteudo(currentChapter.toString().trim());
-            capitulo.setOrdemDoc(chapterNumber);
-
+           ChapterDTO capitulo = doc.createAndAddNewChapter( doc.getTitulo() + " - Parte " + chapterNumber,
+	    						 currentChapter.toString().trim() );
             capitulo.getMetadados().put("tipo_split", "paragrafos");
             capitulo.getMetadados().put("palavras_aproximadas", String.valueOf(currentWords));
-
-            capitulos.add(capitulo);
+            
         }
-
-        logger.debug("Created {} chapters by paragraphs", capitulos.size());
-        return capitulos;
+        logger.debug("Created {} chapters by paragraphs", doc.getCapitulos().size());
+        return doc.getCapitulos();
     }
 
     /**

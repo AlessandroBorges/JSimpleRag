@@ -76,8 +76,8 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	                            "data_modificacao","id","identificador","documento_id","documentoid",
 	                            "biblioteca_id","bibliotecaid", "file_path","filepath","path",
 	                            "file_size","filesize","encoding","detected_format","format",
-	                            "url","source_url"
-    };        
+	                            //"url","source_url"
+    				};        
     private Set<String> ignoredKeys = Set.of(negativeKeys);
 
     @Override
@@ -200,13 +200,14 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
             // Use SplitterGenerico via Factory to split into optimized chunks
             SplitterGenerico splitter = splitterFactory.createGenericSplitter(library);
             List<DocumentEmbeddingDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapter);
-
+                                    
             // Generate embeddings for each chunk
             for (int i = 0; i < chunkDTOs.size(); i++) {
                 DocumentEmbeddingDTO chunkDTO = chunkDTOs.get(i);
-
+                String chunkTextWithMetadata = buildTextWithMetadata(chapter);				
+                
                 DocumentEmbeddingDTO embedding = createEmbeddingFromText(
-                        chunkDTO.getTrechoTexto(),
+                        chunkTextWithMetadata,
                         chapter.getTitulo() + " - Chunk " + (i + 1),
                         library,
                         chapter.getDocumentoId(),
@@ -233,8 +234,10 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Automatically chooses embedding type based on content size
      */
-    private List<DocumentEmbeddingDTO> createAutoEmbeddings(ChapterDTO chapter, LibraryDTO library,
-                                                            EmbeddingRequest request) {
+    private List<DocumentEmbeddingDTO> createAutoEmbeddings(ChapterDTO chapter, 
+	    						    LibraryDTO library,
+                                                            EmbeddingRequest request) 
+    {
         try {
             int tokenCount = estimateTokenCount(chapter.getConteudo());
 
@@ -245,7 +248,8 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
             } else if (tokenCount <= DEFAULT_CHUNK_SIZE) {
                 // Ideal size - use text only
                 log.debug("Medium chapter ({} tokens) - using text only", tokenCount);
-                return List.of(createTextOnlyEmbedding(chapter, library, request));
+                //return List.of(createTextOnlyEmbedding(chapter, library, request));
+                return List.of(createFullTextEmbedding(chapter, library, request));
             } else {
                 // Too large - split into chunks
                 log.debug("Large chapter ({} tokens) - splitting into chunks", tokenCount);
@@ -306,12 +310,6 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	    }else {
 		log.debug("Library embedding dimension is null or model does not support setting it.");
 	    }
-            
-            if(model!=null) {
-        	params.modelObj(model);
-            }
-            
-           // params.put("library_context", library.getNome());
         }
 
         // Generate embedding
@@ -342,12 +340,21 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         return docEmbedding;
     }
 
+    /**
+     * Normalizes embedding vector to specified dimension
+     * @param embedding
+     * @param context
+     * @return
+     */
     private float[] normalizeEmbedding(float[] embedding, EmbeddingContext context) {
 	Integer length = context != null && context.getEmbeddingDimension() != null ?
 		    context.getEmbeddingDimension() : defaultEmbeddingDimension;	
 	// Adjust length if necessary
 	if (length!=null && embedding != null && embedding.length != length) {
 	    log.debug("Normalizing embedding from length {} to {}", embedding.length, length);
+	    // normalize source first - just in case
+	    embedding = bor.tools.simplerag.util.VectorUtil.normalize(embedding);
+	    // then resize
 	    float[] normalized = new float[length];
 	    System.arraycopy(embedding, 0, normalized, 0, Math.min(embedding.length, length));
 	    embedding = normalized;	
@@ -362,7 +369,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private String buildTextWithMetadata(ChapterDTO chapter) {
         StringBuilder builder = new StringBuilder();
 
-        // Add title
+        // Add title       
         if (chapter.getTitulo() != null) {
             builder.append("Título: ").append(chapter.getTitulo()).append("\n\n");
         }
@@ -371,10 +378,12 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         if (chapter.getMetadados() != null) {
             String metadataText = buildMetadataText(chapter);
             if (!metadataText.isEmpty()) {
+        	builder.append("\n**METADADOS DO DOCUMENTO**\n");
                 builder.append(metadataText).append("\n\n");
             }
         }
 
+        builder.append("\n---\nConteúdo:\n");
         // Add main content
         builder.append(chapter.getConteudo());
 
@@ -395,18 +404,15 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
                 }
             });
         }
-
         return builder.toString();
     }
 
     /**
      * Estimates token count in text
-     * Simple estimation: words / 0.75
+     * Simple estimation: 1 token ~ 4.2 characters
      */
     private int estimateTokenCount(String text) {
-        if (text == null) return 0;
-
-        String[] words = text.split("\\s+");
-        return (int) Math.ceil(words.length / 0.75);
+        if (text == null) return 0;       
+        return (int) Math.ceil( ((float)text.length()) / 4.2f);
     }
 }

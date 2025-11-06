@@ -187,6 +187,12 @@ public class EmbeddingOrchestrator {
      * 2. Splits document into chapters
      * 3. Generates embeddings for each chapter
      * 4. Generates additional embeddings (Q&A, summaries) if requested
+     * 
+     * @param documento Document to process
+     * @param context Context including library and model configuration
+     * @param options Processing options (Q&A, summaries, etc.)
+     * 
+     * @return Processing results
      */
     private ProcessingResult executeProcessing(
             DocumentoWithAssociationDTO documento,

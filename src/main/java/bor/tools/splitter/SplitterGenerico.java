@@ -1,6 +1,7 @@
 package bor.tools.splitter;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -109,10 +110,10 @@ public class SplitterGenerico extends AbstractSplitter {
      * @inheritDoc
      */
     @Override
-    public List<ChapterDTO> splitDocumento(@NonNull DocumentoWithAssociationDTO DocumentoWithAssociationDTO) {
-	String text = DocumentoWithAssociationDTO.getTexto();
+    public List<ChapterDTO> splitDocumento(@NonNull DocumentoWithAssociationDTO docDTO) {
+	String text = docDTO.getTexto();
 	
-	int tokenCount = text.length() / 4; // estimativa inicial
+	int tokenCount = RagUtils.countTokensFast(text);// estimativa inicial
 	
 	try {
 	    tokenCount = getLlmServices().tokenCount(text, "fast");
@@ -123,11 +124,10 @@ public class SplitterGenerico extends AbstractSplitter {
 	if(tokenCount < DOCUMENT_WITH_CHAPTERS_MIN_TOKENS) {
 	    // Se o documento for pequeno, não dividir em capítulos
 	    List<ChapterDTO> capitulos = new ArrayList<>();
-	    ChapterDTO capitulo = new ChapterDTO();
-	    capitulo.setTitulo(DocumentoWithAssociationDTO.getTitulo() != null ? DocumentoWithAssociationDTO.getTitulo() : "Documento");
-	    capitulo.setConteudo(text);
-	    capitulo.setOrdemDoc(1);
-	    DocumentoWithAssociationDTO.addParte(capitulo);
+	    
+	    String titulo =  docDTO.getTitulo() != null ? docDTO.getTitulo() : "Capitulo 1";
+	    ChapterDTO capitulo = docDTO.createAndAddNewChapter(titulo,  text);	
+	    
 	    capitulos.add(capitulo);
 	    return capitulos;
 	}
@@ -136,9 +136,9 @@ public class SplitterGenerico extends AbstractSplitter {
 	List<TitleTag> titles = detectTitles(lines);
 	if (titles.isEmpty()) {
 	    // Se não houver títulos, dividir o texto em partes de tamanho fixo
-	    return splitBySize(DocumentoWithAssociationDTO, CHAPTER_MAX_TOKENS);
+	    return splitBySize(docDTO, CHAPTER_MAX_TOKENS);
 	} else {
-	    return splitByTitles(DocumentoWithAssociationDTO, lines, titles);
+	    return splitByTitles(docDTO, lines, titles);
 	}
     }
     
@@ -153,40 +153,76 @@ public class SplitterGenerico extends AbstractSplitter {
      * @return lista de partes do DocumentoWithAssociationDTO
      */
     public List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO docDTO, String[] lines, List<TitleTag> titles) {
-	logger.debug("Splitting document by titles. Found {} titles", titles.size());
+        logger.debug("Splitting document by titles. Found {} titles", titles.size());
 
-	if (titles.isEmpty()) {
-	    return splitBySize(docDTO, CHAPTER_MAX_TOKENS);
-	}
+        if (titles.isEmpty()) {
+            return splitBySize(docDTO, CHAPTER_MAX_TOKENS);
+        }
 
-	if (lines == null) {
-	    lines = docDTO.getTexto().split("\n");
-	}
+        if (lines == null) {
+            lines = docDTO.getTexto().split("\n");
+        }
+        // Mapa para armazenar títulos hierárquicos
+        Map<Integer, String> titleMap = new LinkedHashMap<>();
+        
+        // Processa cada seção entre títulos
+        for (int i = 0; i < titles.size(); i++) {
+            TitleTag titleTag = titles.get(i);
+            int startPos = (i == 0) ? 0 : titles.get(i - 1).getPosition();
+            int endPos = titleTag.getPosition();
+            
+            updateTitleMap(titleMap, titleTag.getLevel(), titleTag.getTitle());
+            
+            String content = extractContentBetweenLines(lines, startPos, endPos);
+            if (!content.isEmpty()) {
+                createChapterWithMetadata(docDTO, titleMap, content);
+            }
+        }
 
-	List<ChapterDTO> capitulos = new ArrayList<>();
+        // Processa conteúdo após o último título
+        int lastTitlePos = titles.get(titles.size() - 1).getPosition();
+        String finalContent = extractContentBetweenLines(lines, lastTitlePos, lines.length);
+        
+        if (!finalContent.isEmpty()) {
+            String titleFull = String.join("\n", titleMap.values()) + "\n Conclusão \n";
+            createChapterWithMetadata(docDTO, titleMap, titleFull, finalContent);
+        }
 
-	// Processa cada seção entre títulos
-	for (int i = 0; i < titles.size(); i++) {
-	    int startPos = i == 0 ? 0 : titles.get(i - 1).getPosition();
-	    int endPos = titles.get(i).getPosition();
+        logger.debug("Created {} chapters from document", docDTO.getCapitulos().size());
+        return docDTO.getCapitulos();
+    }
 
-	    String content = extractContentBetweenLines(lines, startPos, endPos);
-	    if (!content.isEmpty()) {
-		ChapterDTO capitulo = createChapter(docDTO, titles.get(i).getTitle(), content, capitulos.size() + 1);
-		capitulos.add(capitulo);
-	    }
-	}
+    /**
+     * Atualiza o mapa de títulos, removendo níveis inferiores quando necessário
+     */
+    private void updateTitleMap(Map<Integer, String> titleMap, int level, String title) {
+        titleMap.put(level, title);
+        // Remove níveis inferiores
+        titleMap.keySet().removeIf(key -> key > level);
+    }
 
-	// Processa conteúdo após o último título
-	int lastTitlePos = titles.get(titles.size() - 1).getPosition();
-	String finalContent = extractContentBetweenLines(lines, lastTitlePos, lines.length);
-	if (!finalContent.isEmpty()) {
-	    ChapterDTO capitulo = createChapter(docDTO, "Conclusão", finalContent, capitulos.size() + 1);
-	    capitulos.add(capitulo);
-	}
+    /**
+     * Cria capítulo e adiciona metadados de títulos
+     */
+    private void createChapterWithMetadata(DocumentoWithAssociationDTO docDTO, 
+                                           Map<Integer, String> titleMap, 
+                                           String content) {
+        String titleFull = String.join("\n", titleMap.values());
+        createChapterWithMetadata(docDTO, titleMap, titleFull, content);
+    }
 
-	logger.debug("Created {} chapters from document", capitulos.size());
-	return capitulos;
+    /**
+     * Cria capítulo com título customizado e adiciona metadados
+     */
+    private void createChapterWithMetadata(DocumentoWithAssociationDTO docDTO, 
+                                           Map<Integer, String> titleMap, 
+                                           String titleFull,
+                                           String content) {
+        ChapterDTO capitulo = createChapter(docDTO, titleFull, content);
+        
+        titleMap.forEach((level, title) -> 
+            capitulo.getMetadados().addMetadata("title_level_" + level, title)
+        );
     }
 
     /**
@@ -202,8 +238,16 @@ public class SplitterGenerico extends AbstractSplitter {
 
     /**
      * Cria um ChapterDTO com os metadados do documento
+     * @param docDTO   DocumentoWithAssociationDTO pai
+     * @param titulo   título do capítulo
+     * @param conteudo conteúdo do capítulo
+     * @param ordem    ordem do capítulo
+     * 
+     * @return ChapterDTO criado
      */
-    private ChapterDTO createChapter(DocumentoWithAssociationDTO docDTO, String titulo, String conteudo, int ordem) {
+    private ChapterDTO createChapter(DocumentoWithAssociationDTO docDTO, 
+	    			    String titulo, 
+	    			    String conteudo) {
 	ChapterDTO capitulo = new ChapterDTO();
 	docDTO.addParte(capitulo);	
 	capitulo.setTitulo(titulo);
@@ -222,7 +266,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	logger.debug("Splitting document by size with chapterMaxTokens: {}", maxWords);
 
 	// Use internal implementation instead of ContentSplitter
-	List<ChapterDTO> chapters = splitTextIntoInitialChapters(docDTO.getTexto());
+	List<ChapterDTO> chapters = splitTextIntoInitialChapters(docDTO);
 
 	List<ChapterDTO> adjustedChapters = new ArrayList<>();
 	int chapterNumber = 1;
@@ -241,8 +285,8 @@ public class SplitterGenerico extends AbstractSplitter {
 		adjustedChapters.addAll(splitChapters);
 	    }
 	}
-
 	logger.debug("Split completed. Generated {} chapters", adjustedChapters.size());
+	docDTO.setCapitulos(adjustedChapters);
 	return adjustedChapters;
     }
 
@@ -281,14 +325,9 @@ public class SplitterGenerico extends AbstractSplitter {
 
 	// Small chapter, no need to split
 	if(tokenCount <= CHAPTER_MIN_TOKENS) {
-	    DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-		    .documentoId(chapter.getDocumentoId())
-		    .bibliotecaId(chapter.getBibliotecaId())
-		    .capituloId(chapter.getId())
-		    .trechoTexto(conteudo)
-		    .ordemCap(1)
-		    .tipoEmbedding(TipoEmbedding.CAPITULO)
-		    .build();
+	    DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(conteudo,
+		    							0, 
+		    							TipoEmbedding.CAPITULO);	  
 	    chunks.add(newChunk);
 	    return chunks;
 	}
@@ -305,14 +344,9 @@ public class SplitterGenerico extends AbstractSplitter {
 		Integer end = title.getLinesLength();
 		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
 
-		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-			.documentoId(chapter.getDocumentoId())
-			.bibliotecaId(chapter.getBibliotecaId())
-			.capituloId(chapter.getId())
-			.trechoTexto(textBlock)
-			.ordemCap(count++)
-			.tipoEmbedding(TipoEmbedding.TRECHO)
-			.build();
+		DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(textBlock,
+									    count++);	
+				
 		chunks.add(newChunk);
 	    }
 	} else {
@@ -379,32 +413,18 @@ public class SplitterGenerico extends AbstractSplitter {
 		    String textBlock = currentChunk.toString().trim();
 		    if(!textBlock.isEmpty()) {
 			currentChunk.setLength(0);
-			currentChunk.append(nextBlock).append(" ");
-
-			DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-				.documentoId(chapter.getDocumentoId())
-				.bibliotecaId(chapter.getBibliotecaId())
-				.capituloId(chapter.getId())
-				.trechoTexto(textBlock)
-				.ordemCap(count++)
-				.tipoEmbedding(TipoEmbedding.TRECHO)
-				.build();
-
+			currentChunk.append(nextBlock).append(" ");			
+			DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(textBlock,
+									    count++);
 			chunks.add(newChunk);
 		    }
 		}
 	    }
 
 	    // Add final chunk if any
-	    if(currentChunk.length() > 0) {
-		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-			.documentoId(chapter.getDocumentoId())
-			.bibliotecaId(chapter.getBibliotecaId())
-			.capituloId(chapter.getId())
-			.trechoTexto(currentChunk.toString().trim())
-			.ordemCap(count)
-			.tipoEmbedding(TipoEmbedding.TRECHO)
-			.build();
+	    if(currentChunk.length() > 0) {	
+		DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(currentChunk.toString().trim(),
+									    count++);
 		chunks.add(newChunk);
 	    }
 	}
@@ -424,6 +444,13 @@ public class SplitterGenerico extends AbstractSplitter {
 
     /**
      * Divide um capítulo grande em partes menores respeitando o limite de palavras
+     * @param chapter  capítulo a ser dividido
+     * @param maxWords limite máximo de palavras por parte
+     * @param startNumber número inicial para enumeração das partes
+     * 
+     * @return nova lista de partes do capítulo
+     * 
+     * 
      */
     private List<ChapterDTO> splitLargeChapter(ChapterDTO chapter, int maxWords, int startNumber) {
 	List<ChapterDTO> parts = new ArrayList<>();
@@ -437,7 +464,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	    int paragraphWords = countWords(paragraph);
 
 	    if (shouldCreateNewPart(currentWordCount, paragraphWords, maxWords)) {
-		parts.add(createChapterPart(chapter.getTitulo(), currentContent.toString(), partNumber++));
+		parts.add(createChapterPart(chapter, chapter.getTitulo(), currentContent.toString(), partNumber++));
 		currentContent = new StringBuilder();
 		currentWordCount = 0;
 	    }
@@ -448,7 +475,7 @@ public class SplitterGenerico extends AbstractSplitter {
 
 	// Adicionar última parte se houver conteúdo
 	if (currentContent.length() > 0) {
-	    parts.add(createChapterPart(chapter.getTitulo(), currentContent.toString(), partNumber));
+	    parts.add(createChapterPart(chapter, chapter.getTitulo(), currentContent.toString(), partNumber));
 	}
 
 	return parts;
@@ -471,11 +498,14 @@ public class SplitterGenerico extends AbstractSplitter {
     /**
      * Cria uma parte de capítulo com título numerado
      */
-    private ChapterDTO createChapterPart(String baseTitle, String content, int partNumber) {
+    private ChapterDTO createChapterPart(ChapterDTO source, String baseTitle, String content, int partNumber) {
 	ChapterDTO part = new ChapterDTO();
+	part.setDocumentoId(source.getDocumentoId());
+	part.setBibliotecaId(source.getBibliotecaId());	
+	part.getMetadados().addMetadata(source.getMetadados());
 	part.setTitulo(baseTitle + " (Parte " + partNumber + ")");
 	part.setConteudo(content.trim());
-	part.setOrdemDoc(partNumber);
+	part.setOrdemDoc(partNumber);	
 	return part;
     }
 
@@ -495,9 +525,8 @@ public class SplitterGenerico extends AbstractSplitter {
      * @return list of ChapterDTO with initial split (may need further size adjustment)
      * @since 0.0.3
      */
-    private List<ChapterDTO> splitTextIntoInitialChapters(String content) {
-	List<ChapterDTO> chapters = new ArrayList<>();
-
+    private List<ChapterDTO> splitTextIntoInitialChapters(DocumentoWithAssociationDTO docDTO ) {	
+	String content = docDTO.getTexto();
 	// Split on double line breaks (paragraphs)
 	String[] paragraphs = content.split("\\n\\s*\\n");
 
@@ -512,11 +541,9 @@ public class SplitterGenerico extends AbstractSplitter {
 	    if ((currentTokenCount + paragraphTokens) >= CHAPTER_IDEAL_TOKENS 
 		 && currentTokenCount >= CHUNK_MIN_TOKENS /*CHAPTER_MIN_TOKENS*/) 
 	    {
-		ChapterDTO chapter = new ChapterDTO();
-		chapter.setTitulo("Section " + chapterNumber++);
-		chapter.setConteudo(currentChapter.toString().trim());
-		chapters.add(chapter);
-
+		ChapterDTO chapter = docDTO.createAndAddNewChapter("Capitulo " + chapterNumber,
+							  currentChapter.toString().trim());
+		
 		currentChapter = new StringBuilder();
 		currentTokenCount = 0;
 	    }
@@ -526,15 +553,13 @@ public class SplitterGenerico extends AbstractSplitter {
 	}
 
 	// Add final chapter if there's content remaining
-	if (currentChapter.length() > 0) {
-	    ChapterDTO chapter = new ChapterDTO();
-	    chapter.setTitulo("Section " + chapterNumber);
-	    chapter.setConteudo(currentChapter.toString().trim());
-	    chapters.add(chapter);
+	if (currentChapter.length() > 0) {	   	   
+	    var chapter = docDTO.createAndAddNewChapter("Capitulo " + chapterNumber,
+							  currentChapter.toString().trim());	    
 	}
 
-	logger.debug("Split text into {} initial chapters", chapters.size());
-	return chapters;
+	logger.debug("Split text into {} initial chapters", docDTO.getCapitulos().size());
+	return docDTO.getCapitulos();
     }
 
     /**
@@ -649,16 +674,14 @@ public class SplitterGenerico extends AbstractSplitter {
 	
 	// small chapter, no need to split
 	if(tokenCount <= CHUNK_IDEAL_TOKENS) {
-	    DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-		    .documentoId(chapter.getDocumentoId())
-		    .bibliotecaId(chapter.getBibliotecaId())
-		    .capituloId(chapter.getId())
-		    .trechoTexto(conteudo)
-		    .ordemCap(1).tipoEmbedding(TipoEmbedding.CAPITULO)
-		    .build();
+	    DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(conteudo,
+		    							1, 
+		    							TipoEmbedding.CAPITULO);
 	    chunks.add(newChunk);
 	    return chunks;
-	}		
+	}	
+	
+	String fullTitle = chapter.getTitulo().trim();
 	
 	String[] lines = conteudo.split("\n");
 	List<TitleTag> titles = detectTitles(lines);
@@ -669,18 +692,14 @@ public class SplitterGenerico extends AbstractSplitter {
 		Integer start = title.getPosition();
 		Integer end = title.getLinesLength();
 		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
-
-		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-			.documentoId(chapter.getDocumentoId())
-			.bibliotecaId(chapter.getBibliotecaId())
-			.capituloId(chapter.getId())
-			.trechoTexto(textBlock)
-			.ordemCap(count++).tipoEmbedding(TipoEmbedding.TRECHO).build();
+		textBlock = fullTitle + "\n" + textBlock.trim();
+		DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(textBlock,
+									    count++);
 		chunks.add(newChunk);
 	    }
 	} else {
 	    // Fallback: split by size if no titles found
-	    int idealChunckSize = CHUNK_IDEAL_TOKENS * 4; // Approximate character count
+	    int idealChunckCharLen = CHUNK_IDEAL_TOKENS * 4; // Approximate character count
 	    
 	    // Split by paragraphs to avoid cutting in the middle
 	    String[] textBlocks = conteudo.split("\\n\\s*\\n");
@@ -712,7 +731,7 @@ public class SplitterGenerico extends AbstractSplitter {
 			if(i < textBlocks.length -1) {
 			    String nextBlock = textBlocks[i+1].trim();
 			    String mergedBlock = block + " " + nextBlock;
-			    if(mergedBlock.length() <= (idealChunckSize + 200)) {
+			    if(mergedBlock.length() <= (idealChunckCharLen + 200)) {
 				refinedBlocks.add(mergedBlock.trim());
 				i++; // skip next block
 			    } else {
@@ -730,22 +749,15 @@ public class SplitterGenerico extends AbstractSplitter {
 	    StringBuilder currentChunk = new StringBuilder();
 	    int count = 1;
 	    for (String nextBlock : refinedBlocks) {		
-		if((currentChunk.length() + nextBlock.length()) <= idealChunckSize) {
+		if((currentChunk.length() + nextBlock.length()) <= idealChunckCharLen) {
 		    currentChunk.append(nextBlock).append(" ");
 		    continue;
 		} else {				
 		String textBlock = currentChunk.toString().trim();
 		currentChunk.setLength(0); // Reset for next chunk
 		currentChunk.append(nextBlock).append(" "); // Start new chunk with current sentence
-
-		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
-			.documentoId(chapter.getDocumentoId())
-			.bibliotecaId(chapter.getBibliotecaId())
-			.capituloId(chapter.getId())
-			.trechoTexto(textBlock)
-			.ordemCap(count++)
-			.tipoEmbedding(TipoEmbedding.TRECHO).build();
-
+		DocumentEmbeddingDTO newChunk = chapter.createChapterLevelEmbedding(textBlock,
+									    count++);
 		chunks.add(newChunk);
 		}
 	    }//for

@@ -56,9 +56,10 @@ public class EmbeddingRequest {
     private Integer numberOfQAPairs;
 
     /**
-     * Maximum summary length (for summary embeddings)
+     * Maximum summary length in tokens (for summary embeddings)
      */
-    private Integer maxSummaryLength;
+    @Builder.Default
+    private Integer maxSummaryLength = 1200;
 
     /**
      * Custom summarization instructions (for summary embeddings)

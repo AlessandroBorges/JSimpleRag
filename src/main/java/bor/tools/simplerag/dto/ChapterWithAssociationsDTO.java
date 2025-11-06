@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+import bor.tools.simplerag.entity.MetaDoc;
+
 /**
  * DTO for Chapter entity with associations.<br>
  * The associations included are:
@@ -136,6 +138,22 @@ public class ChapterWithAssociationsDTO {
 	    setChapterTitle(chapterTitle);
 	}
     }
+    
+    /**
+     * Create chapter-level embedding DTO for this chapter
+     * 
+     * @param content Text content for the embedding
+     * @param ordemCap Order of the chapter embedding
+     * 
+     * @return DocumentEmbeddingDTO
+     */	
+    public DocumentEmbeddingDTO createChapterLevelEmbedding(String content, Integer ordemCap) {
+	DocumentEmbeddingDTO embedding = this.chapter.createChapterLevelEmbedding(content, ordemCap);
+	embedding.setOrdemCap(embeddings.size() + 1); // set ordemCap based on current size
+	this.embeddings.add(embedding);
+	return embedding;
+    }
+    
     
 	
 } //class

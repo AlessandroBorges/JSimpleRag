@@ -110,6 +110,7 @@ public class DocumentoWithAssociationDTO {
                 .deletedAt(src.getDeletedAt())
                 .build();
         
+        dto.getMetadados().addMetadata(src.getMetadados());
         // Set content and also tokensTotal and checksum
         dto.setConteudoMarkdown(src.getConteudoMarkdown());
         
@@ -193,7 +194,10 @@ public class DocumentoWithAssociationDTO {
         if (capitulos == null) {
             capitulos = new ArrayList<>();
         }
-        capitulos.add(capitulo);
+        if(capitulos.contains(capitulo)) {
+	    return; // avoid duplicates
+	} else
+	    capitulos.add(capitulo);
     }
 
     /**
@@ -425,6 +429,7 @@ public class DocumentoWithAssociationDTO {
     
     public void addParte(ChapterDTO parte) {
 	parte.setDocumentoId(this.id);
+	parte.setBibliotecaId(this.bibliotecaId);
 	parte.getMetadados().addMetadata(this.getMetadados());
 	if (parte.getOrdemDoc() == null) {
 	    parte.setOrdemDoc(this.getChaptersCount() + 1);
@@ -448,7 +453,28 @@ public class DocumentoWithAssociationDTO {
 	this.anexos.add(doc);
     }
     
-   
+    /**
+     * Create and return a new chapter with given title and content,
+     * setting its documentId, bibliotecaId, and ordemDoc automatically.
+     * 
+     * Note: The new chapter is NOT added to the document's chapters list.
+     * You must call addCapitulo() separately to add it.
+     * 
+     * @param titulo - chapter title
+     * @param conteudo - chapter content
+     * @return newly created ChapterDTO
+     */
+    public ChapterDTO createAndAddNewChapter(String titulo, String conteudo) {
+	ChapterDTO capitulo = ChapterDTO.builder()
+			.documentoId(this.id)
+			.bibliotecaId(bibliotecaId)
+			.ordemDoc(this.getChaptersCount() + 1)			
+			.titulo(titulo)
+			.conteudo(conteudo)
+			.build();
+	return capitulo;
+    }
+    
     /**
      * Normalize text: lowercase, replace multiple whitespaces with single space, trim
      */

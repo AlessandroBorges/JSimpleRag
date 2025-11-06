@@ -483,7 +483,6 @@ public class DocumentoService {
                 }
 
                 LibraryDTO biblioteca = LibraryDTO.from(libraryOpt.get());
-
                 // Delegate to enrichment service
                 bor.tools.simplerag.service.processing.EnrichmentResult result =
                         documentProcessingService.enrichDocument(documento, biblioteca, options).get();

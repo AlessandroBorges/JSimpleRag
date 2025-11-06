@@ -3,7 +3,9 @@ package bor.tools.simplerag.service.processing;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.scheduling.annotation.Async;
@@ -33,6 +35,7 @@ import bor.tools.splitter.AbstractSplitter;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.splitter.SplitterFactory;
 import bor.tools.splitter.SplitterGenerico;
+import bor.tools.utils.RagUtils;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -105,7 +108,7 @@ public class DocumentProcessingService {
     /**
      * Ideal chunk size for chapter splitting (aligns with ContentSplitter.IDEAL_TOKENS).
      */
-    private static final int IDEAL_CHUNK_SIZE_TOKENS = 2000;
+    private static final int IDEAL_CHUNK_SIZE_TOKENS = 512;
 
     /**
      * Percentage threshold for deciding to summarize vs truncate oversized text.
@@ -226,18 +229,8 @@ public class DocumentProcessingService {
         AbstractSplitter splitter = splitterFactory.createSplitter(tipoConteudo, library);
 
         // Convert to DocumentoWithAssociationDTO for splitter
-        DocumentoWithAssociationDTO documentoDTO = DocumentoWithAssociationDTO.builder()
-                .id(documento.getId())
-                .bibliotecaId(documento.getBibliotecaId())
-                .titulo(documento.getTitulo())
-                .conteudoMarkdown(documento.getConteudoMarkdown())
-                .flagVigente(documento.getFlagVigente())
-                .dataPublicacao(documento.getDataPublicacao())
-                .tokensTotal(documento.getTokensTotal())
-                .metadados(documento.getMetadados())
-                .biblioteca(library)
-                .build();
-
+        DocumentoWithAssociationDTO documentoDTO = DocumentoWithAssociationDTO.from(documento);
+        
         // Split document into chapters
         List<ChapterDTO> chapterDTOs = splitter.splitDocumento(documentoDTO);
         log.debug("Document split into {} chapters", chapterDTOs.size());
@@ -246,12 +239,14 @@ public class DocumentProcessingService {
         List<Chapter> chapters = new ArrayList<>();
         List<DocumentEmbedding> allEmbeddings = new ArrayList<>();
         List<Integer> embeddingsPerChapter = new ArrayList<>(); // Track count per chapter
-       
+                
         for (ChapterDTO chapterDTO : chapterDTOs) {
             // Create chapter entity
             Chapter chapter = chapterDTO.toEntity();
-
             chapters.add(chapter);
+            if(chapter.getBibliotecaId()==null) {
+        	log.debug("Chapter bibliotecaId: {}", chapter.getBibliotecaId());
+            }
 
             // Create embeddings for this chapter (will be persisted after chapter)
             List<DocumentEmbedding> chapterEmbeddings = createChapterEmbeddings(
@@ -260,7 +255,7 @@ public class DocumentProcessingService {
                                                                         documento,
                                                                         library,
                                                                         llmContext);
-
+                       
             // Track how many embeddings this chapter generated
             embeddingsPerChapter.add(chapterEmbeddings.size());
             allEmbeddings.addAll(chapterEmbeddings);
@@ -332,13 +327,13 @@ public class DocumentProcessingService {
         int chapterTokens = llmContext.tokenCount(chapterDTO.getConteudo(), TOKEN_MODEL);
         log.debug("Chapter '{}' has {} tokens", chapter.getTitulo(), chapterTokens);
 
-        // CASE 1: Small chapter (≤ 2000 tokens) - Create single TRECHO
+        // CASE 1: Small chapter (≤ 512 tokens) - Create single TRECHO
         if (chapterTokens <= IDEAL_CHUNK_SIZE_TOKENS) {
             log.debug("Chapter is small (≤{} tokens), creating single TRECHO", IDEAL_CHUNK_SIZE_TOKENS);
             DocumentEmbedding trecho = criarTrechoUnico(
                     chapterDTO,
                     documento,
-                    0 // orderChapter
+                    1 // orderChapter
             );
             embeddings.add(trecho);
             return embeddings;
@@ -374,7 +369,7 @@ public class DocumentProcessingService {
         log.debug("Chapter split into {} chunks", chunkDTOs.size());
 
         // Step 3: Convert DTOs to entities
-        int orderChapter = 0;
+        int orderChapter = 1;
         for (DocumentEmbeddingDTO chunkDTO : chunkDTOs) {
             DocumentEmbedding trecho = DocumentEmbedding.builder()
                     .libraryId(documento.getBibliotecaId())
@@ -384,12 +379,15 @@ public class DocumentProcessingService {
                     .texto(chunkDTO.getTrechoTexto())
                     .orderChapter(orderChapter)
                     .embeddingVector(null) // NULL - calculated later
-                    .build();
-
+                    .build();          
+         
             // Add metadata
-            trecho.getMetadados().put("chunk_index", orderChapter);
-            trecho.getMetadados().put("total_chunks", chunkDTOs.size());
-            trecho.getMetadados().put("parent_chapter_title", chapterDTO.getTitulo());
+            var meta = trecho.getMetadados();
+            meta.addMetadata(chapterDTO.getMetadados());
+            meta.addMetadata("chunk_index", orderChapter);
+            meta.addMetadata("total_chunks", chunkDTOs.size());
+            meta.addMetadata("tokens", RagUtils.countTokensFast(chunkDTO.getTrechoTexto()));
+            meta.addMetadata("parent_chapter_title", chapterDTO.getTitulo());
 
             embeddings.add(trecho);
             orderChapter++;
@@ -485,6 +483,7 @@ public class DocumentProcessingService {
                 .build();
 
         // Add metadata
+        trecho.getMetadados().addMetadata(chapterDTO.getMetadados());
         trecho.getMetadados().put("is_single_chunk", true);
         trecho.getMetadados().put("chapter_title", chapterDTO.getTitulo());
 
@@ -759,11 +758,19 @@ public class DocumentProcessingService {
 
             log.debug("Found {} chapters to enrich", chapters.size());
 
+            
+            String llmModelName = options.getLLMmodelName()!=null? options.getLLMmodelName() :
+        	                   library.getCompletionQAModel();
+            if(llmModelName==null || llmModelName.isEmpty()) {
+        	llmModelName = llmServiceManager.getDefaultCompletionModelName();
+            }
+            
             // Create contexts
             EmbeddingContext embeddingContext = EmbeddingContext.builder()
                     .library(library)
                     .embeddingModelName(library.getEmbeddingModel())
                     .embeddingDimension(library.getEmbeddingDimension())
+                    .completionQAModelName(llmModelName)
                     .build();
 
             // Process each chapter

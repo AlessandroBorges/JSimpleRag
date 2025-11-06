@@ -1,12 +1,17 @@
 package bor.tools.utils;
 
 import java.io.IOException;
+import java.util.Map;
+
+import org.apache.tika.exception.TikaException;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-@Deprecated
+/**
+ * Classe para baixar artigos da Wikipedia usando a API pública.
+ */
 public class WikipediaArticleFetcher {
 
 
@@ -21,8 +26,13 @@ public class WikipediaArticleFetcher {
         Request request = new Request.Builder().url(url).build();
 
         // Executa a requisição
+        
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+            if (!response.isSuccessful()) {        	
+        	throw new IOException("Unexpected code " + 
+        			response.code() + 
+        			"\n\t" + response);
+            }
 
             // Extrai a resposta
             String responseData = response.body().string();
@@ -35,6 +45,16 @@ public class WikipediaArticleFetcher {
             e.printStackTrace();
         }
         return null;
+    }
+    
+    public static void main(String[] args) throws IOException, TikaException, Exception {
+	String articleTitle = "Immanuel_Kant";
+	String language = "pt"; // pt para português, en para inglês, etc.
+	WikiParse wiki = RagUtils.wikiArticleXtract(articleTitle, language);
+	Map<String,Object> mapText = wiki.getText();
+	String text = (String) mapText.get("*");
+	String markdown = RagUtils.convertHTMLtoMarkdown(text);
+	System.out.println(markdown);
     }
 
 }

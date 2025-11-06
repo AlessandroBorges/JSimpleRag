@@ -198,5 +198,23 @@ public class Metadata extends LinkedHashMap<String, Object> {
 	return super.isEmpty();	
     }
     
+    /**
+     * Returns a string representation of the metadata.
+     * @return a formatted string of key-value pairs in the metadata
+     */
+    public String toString() {
+	StringBuilder builder = new StringBuilder(256);
+	builder.append("Metadata [\n");
+	for (var entry : this.entrySet()) {
+	    String key = entry.getKey();
+	    builder.append(key);
+	    builder.append(" : ");
+	    builder.append(entry.getValue());
+	    builder.append("\n ");
+	}
+
+	builder.append("]\n");
+	return builder.toString();
+    }
 
 }

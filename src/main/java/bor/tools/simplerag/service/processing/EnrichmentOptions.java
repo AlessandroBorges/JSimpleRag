@@ -105,6 +105,9 @@ public class EnrichmentOptions {
      */
     @Builder.Default
     private boolean continueOnError = true;
+    
+    
+    String llmModelName;
 
     /**
      * Validates the configuration and returns error message if invalid.
@@ -178,5 +181,13 @@ public class EnrichmentOptions {
                 .maxSummaryLength(maxLength)
                 .continueOnError(true)
                 .build();
+    }
+
+    /**
+     * Get the name of the Q&A model to use.
+     * @return
+     */
+    public String getLLMmodelName() {	
+	return this.llmModelName;
     }
 }

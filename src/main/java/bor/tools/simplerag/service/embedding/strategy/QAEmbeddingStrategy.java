@@ -14,6 +14,7 @@ import bor.tools.simplellm.LLMService;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.Reasoning_Effort;
+import bor.tools.simplellm.Utils;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
@@ -79,7 +80,10 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
             log.warn("Empty content for chapter: {}", chapter.getTitulo());
             return new ArrayList<>();
         }
-
+        
+        String metadataInfo = chapter.getMetadados() != null ? chapter.getMetadados().toString() : " ";
+        
+        String full_content = "\nTexto do Capítulo:\n" + content + "\n\nMetadados do Capítulo:\n" + metadataInfo;
         try {
             LibraryDTO library = request.getContext().getLibrary();
             int numberOfPairs = request.getNumberOfQAPairs() != null
@@ -87,7 +91,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
                 : DEFAULT_QA_PAIRS;
 
             // Step 1: Generate Q&A pairs using completion model
-            List<QuestionAnswer> qaPairs = generateQAPairs(content, numberOfPairs, request);
+            List<QuestionAnswer> qaPairs = generateQAPairs(full_content, numberOfPairs, request);
 
             if (qaPairs.isEmpty()) {
                 log.warn("No Q&A pairs generated for chapter: {}", chapter.getTitulo());
@@ -186,10 +190,14 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
         // Prepare prompt for Q&A generation
         String prompt = String.format(
-            "Com base no texto fornecido, gere exatamente %d pares de pergunta e resposta relevantes e informativos. " +
-            "As perguntas devem abordar os pontos principais do texto.\n" +
+            "Com base no texto fornecido, identifique os principais assuntos e "
+            + "gere pares de pergunta e resposta relevantes e informativos apra cada assunto identificado. " +
+            "As perguntas devem abordar os pontos principais do texto. Sugere-se até %d pares de perguntas e respostas.\n" +
             "Formato: Q: [pergunta]\nA: [resposta]\\n\\n" +
-            "Certifique-se de que as respostas sejam concisas e restritas ao texto fornecido.",
+            "\nCertifique-se de que as respostas sejam concisas e restritas ao texto fornecido. " +
+            "Este é um documento textual, assim ignore eventuais referências a imagens e tabelas presentes no texto."
+            + "Para melhor contextualização, ao final apresentamos os metadados do capítulo."
+            + "\n\n",
             numberOfPairs
         );
 
@@ -276,19 +284,22 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         MapParam params = new MapParam();
         params.model(modelName);
 
+        Integer dimensions = null;
         // Add library context
         if (library != null) {
-        	Integer dimensions = library.getEmbeddingDimension();
-        	
+        	dimensions = library.getEmbeddingDimension();        	
         	if(dimensions != null) {
 		    	params.put("dimensions", dimensions);
         	}
-            params.put("library_context", library.getNome());
+           // params.put("library_context", library.getNome());
         }
 
         // Generate embedding
         float[] embedding = llmService.embeddings(Embeddings_Op.DOCUMENT, combinedText, params);
-
+        
+        if(dimensions != null && embedding.length != dimensions) {	
+            embedding = Utils.normalizeAndResize(embedding, totalPairs);
+	}
         // Create DTO
         DocumentEmbeddingDTO docEmbedding = new DocumentEmbeddingDTO();
         docEmbedding.setTrechoTexto(combinedText);

@@ -269,6 +269,12 @@ public class SplitterNorma  extends AbstractSplitter{
 	}
 
 
+    /**
+     * Split DocumentoWithAssociationDTO into ChapterDTO parts.
+     *
+     * @param documento - DocumentoWithAssociationDTO to be split
+     * @return List of ChapterDTO parts
+     */
     @Override
     public List<ChapterDTO > splitDocumento(@NonNull DocumentoWithAssociationDTO documento) {
         return documento.getCapitulos();
@@ -307,18 +313,24 @@ public class SplitterNorma  extends AbstractSplitter{
 		return carregaNorma(url, docStub);
 	}
 
-
+	/**
+	 * Split by titles specific for legal documents
+	 * @param doc    - DocumentoWithAssociationDTO to be split
+	 * @param lines  - array of lines from the document
+	 * @param titles - list of detected TitleTag
+	 */
 	@Override
-	protected List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO doc, String[] lines, List<TitleTag> titles) {
+	protected List<ChapterDTO> splitByTitles(DocumentoWithAssociationDTO doc, 
+						 String[] lines, 
+						 List<TitleTag> titles) 
+	{
 		logger.debug("Splitting legal document by titles. Found {} titles", titles.size());
 
 		if (titles.isEmpty()) {
 			return List.of(createSingleChapter(doc));
-		}
-
-		List<ChapterDTO> capitulos = new ArrayList<>();
+		}	
+		
 		List<TitleTag> secoes = extractSecoes(titles);
-
 		if (secoes.isEmpty()) {
 			return List.of(createSingleChapter(doc));
 		}
@@ -328,25 +340,18 @@ public class SplitterNorma  extends AbstractSplitter{
 			int startPos = secao.getPosition();
 			int endPos = (i + 1 < secoes.size()) ? secoes.get(i + 1).getPosition() : lines.length;
 			
-			String content = extractContent(lines, startPos, endPos);
-			ChapterDTO capitulo = createCapitulo(secao.getTitle(), content, i + 1, doc);
-			capitulos.add(capitulo);
+			String conteudo = extractContent(lines, startPos, endPos);
+			ChapterDTO capitulo = createCapitulo(secao.getTitle(), conteudo, i + 1, doc);			
 		}
-
-		logger.debug("Created {} chapters from legal document", capitulos.size());
-		return capitulos;
+		logger.debug("Created {} chapters from legal document", doc.getCapitulos().size());
+		return doc.getCapitulos();
 	}
 
 	/**
 	 * Cria um único capítulo com todo o conteúdo do documento
 	 */
-	private ChapterDTO createSingleChapter(DocumentoWithAssociationDTO doc) {
-		ChapterDTO capitulo = new ChapterDTO();
-		capitulo.getMetadados().addMetadata(doc.getMetadados());
-		capitulo.setDocumentoId(doc.getId());
-		capitulo.setTitulo(doc.getTitulo());
-		capitulo.setConteudo(doc.getTexto());
-		capitulo.setOrdemDoc(1);
+	private ChapterDTO createSingleChapter(DocumentoWithAssociationDTO doc) {			
+		ChapterDTO capitulo = doc.createAndAddNewChapter(doc.getTitulo(),doc.getConteudoMarkdown());
 		return capitulo;
 	}
 
@@ -384,15 +389,15 @@ public class SplitterNorma  extends AbstractSplitter{
 	/**
 	 * Cria um ChapterDTO com todos os metadados necessários
 	 */
-	private ChapterDTO createCapitulo(String titulo, String conteudo, int ordem, DocumentoWithAssociationDTO doc) {
-		ChapterDTO capitulo = new ChapterDTO();
-		capitulo.setTitulo(titulo);
-		capitulo.setConteudo(conteudo);
-		capitulo.setOrdemDoc(ordem);
-		capitulo.getMetadados().addMetadata(doc.getMetadados());
-		capitulo.setDocumentoId(doc.getId());
+	private ChapterDTO createCapitulo(String titulo, String conteudo, Integer ordemDoc, DocumentoWithAssociationDTO doc) {
+	
+		ChapterDTO capitulo = doc.createAndAddNewChapter(titulo, conteudo);
+		if (ordemDoc != null && ordemDoc > 0) {
+			capitulo.setOrdemDoc(ordemDoc);
+		}
 		capitulo.getMetadados().put("tipo_secao", "normativo");
 		capitulo.getMetadados().put("nivel_hierarquico", "secao");
+		
 		return capitulo;
 	}
 

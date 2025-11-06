@@ -1,13 +1,12 @@
 package bor.tools.simplerag.entity;
 
-import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import bor.tools.utils.RagUtils;
 import jakarta.persistence.Transient;
 
 /**
@@ -29,8 +28,27 @@ public class MetaDoc extends Metadata {
     private static final String DATA_PUBLICACAO_KEY = "data_publicacao";
     private static final String CHECKSUM_KEY = "checksum";
     private static final String ISBN_KEY = "isbn";
-    private static final String DATA_PUBLICAO_KEY = "data_publicacao";
-
+    
+    /**
+     * All metadata tags used in MetaDoc.
+     */
+    private static final String[] ALL_TAGS = {URL_KEY,
+	    NOME_DOCUMENTO_KEY,
+	    CAPITULO_KEY,
+	    DESCRICAO_KEY,
+	    AREA_CONHECIMENTO_KEY,
+	    PALAVRAS_CHAVE_KEY,
+	    AUTOR_KEY,
+	    DATA_PUBLICACAO_KEY,
+	    CHECKSUM_KEY,
+	    ISBN_KEY
+    };
+    
+    private static Set<String> allTagsSet;
+    
+    static {
+	allTagsSet = Set.of(ALL_TAGS);
+    }
         
     public MetaDoc() {
 	super();
@@ -228,25 +246,66 @@ public class MetaDoc extends Metadata {
 	return obj != null ? obj.toString() : null;
     }
     
-    
-    @JsonIgnore
-    @Transient
-    public void setDataPublicao(Date dataPublicao) {
-	String dataStr = RagUtils.format(dataPublicao);
-	this.put(DATA_PUBLICAO_KEY, dataStr);	
+   
+    @Override
+    public String toString() {
+	StringBuilder builder = new StringBuilder();
+	builder.append("Metadados [\n ");
+	if (getNomeDocumento() != null) {
+	    builder.append("nome documento : ");
+	    builder.append(getNomeDocumento());
+	    builder.append("\n ");
+	}
+	if (getUrl() != null) {
+	    builder.append("url :");
+	    builder.append(getUrl());
+	    builder.append("\n ");
+	}
+	if (getCapitulo() != null) {
+	    builder.append("capitulo : ");
+	    builder.append(getCapitulo());
+	    builder.append("\n ");
+	}
+	if (getDescricao() != null) {
+	    builder.append("descricao : ");
+	    builder.append(getDescricao());
+	    builder.append("\n ");
+	}
+	if (getAreaConhecimento() != null) {
+	    builder.append("area conhecimento : ");
+	    builder.append(getAreaConhecimento());
+	    builder.append("\n ");
+	}
+	if (getPalavrasChave() != null) {
+	    builder.append("palavras chave : ");
+	    builder.append(getPalavrasChave());
+	    builder.append("\n ");
+	}
+	if (getAutor() != null) {
+	    builder.append("autor : ");
+	    builder.append(getAutor());
+	    builder.append("\n ");
+	}
+	if (getDataPublicacao() != null) {
+	    builder.append(" data publicacao : ");
+	    builder.append(this.getDataPublicacao());
+	    builder.append("\n ");
+	}	
+	
+	for(var entry : this.entrySet()) {
+	    String key = entry.getKey();
+	    if (!allTagsSet.contains(key)) {		
+		builder.append(key);
+		builder.append(" : ");
+		builder.append(entry.getValue());
+		builder.append("\n ");
+	    }
+	}
+	
+	builder.append("\n]\n");
+	return builder.toString();
     }
     
-    @JsonIgnore
-    @Transient
-    public void setDataPublicao(String dataPublicao) {
-	this.put(DATA_PUBLICAO_KEY, dataPublicao);	
-    }
-    
-    @JsonIgnore
-    @Transient
-    public String getDataPublicao() {
-	Object obj = this.get(DATA_PUBLICAO_KEY);
-	return obj != null ? obj.toString() : null;	
-    }
+   
 
 }

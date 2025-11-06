@@ -12,9 +12,12 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
+import bor.tools.simplerag.entity.enums.TipoEmbedding;
+import bor.tools.utils.RagUtils;
 
 /**
  * DTO for Chapter entity.
@@ -24,7 +27,7 @@ import bor.tools.simplerag.entity.Metadata;
  */
 
 @Data
-@NoArgsConstructor
+//@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 
@@ -74,6 +77,12 @@ public class ChapterDTO {
     private List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
 
     /**
+     * Default constructor
+     */
+    public ChapterDTO() {	
+    }
+    
+    /**
      * Constructor with title and content
      */
     public ChapterDTO(String titulo, String conteudo) {
@@ -98,8 +107,7 @@ public class ChapterDTO {
     public static ChapterDTO from(Chapter src) {
         if (src == null) {
             return null;
-        }
-        
+        }        
         ChapterDTO dto = ChapterDTO.builder()
                 .id(src.getId())
                 .documentoId(src.getDocumentoId())
@@ -113,15 +121,8 @@ public class ChapterDTO {
                 .createdAt(src.getCreatedAt())
                 .updatedAt(src.getUpdatedAt())
                 .deletedAt(src.getDeletedAt())
-                .build();
-        
-        // Convert metadata if present
-        if (src.getMetadados() != null) {
-            dto.setMetadados(src.getMetadados());
-        } else {
-	    dto.setMetadados(new MetaDoc());
-	}
-        
+                .build();        
+        dto.getMetadados().addMetadata(src.getMetadados());
         return dto;
     }
 
@@ -301,4 +302,54 @@ public class ChapterDTO {
     public void initializeMetadata() {
 	addMetadata("titulo", titulo);		
     }
+    
+    
+    /**
+     * Create chapter-level embedding DTO for this chapter
+     * @param content Text content for the embedding
+     * @param ordemCap Order of the chapter embedding
+     * @param tipoEmbedding Type of embedding
+     * 
+     * @return DocumentEmbeddingDTO
+     * 
+     * @see TipoEmbedding
+     * @see DocumentEmbeddingDTO
+     */	
+    public DocumentEmbeddingDTO createChapterLevelEmbedding(String content, Integer ordemCap, TipoEmbedding tipoEmbedding) {
+	
+	    var chunk = DocumentEmbeddingDTO.builder()
+	        .capituloId(this.id)
+	        .bibliotecaId(this.bibliotecaId)
+	        .documentoId(this.documentoId)
+	        //.metadados(meta)
+	        .trechoTexto(content)
+	        .ordemCap(ordemCap)
+	        .tipoEmbedding(tipoEmbedding)	       
+	        .build();
+	    
+	    var meta = chunk.getMetadados();
+	    meta.addMetadata(this.getMetadados());
+	    meta.addMetadata("chapter_title", this.getTitulo());
+	    meta.addMetadata("tokens",  RagUtils.countTokensFast(content));
+	    return chunk;
+    }
+    
+    /**
+     * Create chapter-level embedding DTO for this chapter, 
+     * with default TipoEmbedding.TRECHO.
+     * 
+     * 
+     * 
+     * @param content Text content for the embedding
+     * @param ordemCap Order of the chapter embedding
+     * 
+     * @return DocumentEmbeddingDTO
+     * 
+     * @see DocumentEmbeddingDTO
+     * @see TipoEmbedding#TRECHO
+     */
+    public DocumentEmbeddingDTO createChapterLevelEmbedding(String content, Integer ordemCap) {
+	return createChapterLevelEmbedding(content, ordemCap, TipoEmbedding.TRECHO);
+    }
+    
 }

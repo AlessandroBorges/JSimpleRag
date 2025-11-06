@@ -1338,7 +1338,7 @@ public class RagUtils {
 	    return 0;
 	}	
 	LLMService service = getLLMService(null);
-	return service.tokenCount(texto,"gpt-3.5");
+	return service.tokenCount(texto,"gpt-5");
     }
     
     /**
@@ -1351,7 +1351,7 @@ public class RagUtils {
 	if (texto == null || texto.isEmpty()) {
 	    return 0;
 	}	
-	return texto.length() / 4; // estimativa simples
+	return Math.round(((float)texto.length()) / 4.2f); // estimativa simples
     }
 
     /**
@@ -1521,6 +1521,7 @@ public class RagUtils {
      */
     private static OkHttpClient client;
 
+    
     /**
      * Recupera um cliente HTTP para uso seguro
      *
@@ -1530,6 +1531,7 @@ public class RagUtils {
 	if (client == null) {
 	    client = OkHttpProvider.getInstance().getOkHttpClient();
 	}
+	
 	return client;
     }
 
@@ -1540,19 +1542,22 @@ public class RagUtils {
      * @param language
      * @return
      */
-    @Deprecated
+
     public static WikiParse wikiArticleXtract(String articleTitle, String language) {
 	// Configura o cliente HTTP
 	OkHttpClient client = RagUtils.getUnsafeOkHttpClient();
 
 	// Monta a URL da API da Wikipedia para obter o conteúdo do artigo
-	String url = String.format("https://%s.wikipedia.org/w/api.php?action=parse&page=%s&format=json&prop=text",
+	String url = String.format("https://%s.m.wikipedia.org/w/api.php?action=parse&page=%s&format=json&prop=text",
 		language, articleTitle);
 
 	print(LogColor.Purple, url);
 	// Cria a requisição HTTP
 	Request request = new Request.Builder().url(url).header("User-Agent",
-		"Mozilla/5.0 (Windows NT 10; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36")
+                   "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) "
+                       + "Version/4.0 Chrome/125.000 Mobile Safari/537.36"                   
+                   )		
+//		"Mozilla/5.0 (Windows NT 10; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36")
 		.header("Accept", "text/html,application/xhtml+xml,application/xml,text/json;").build();
 
 	// Executa a requisição

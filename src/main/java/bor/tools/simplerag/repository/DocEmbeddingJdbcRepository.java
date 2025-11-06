@@ -21,6 +21,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
 
 import bor.tools.simplerag.entity.DocumentEmbedding;
@@ -90,6 +93,8 @@ public class DocEmbeddingJdbcRepository {
      * Mapeamento de biblioteca_id para dimensão do vetor de embeddings
      */
     private Map<Integer, Integer> mapBibliotecaId2VecLen = new HashMap<>();
+    
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * RowMapper para DocumentEmbedding
@@ -109,10 +114,14 @@ public class DocEmbeddingJdbcRepository {
 
         // Parse metadados JSON
         String metadataJson = rs.getString("metadados");
-        if (metadataJson != null && !metadataJson.isEmpty() && !metadataJson.equals("{}")) {
-            // TODO: Usar Jackson para parse adequado do JSON
-            // Por enquanto, criamos um mapa vazio para evitar NPE
-            doc.setMetadados(new MetaDoc());
+        if (metadataJson != null && !metadataJson.isEmpty() && !metadataJson.equals("{}")) {            
+            try {
+		@SuppressWarnings("unchecked")
+		Map<String, Object> metaMap = objectMapper.readValue(metadataJson, Map.class);
+		doc.getMetadados().putAll(metaMap);
+	    } catch (Exception e) {		
+		e.printStackTrace();
+	    } 
         }
 
         // Processa embedding vector
@@ -670,7 +679,17 @@ public class DocEmbeddingJdbcRepository {
                 }
 
                 // Metadados as JSON
-                ps.setString(8, doc.getMetadados() != null ? "{}" : null);
+                String metadadosJson = "{}";
+                if (doc.getMetadados() != null && !doc.getMetadados().isEmpty()) {
+                    try {                       
+                        metadadosJson = objectMapper.writeValueAsString(doc.getMetadados());
+                    } catch (Exception e) {
+                        // Fallback to empty JSON on serialization error
+                        metadadosJson = "{}";
+                        e.printStackTrace();
+                    }
+                }
+                ps.setString(8, metadadosJson);
 
                 return ps;
             }, keyHolder);
