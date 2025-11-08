@@ -13,7 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO for DocumentEmbedding entity.
+ * DTO for DocChunk entity.
  *
  * Contains basic embedding data without parent references.
  * Used as leaf nodes in the hierarchy for Splitters and processing.
@@ -64,7 +64,7 @@ public class DocumentEmbeddingDTO {
      * @param src - source entity
      * @return DTO instance
      */
-    public static DocumentEmbeddingDTO from(bor.tools.simplerag.entity.DocumentEmbedding src) {
+    public static DocumentEmbeddingDTO from(bor.tools.simplerag.entity.DocChunk src) {
         if (src == null) {
             return null;
         }
@@ -86,10 +86,10 @@ public class DocumentEmbeddingDTO {
 
     /**
      * Convert DTO to entity
-     * @return DocumentEmbedding entity
+     * @return DocChunk entity
      */
-    public bor.tools.simplerag.entity.DocumentEmbedding toEntity() {
-        bor.tools.simplerag.entity.DocumentEmbedding entity = new bor.tools.simplerag.entity.DocumentEmbedding();
+    public bor.tools.simplerag.entity.DocChunk toEntity() {
+        bor.tools.simplerag.entity.DocChunk entity = new bor.tools.simplerag.entity.DocChunk();
         entity.setId(this.id);
         entity.setLibraryId(this.bibliotecaId);
         entity.setDocumentoId(this.documentoId);

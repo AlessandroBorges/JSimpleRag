@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
 
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.MetaBiblioteca;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
@@ -37,10 +37,10 @@ import lombok.NonNull;
 import lombok.Setter;
 
 /**
- * Repositório JDBC para DocumentEmbedding adaptado para JSimpleRag.
+ * Repositório JDBC para DocChunk adaptado para JSimpleRag.
  *
  * Baseado na implementação de referência com adaptações para a arquitetura hierárquica
- * do JSimpleRag (Library → Documento → Chapter → DocumentEmbedding).
+ * do JSimpleRag (Library → Documento → Chapter → DocChunk).
  *
  * Campos de interesse para read/write:
  * - id
@@ -60,8 +60,7 @@ import lombok.Setter;
  * Fornece métodos CRUD básicos e avançados, incluindo pesquisa semântica,
  */
 @Repository
-@SuppressWarnings("null")
-public class DocEmbeddingJdbcRepository {
+public class DocChunkJdbcRepository {
 
     private static final String TAG_EXCLUSAO = " & !";
     private static final String TAG_HOLD = " <#-#> ";
@@ -97,10 +96,10 @@ public class DocEmbeddingJdbcRepository {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * RowMapper para DocumentEmbedding
+     * RowMapper para DocChunk
      */
-    private RowMapper<DocumentEmbedding> rowMapper = (rs, rowNum) -> {
-        DocumentEmbedding doc = DocumentEmbedding.builder()
+    private RowMapper<DocChunk> rowMapper = (rs, rowNum) -> {
+        DocChunk doc = DocChunk.builder()
             .id(rs.getInt("id"))
             .libraryId(rs.getInt("library_id"))
             .documentoId(rs.getInt("documento_id"))
@@ -142,10 +141,10 @@ public class DocEmbeddingJdbcRepository {
     };
 
     /**
-     * RowMapper para DocumentEmbedding com scores de pesquisa
+     * RowMapper para DocChunk com scores de pesquisa
      */
-    private RowMapper<DocumentEmbedding> rowMapperWithScores = (rs, rowNum) -> {
-        DocumentEmbedding doc = rowMapper.mapRow(rs, rowNum);
+    private RowMapper<DocChunk> rowMapperWithScores = (rs, rowNum) -> {
+        DocChunk doc = rowMapper.mapRow(rs, rowNum);
 
         // Adiciona scores aos metadados
         MetaDoc metadados = doc.getMetadados();
@@ -294,14 +293,14 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Retorna todos os registros da tabela doc_embedding
      */
-    public List<DocumentEmbedding> findAll() {
+    public List<DocChunk> findAll() {
         return jdbcTemplate.query("SELECT * FROM doc_embedding ORDER BY id", rowMapper);
     }
 
     /**
      * Retorna um registro da tabela doc_embedding pelo ID
      */
-    public Optional<DocumentEmbedding> findById(@NonNull Integer id)
+    public Optional<DocChunk> findById(@NonNull Integer id)
             throws DataAccessException, SQLException {
         var obj = jdbcTemplate.queryForObject("SELECT * FROM doc_embedding WHERE id = ?",
                                             rowMapper,
@@ -312,7 +311,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Busca embeddings por documento
      */
-    public List<DocumentEmbedding> findByDocumentoId(Integer documentoId)
+    public List<DocChunk> findByDocumentoId(Integer documentoId)
             throws DataAccessException, SQLException {
         return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE documento_id = ? ORDER BY order_chapter",
                                   rowMapper,
@@ -322,7 +321,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Busca embeddings por biblioteca
      */
-    public List<DocumentEmbedding> findByBibliotecaId(Integer bibliotecaId)
+    public List<DocChunk> findByBibliotecaId(Integer bibliotecaId)
             throws DataAccessException, SQLException {
         return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE library_id = ? ORDER BY documento_id, order_chapter",
                                   rowMapper,
@@ -332,7 +331,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Busca embeddings por capítulo
      */
-    public List<DocumentEmbedding> findByCapituloId(Integer capituloId)
+    public List<DocChunk> findByCapituloId(Integer capituloId)
             throws DataAccessException, SQLException {
         return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE chapter_id = ? ORDER BY order_chapter",
                                   rowMapper,
@@ -342,7 +341,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Busca embeddings por tipo
      */
-    public List<DocumentEmbedding> findByTipoEmbedding(TipoEmbedding tipoEmbedding)
+    public List<DocChunk> findByTipoEmbedding(TipoEmbedding tipoEmbedding)
             throws DataAccessException, SQLException {
         return jdbcTemplate.query("SELECT * FROM doc_embedding WHERE tipo_embedding = ? ORDER BY id",
                                   rowMapper,
@@ -354,7 +353,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Realiza pesquisa híbrida (semântica + textual) com filtro por bibliotecas
      */
-    public List<DocumentEmbedding> pesquisaHibrida(float[] embedding,
+    public List<DocChunk> pesquisaHibrida(float[] embedding,
                                              String query,
                                              Integer[] bibliotecaIds,
                                              Integer k,
@@ -425,7 +424,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Pesquisa semântica em bibliotecas específicas
      */
-    public List<DocumentEmbedding> pesquisaSemantica(@NonNull float[] vec,
+    public List<DocChunk> pesquisaSemantica(@NonNull float[] vec,
                                                @NonNull Integer[] bibliotecaIds,
                                                Integer k) {
         if (k == null) 
@@ -455,7 +454,7 @@ public class DocEmbeddingJdbcRepository {
     /**
      * Pesquisa textual em bibliotecas específicas
      */
-    public List<DocumentEmbedding> pesquisaTextual(@NonNull String queryString,
+    public List<DocChunk> pesquisaTextual(@NonNull String queryString,
                                             @NonNull Integer[] bibliotecaIds,
                                             Integer k) {
         if (k == null) k = k_pesquisa;
@@ -549,9 +548,9 @@ public class DocEmbeddingJdbcRepository {
     // ======== MÉTODOS CRUD AVANÇADOS ========
 
     /**
-     * Salva um DocumentEmbedding
+     * Salva um DocChunk
      */
-    public Integer save(@NonNull DocumentEmbedding doc) throws DataAccessException, SQLException {
+    public Integer save(@NonNull DocChunk doc) throws DataAccessException, SQLException {
         doOnce();
 
         if (doc.getId() != null) {
@@ -598,9 +597,9 @@ public class DocEmbeddingJdbcRepository {
     }
 
     /**
-     * Atualiza um DocumentEmbedding
+     * Atualiza um DocChunk
      */
-    public int update(DocumentEmbedding doc) throws DataAccessException, SQLException {
+    public int update(DocChunk doc) throws DataAccessException, SQLException {
         if (doc.getId() == null) {
             return save(doc);
         }
@@ -642,7 +641,7 @@ public class DocEmbeddingJdbcRepository {
      * @throws SQLException se houver erro SQL
      * @since 0.0.3
      */
-    public List<Integer> saveAll(@NonNull List<DocumentEmbedding> embeddings)
+    public List<Integer> saveAll(@NonNull List<DocChunk> embeddings)
             throws DataAccessException, SQLException {
         if (embeddings == null || embeddings.isEmpty()) {
             return List.of();
@@ -659,7 +658,7 @@ public class DocEmbeddingJdbcRepository {
 
         List<Integer> generatedIds = new java.util.ArrayList<>();
 
-        for (DocumentEmbedding doc : embeddings) {
+        for (DocChunk doc : embeddings) {
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             jdbcTemplate.update(connection -> {

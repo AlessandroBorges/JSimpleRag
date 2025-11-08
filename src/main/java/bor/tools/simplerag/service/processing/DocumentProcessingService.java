@@ -17,12 +17,12 @@ import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.repository.ChapterRepository;
-import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
+import bor.tools.simplerag.repository.DocChunkJdbcRepository;
 import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.context.LLMContext;
@@ -77,7 +77,7 @@ public class DocumentProcessingService {
     private final DocumentRouter documentRouter;
     private final SplitterFactory splitterFactory;
     private final ChapterRepository chapterRepository;
-    private final DocEmbeddingJdbcRepository embeddingRepository;
+    private final DocChunkJdbcRepository embeddingRepository;
     private final LLMServiceManager llmServiceManager;
  // private final LibraryService libraryService;
     private final QAEmbeddingStrategy qaEmbeddingStrategy;
@@ -161,9 +161,9 @@ public class DocumentProcessingService {
             // ETAPA 2.3: Calculate embeddings and update vectors
             log.debug("Calculating embeddings in batches...");
             int processed = calculateAndUpdateEmbeddings(
-                    splitResult.getEmbeddings(),
-                    embeddingContext,
-                    llmContext);
+                                        splitResult.getEmbeddings(),
+                                        embeddingContext,
+                                        llmContext);
 
             log.info("Embeddings processed: {}/{} successful",
                     processed, splitResult.getEmbeddingsCount());
@@ -222,7 +222,7 @@ public class DocumentProcessingService {
             LLMContext llmContext) throws Exception {
 
         // Detect content type
-        TipoConteudo tipoConteudo = documentRouter.detectContentType(documento.getConteudoMarkdown());
+        TipoConteudo tipoConteudo = documentRouter.detectContentType(documento.getText());
         log.debug("Detected content type: {}", tipoConteudo);
 
         // Create appropriate splitter
@@ -237,7 +237,7 @@ public class DocumentProcessingService {
 
         // Convert to entities and persist
         List<Chapter> chapters = new ArrayList<>();
-        List<DocumentEmbedding> allEmbeddings = new ArrayList<>();
+        List<DocChunk> allEmbeddings = new ArrayList<>();
         List<Integer> embeddingsPerChapter = new ArrayList<>(); // Track count per chapter
                 
         for (ChapterDTO chapterDTO : chapterDTOs) {
@@ -249,7 +249,7 @@ public class DocumentProcessingService {
             }
 
             // Create embeddings for this chapter (will be persisted after chapter)
-            List<DocumentEmbedding> chapterEmbeddings = createChapterEmbeddings(
+            List<DocChunk> chapterEmbeddings = createChapterEmbeddings(
                                                                         chapter,
                                                                         chapterDTO,
                                                                         documento,
@@ -276,7 +276,7 @@ public class DocumentProcessingService {
             // Assign chapter ID to the exact number of embeddings for this chapter
             for (int j = 0; j < embCount; j++) {
                 if (embIndex < allEmbeddings.size()) {
-                    DocumentEmbedding emb = allEmbeddings.get(embIndex);
+                    DocChunk emb = allEmbeddings.get(embIndex);
                     emb.setChapterId(chapter.getId());
                     embIndex++;
                 } else {
@@ -314,14 +314,14 @@ public class DocumentProcessingService {
      * @param llmContext LLM context for token counting and summarization
      * @return list of embeddings (with NULL vectors)
      */
-    private List<DocumentEmbedding> createChapterEmbeddings(
+    private List<DocChunk> createChapterEmbeddings(
             Chapter chapter,
             ChapterDTO chapterDTO,
             Documento documento,
             LibraryDTO library,
             LLMContext llmContext) throws Exception {
 
-        List<DocumentEmbedding> embeddings = new ArrayList<>();
+        List<DocChunk> embeddings = new ArrayList<>();
 
         // Count tokens in chapter
         int chapterTokens = llmContext.tokenCount(chapterDTO.getConteudo(), TOKEN_MODEL);
@@ -330,7 +330,7 @@ public class DocumentProcessingService {
         // CASE 1: Small chapter (≤ 512 tokens) - Create single TRECHO
         if (chapterTokens <= IDEAL_CHUNK_SIZE_TOKENS) {
             log.debug("Chapter is small (≤{} tokens), creating single TRECHO", IDEAL_CHUNK_SIZE_TOKENS);
-            DocumentEmbedding trecho = criarTrechoUnico(
+            DocChunk trecho = criarTrechoUnico(
                     chapterDTO,
                     documento,
                     1 // orderChapter
@@ -346,7 +346,7 @@ public class DocumentProcessingService {
         if (chapterTokens > SUMMARY_THRESHOLD_TOKENS) {
             log.debug("Chapter exceeds summary threshold ({}), generating RESUMO", SUMMARY_THRESHOLD_TOKENS);
             try {
-                DocumentEmbedding resumo = criarResumo(
+                DocChunk resumo = criarResumo(
                         chapterDTO,
                         documento,
                         llmContext
@@ -371,7 +371,7 @@ public class DocumentProcessingService {
         // Step 3: Convert DTOs to entities
         int orderChapter = 1;
         for (DocumentEmbeddingDTO chunkDTO : chunkDTOs) {
-            DocumentEmbedding trecho = DocumentEmbedding.builder()
+            DocChunk trecho = DocChunk.builder()
                     .libraryId(documento.getBibliotecaId())
                     .documentoId(documento.getId())
                     .chapterId(null) // Will be set after chapter persistence
@@ -410,7 +410,7 @@ public class DocumentProcessingService {
      * @return RESUMO embedding with NULL vector
      * @throws Exception if summary generation fails
      */
-    private DocumentEmbedding criarResumo(
+    private DocChunk criarResumo(
             ChapterDTO chapterDTO,
             Documento documento,
             LLMContext llmContext) throws Exception {
@@ -437,7 +437,7 @@ public class DocumentProcessingService {
         log.debug("Generated summary with {} characters", summary.length());
 
         // Create RESUMO embedding
-        DocumentEmbedding resumo = DocumentEmbedding.builder()
+        DocChunk resumo = DocChunk.builder()
                 .libraryId(documento.getBibliotecaId())
                 .documentoId(documento.getId())
                 .chapterId(null) // Will be set after chapter persistence
@@ -467,12 +467,12 @@ public class DocumentProcessingService {
      * @param orderChapter the order of this chunk within the chapter
      * @return TRECHO embedding with NULL vector
      */
-    private DocumentEmbedding criarTrechoUnico(
+    private DocChunk criarTrechoUnico(
             ChapterDTO chapterDTO,
             Documento documento,
             int orderChapter) {
 
-        DocumentEmbedding trecho = DocumentEmbedding.builder()
+        DocChunk trecho = DocChunk.builder()
                 .libraryId(documento.getBibliotecaId())
                 .documentoId(documento.getId())
                 .chapterId(null) // Will be set after chapter persistence
@@ -508,7 +508,7 @@ public class DocumentProcessingService {
      * @return number of successfully processed embeddings
      */
     private int calculateAndUpdateEmbeddings(
-            List<DocumentEmbedding> embeddings,
+            List<DocChunk> embeddings,
             EmbeddingContext embeddingContext,
             LLMContext llmContext) {
 
@@ -519,13 +519,13 @@ public class DocumentProcessingService {
                 embeddings.size(), contextLength);
 
         // Group into batches
-        List<List<DocumentEmbedding>> batches = createBatches(embeddings, BATCH_SIZE);
+        List<List<DocChunk>> batches = createBatches(embeddings, BATCH_SIZE);
 
         log.debug("Created {} batches (max {} texts per batch)",
                 batches.size(), BATCH_SIZE);
 
         for (int batchNum = 0; batchNum < batches.size(); batchNum++) {
-            List<DocumentEmbedding> batch = batches.get(batchNum);
+            List<DocChunk> batch = batches.get(batchNum);
 
             try {
                 log.debug("Processing batch {}/{} with {} texts",
@@ -590,7 +590,7 @@ public class DocumentProcessingService {
      * @return processed text (original, summarized, or truncated)
      */
     private String handleOversizedText(
-            DocumentEmbedding embedding,
+            DocChunk embedding,
             int contextLength,
             LLMContext llmContext) {
 
@@ -661,11 +661,11 @@ public class DocumentProcessingService {
      * @param batchSize maximum size per batch
      * @return list of batches
      */
-    private List<List<DocumentEmbedding>> createBatches(
-            List<DocumentEmbedding> embeddings,
+    private List<List<DocChunk>> createBatches(
+            List<DocChunk> embeddings,
             int batchSize) {
 
-        List<List<DocumentEmbedding>> batches = new ArrayList<>();
+        List<List<DocChunk>> batches = new ArrayList<>();
 
         for (int i = 0; i < embeddings.size(); i += batchSize) {
             int end = Math.min(i + batchSize, embeddings.size());
@@ -875,7 +875,7 @@ public class DocumentProcessingService {
 
                 // Persist Q&A embeddings
                 for (DocumentEmbeddingDTO embDTO : qaEmbeddings) {
-                    DocumentEmbedding embedding = toEmbeddingEntity(embDTO, documento, chapter);
+                    DocChunk embedding = toEmbeddingEntity(embDTO, documento, chapter);
                     embeddingRepository.save(embedding);
                     qaCount++;
                 }
@@ -906,7 +906,7 @@ public class DocumentProcessingService {
 
                 // Persist summary embeddings
                 for (DocumentEmbeddingDTO embDTO : summaryEmbeddings) {
-                    DocumentEmbedding embedding = toEmbeddingEntity(embDTO, documento, chapter);
+                    DocChunk embedding = toEmbeddingEntity(embDTO, documento, chapter);
                     embeddingRepository.save(embedding);
                     summaryCount++;
                 }
@@ -923,10 +923,10 @@ public class DocumentProcessingService {
     }
 
     /**
-     * Converts DocumentEmbeddingDTO to DocumentEmbedding entity.
+     * Converts DocumentEmbeddingDTO to DocChunk entity.
      */
-    private DocumentEmbedding toEmbeddingEntity(DocumentEmbeddingDTO dto, Documento documento, Chapter chapter) {
-        return DocumentEmbedding.builder()
+    private DocChunk toEmbeddingEntity(DocumentEmbeddingDTO dto, Documento documento, Chapter chapter) {
+        return DocChunk.builder()
                 .libraryId(documento.getBibliotecaId())
                 .documentoId(documento.getId())
                 .chapterId(chapter.getId())
@@ -959,7 +959,7 @@ public class DocumentProcessingService {
     @Builder
     private static class SplitResult {
         private List<Chapter> chapters;
-        private List<DocumentEmbedding> embeddings;
+        private List<DocChunk> embeddings;
 
         public int getChaptersCount() {
             return chapters != null ? chapters.size() : 0;

@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 
@@ -24,7 +24,7 @@ public class SplitterFactory {
     private static final Logger logger = LoggerFactory.getLogger(SplitterFactory.class);
 
     private final DocumentRouter documentRouter;
-    private final LLMService llmService;
+    private final LLMProvider llmService;
     private final SplitterConfig splitterConfig;
 
     /**
@@ -36,7 +36,7 @@ public class SplitterFactory {
      * Construtor com injeção de dependências
      */
     public SplitterFactory(DocumentRouter documentRouter,
-                          LLMService llmService,
+                          LLMProvider llmService,
                           SplitterConfig splitterConfig) {
         this.documentRouter = documentRouter;
         this.llmService = llmService;
@@ -150,7 +150,7 @@ public class SplitterFactory {
             return;
         }
 
-        // Configurar LLMService se não configurado
+        // Configurar LLMProvider se não configurado
         if (splitter.getLlmServices() == null && llmService != null) {
             splitter.setLlmServices(llmService);
         }
@@ -181,12 +181,12 @@ public class SplitterFactory {
      */
     private <T extends AbstractSplitter> T createSplitterInstance(Class<T> splitterClass) throws Exception {
         try {
-            // Tentar construtor com LLMService primeiro
+            // Tentar construtor com LLMProvider primeiro
             if (llmService != null) {
                 try {
-                    return splitterClass.getConstructor(LLMService.class).newInstance(llmService);
+                    return splitterClass.getConstructor(LLMProvider.class).newInstance(llmService);
                 } catch (NoSuchMethodException e) {
-                    logger.debug("No LLMService constructor found for {}, using default",
+                    logger.debug("No LLMProvider constructor found for {}, using default",
                                splitterClass.getSimpleName());
                 }
             }
@@ -194,7 +194,7 @@ public class SplitterFactory {
             // Usar construtor padrão
             T splitter = splitterClass.getDeclaredConstructor().newInstance();
 
-            // Configurar LLMService se disponível
+            // Configurar LLMProvider se disponível
             if (llmService != null) {
                 splitter.setLlmServices(llmService);
             }

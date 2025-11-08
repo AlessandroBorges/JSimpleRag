@@ -47,13 +47,13 @@ public class ChapterDTO {
 
     /**
      * In Chapter context, 1 token = 1 char (utf8).
-     * For Embedding Tokens, consider using LLMService instead, 
+     * For Embedding Tokens, consider using LLMProvider instead, 
      */
     private Integer tokenInicio;
 
     /**
      * In Chapter context, 1 token = 1 char (utf8).
-     * For Embedding Tokens, consider using LLMService instead, 
+     * For Embedding Tokens, consider using LLMProvider instead, 
      */
     private Integer tokenFim;
 
@@ -150,7 +150,7 @@ public class ChapterDTO {
     /**
      * Calculate tokens total if not set.<br>
      * In Chapter context, 1 token = 1 char (utf8).
-     * For Embedding Tokens, consider using LLMService instead. <br>
+     * For Embedding Tokens, consider using LLMProvider instead. <br>
      * 
      * In this case, "tokensTotal" = "tokenFim" - "tokenInicio"'
      */

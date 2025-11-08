@@ -1,6 +1,6 @@
 package bor.tools.simplerag.dto;
 
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -79,9 +79,9 @@ public class SearchResultDTO {
     private Map<String, Object> metadados;
 
     /**
-     * Create SearchResultDTO from DocumentEmbedding
+     * Create SearchResultDTO from DocChunk
      */
-    public static SearchResultDTO from(DocumentEmbedding embedding) {
+    public static SearchResultDTO from(DocChunk embedding) {
         if (embedding == null) {
             return null;
         }

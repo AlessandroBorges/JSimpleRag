@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
@@ -40,7 +40,7 @@ public class SplitterNorma  extends AbstractSplitter{
 	 */
 	protected NormativosLoader loader;
 
-	protected LLMService provedor;
+	protected LLMProvider provedor;
 
 	
 	/**
@@ -49,7 +49,7 @@ public class SplitterNorma  extends AbstractSplitter{
 	 * @param biblioteca - Library para gestão de documentos
 	 *
 	 */
-	public SplitterNorma(LLMService provedor)  {
+	public SplitterNorma(LLMProvider provedor)  {
 		super(	provedor	);
 		
 		this.loader = new NormativosLoader();

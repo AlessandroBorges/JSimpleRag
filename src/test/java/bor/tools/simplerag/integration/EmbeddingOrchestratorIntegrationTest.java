@@ -75,7 +75,7 @@ class EmbeddingOrchestratorIntegrationTest {
         testDocument.setBibliotecaId(testLibrary.getId());
 
         // Create realistic test content
-        testDocument.setConteudoMarkdown(createTestMarkdownContent());
+        testDocument.setText(createTestMarkdownContent());
 
         MetaDoc docMeta = new MetaDoc();
         docMeta.setAutor("Test Author");
@@ -287,7 +287,7 @@ class EmbeddingOrchestratorIntegrationTest {
         DocumentoWithAssociationDTO invalidDoc = new DocumentoWithAssociationDTO();
         invalidDoc.setId(999);
         invalidDoc.setTitulo("Invalid Document");
-        invalidDoc.setConteudoMarkdown(null); // Invalid: null content
+        invalidDoc.setText(null); // Invalid: null content
 
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)

@@ -81,5 +81,21 @@ public class Documento extends Updatable {
 	}
 	return metadados;
     }
+    
+    /**
+     * Set the markdown text content
+     * @param text
+     */
+    public void setText(String text) {
+	this.conteudoMarkdown = text;
+    }
+    
+    /**
+     * Get the markdown text content
+     * @return
+     */
+    public String getText() {
+	return conteudoMarkdown;
+    }
 
 }

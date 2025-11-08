@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import bor.tools.simplellm.CompletionResponse;
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.Reasoning_Effort;
@@ -155,8 +155,8 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         String modelName = defaultCompletionModel;
         log.debug("Using completion model for Q&A generation: {}", modelName);
 
-        // Get appropriate LLMService from pool
-        LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
+        // Get appropriate LLMProvider from pool
+        LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
         
         
         if (llmService == null) {
@@ -179,7 +179,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	}
         
 
-        log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
+        log.debug("Using LLMProvider from provider: {}", llmService.getServiceProvider());
 
         // Truncate content if too long
         String contentForQA = content;
@@ -238,7 +238,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	if (modelName == null || modelName.trim().isEmpty()) {
 	    return false;
 	}
-	LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
+	LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
 	return llmService != null;
     }
     
@@ -268,8 +268,8 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	    );
 	}
 
-        // Get appropriate LLMService from pool
-        LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
+        // Get appropriate LLMProvider from pool
+        LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
 
         if (llmService == null) {
             throw new IllegalStateException(
@@ -278,7 +278,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
             );
         }
 
-        log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
+        log.debug("Using LLMProvider from provider: {}", llmService.getServiceProvider());
 
         // Prepare parameters
         MapParam params = new MapParam();

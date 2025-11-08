@@ -33,11 +33,11 @@ public class VectorUtil {
             return vector;
         }
         
-        norm = Math.sqrt(norm);
+        float normF = (float) Math.sqrt(norm);
         // Normalize each component
         float[] normalized = new float[vector.length];
         for (int i = 0; i < vector.length; i++) {
-            normalized[i] = (float) (vector[i] / norm);
+            normalized[i] = (vector[i] / normF);
         }
 
         return normalized;

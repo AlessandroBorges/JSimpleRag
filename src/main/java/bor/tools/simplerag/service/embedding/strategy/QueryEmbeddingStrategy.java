@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
@@ -57,8 +57,8 @@ public class QueryEmbeddingStrategy implements EmbeddingGenerationStrategy {
             String modelName = request.getEmbeddingModelName(defaultEmbeddingModel);
             log.debug("Using embedding model: {}", modelName);
 
-            // Get appropriate LLMService from pool
-            LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
+            // Get appropriate LLMProvider from pool
+            LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
 
             if (llmService == null) {
                 throw new IllegalStateException(
@@ -67,7 +67,7 @@ public class QueryEmbeddingStrategy implements EmbeddingGenerationStrategy {
                 );
             }
 
-            log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
+            log.debug("Using LLMProvider from provider: {}", llmService.getServiceProvider());
 
             // Prepare parameters
             MapParam params = new MapParam();
@@ -119,8 +119,8 @@ public class QueryEmbeddingStrategy implements EmbeddingGenerationStrategy {
      */
     public float[] generateQueryVector(String queryText, String modelName, String libraryContext) {
         try {
-            // Get appropriate LLMService from pool
-            LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
+            // Get appropriate LLMProvider from pool
+            LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);
 
             if (llmService == null) {
                 throw new IllegalStateException(
@@ -129,7 +129,7 @@ public class QueryEmbeddingStrategy implements EmbeddingGenerationStrategy {
                 );
             }
 
-            log.debug("Using LLMService from provider: {} for model: {}",
+            log.debug("Using LLMProvider from provider: {} for model: {}",
                      llmService.getServiceProvider(), modelName);
 
             // Prepare parameters

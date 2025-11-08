@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import bor.tools.simplellm.CompletionResponse;
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.service.llm.LLMServiceManager.LLMServiceStats;
 
@@ -30,8 +30,8 @@ import bor.tools.simplerag.service.llm.LLMServiceManager.LLMServiceStats;
  */
 class LLMServiceManagerTest {
 
-    private LLMService primaryService;
-    private LLMService secondaryService;
+    private LLMProvider primaryService;
+    private LLMProvider secondaryService;
     private LLMServiceManager manager;
 
     private static final float[] TEST_VECTOR = new float[] { 0.1f, 0.2f, 0.3f };
@@ -40,8 +40,8 @@ class LLMServiceManagerTest {
     @BeforeEach
     void setUp() throws LLMException {
 	// Create mocks
-	primaryService = mock(LLMService.class);
-	secondaryService = mock(LLMService.class);
+	primaryService = mock(LLMProvider.class);
+	secondaryService = mock(LLMProvider.class);
 
 	// Mock Response objects for completion calls
 	CompletionResponse primaryResponse = mock(CompletionResponse.class);
@@ -73,7 +73,7 @@ class LLMServiceManagerTest {
     @Test
     void testPrimaryOnlyStrategy_UsesOnlyPrimary() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.PRIMARY_ONLY, 3, 30);
 
 	// When
@@ -95,7 +95,7 @@ class LLMServiceManagerTest {
     @Test
     void testFailoverStrategy_PrimarySuccess() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.FAILOVER, 3, 30);
 
 	// When
@@ -116,7 +116,7 @@ class LLMServiceManagerTest {
 	when(primaryService.embeddings(any(Embeddings_Op.class), anyString(), any()))
 		.thenThrow(new RuntimeException("Primary failed"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.FAILOVER, 3, 30);
 
 	// When
@@ -140,7 +140,7 @@ class LLMServiceManagerTest {
 	when(secondaryService.embeddings(any(Embeddings_Op.class), anyString(), any()))
 		.thenThrow(new RuntimeException("Secondary failed"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.FAILOVER, 2, 30);
 
 	// When/Then
@@ -154,7 +154,7 @@ class LLMServiceManagerTest {
     @Test
     void testRoundRobinStrategy_AlternatesProviders() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.ROUND_ROBIN, 3, 30);
 
 	// When - Make 4 requests
@@ -178,7 +178,7 @@ class LLMServiceManagerTest {
     @Test
     void testSpecializedStrategy_EmbeddingUsesPrimary() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.SPECIALIZED, 3, 30);
 
 	// When
@@ -192,7 +192,7 @@ class LLMServiceManagerTest {
     @Test
     void testSpecializedStrategy_CompletionUsesSecondary() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.SPECIALIZED, 3, 30);
 
 	String system = "You are a helpfull assistant";
@@ -212,7 +212,7 @@ class LLMServiceManagerTest {
     @Test
     void testDualVerificationStrategy_CallsBothProviders() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.DUAL_VERIFICATION, 3, 30);
 
 	// When
@@ -233,7 +233,7 @@ class LLMServiceManagerTest {
     @Test
     void testSmartRoutingStrategy_SimpleQueryUsesPrimary() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.SMART_ROUTING, 3, 30);
 
 	// When - Simple short query
@@ -247,7 +247,7 @@ class LLMServiceManagerTest {
     @Test
     void testSmartRoutingStrategy_ComplexQueryUsesSecondary() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.SMART_ROUTING, 3, 30);
 
 	// When - Complex query with keyword
@@ -263,7 +263,7 @@ class LLMServiceManagerTest {
     @Test
     void testSmartRoutingStrategy_LongQueryUsesSecondary() throws LLMException {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.SMART_ROUTING, 3, 30);
 
 	// When - Very long query (> 1000 chars)
@@ -282,7 +282,7 @@ class LLMServiceManagerTest {
     @Test
     void testStatistics_Tracking() {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.ROUND_ROBIN, 3, 30);
 
 	// When
@@ -300,7 +300,7 @@ class LLMServiceManagerTest {
     @Test
     void testStatistics_Reset() {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.PRIMARY_ONLY, 3, 30);
 
 	manager.embeddings(Embeddings_Op.QUERY, "test");
@@ -318,7 +318,7 @@ class LLMServiceManagerTest {
     @Test
     void testManagerConfiguration_SingleProvider() {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.FAILOVER, 3, 30);
 
 	// Then
@@ -341,7 +341,7 @@ class LLMServiceManagerTest {
     @Test
     void testManagerConfiguration_DefaultStrategy() {
 	// Given - null strategy
-	List<LLMService> services = Arrays.asList(primaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService);
 	manager = new LLMServiceManager(services, null, 3, 30);
 
 	// Then - Should default to FAILOVER
@@ -353,7 +353,7 @@ class LLMServiceManagerTest {
     @Test
     void testHealthCheck_ProviderHealthy() {
 	// Given
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.FAILOVER, 3, 30);
 
 	// When/Then
@@ -369,7 +369,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral", "qwen"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When - Request with model from primary
@@ -390,7 +390,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When - Request with model from secondary
@@ -411,7 +411,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When - Request with unknown model
@@ -430,7 +430,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2-7b", "mistral-7b"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-4-turbo"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When - Request with partial model name
@@ -449,7 +449,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("Llama2", "Mistral"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("GPT-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When - Request with lowercase model name
@@ -468,7 +468,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	String system = "You are a helpful assistant";
@@ -491,7 +491,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-3.5-turbo", "gpt-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When
@@ -512,7 +512,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2", "mistral"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When
@@ -533,7 +533,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("qwen3"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("PHI-3.5", "PHI-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When/Then
@@ -548,7 +548,7 @@ class LLMServiceManagerTest {
 	when(primaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("llama2"));
 	when(secondaryService.getRegisteredModelNames()).thenReturn(Arrays.asList("gpt-4"));
 
-	List<LLMService> services = Arrays.asList(primaryService, secondaryService);
+	List<LLMProvider> services = Arrays.asList(primaryService, secondaryService);
 	manager = new LLMServiceManager(services, LLMServiceStrategy.MODEL_BASED, 3, 30);
 
 	// When/Then

@@ -1,0 +1,159 @@
+{
+  "properties": [
+    {
+      "name": "llmservice.provider.name",
+      "type": "java.lang.String",
+      "description": "Primary LLM provider name"
+    },
+    {
+      "name": "llmservice.provider.use_defaults",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use default settings for primary provider"
+    },
+    {
+      "name": "llmservice.provider.llm.models",
+      "type": "java.lang.String",
+      "description": "Primary provider LLM models"
+    },
+    {
+      "name": "llmservice.provider.embedding.model",
+      "type": "java.lang.String",
+      "description": "Primary provider embedding model"
+    },
+    {
+      "name": "llmservice.provider.embedding.dimension",
+      "type": "java.lang.Integer",
+      "description": "Primary provider embedding dimension"
+    },
+    {
+      "name": "llmservice.provider.embedding.embeddingContextLength",
+      "type": "java.lang.Integer",
+      "description": "Primary provider embedding context length"
+    },
+    {
+      "name": "llmservice.provider.api.url",
+      "type": "java.lang.String",
+      "description": "Primary provider API URL"
+    },
+    {
+      "name": "llmservice.provider.api.key",
+      "type": "java.lang.String",
+      "description": "Primary provider API key"
+    },
+    {
+      "name": "llmservice.provider2.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether secondary provider is enabled"
+    },
+    {
+      "name": "llmservice.provider2.name",
+      "type": "java.lang.String",
+      "description": "Secondary LLM provider name"
+    },
+    {
+      "name": "llmservice.provider2.use_defaults",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use default settings for secondary provider"
+    },
+    {
+      "name": "llmservice.provider2.llm.models",
+      "type": "java.lang.String",
+      "description": "Secondary provider LLM models"
+    },
+    {
+      "name": "llmservice.provider2.embedding.model",
+      "type": "java.lang.String",
+      "description": "Secondary provider embedding model"
+    },
+    {
+      "name": "llmservice.provider2.embedding.dimension",
+      "type": "java.lang.Integer",
+      "description": "Secondary provider embedding dimension"
+    },
+    {
+      "name": "llmservice.provider2.embedding.embeddingContextLength",
+      "type": "java.lang.Integer",
+      "description": "Secondary provider embedding context length"
+    },
+    {
+      "name": "llmservice.provider2.api.url",
+      "type": "java.lang.String",
+      "description": "Secondary provider API URL"
+    },
+    {
+      "name": "llmservice.provider2.api.key",
+      "type": "java.lang.String",
+      "description": "Secondary provider API key"
+    },
+    {
+      "name": "llmservice.strategy",
+      "type": "java.lang.String",
+      "description": "LLM service strategy (PRIMARY_ONLY, FAILOVER, ROUND_ROBIN, etc.)"
+    },
+    {
+      "name": "llmservice.failover.max-retries",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of retries for failover strategy"
+    },
+    {
+      "name": "llmservice.failover.timeout-seconds",
+      "type": "java.lang.Integer",
+      "description": "Timeout in seconds for failover strategy"
+    },
+    {
+      "name": "rag.processamento.chunk-size-maximo",
+      "type": "java.lang.Integer",
+      "description": "Maximum chunk size for document processing"
+    },
+    {
+      "name": "rag.processamento.capitulo-size-padrao",
+      "type": "java.lang.Integer",
+      "description": "Default chapter size for document processing"
+    },
+    {
+      "name": "rag.processamento.async.core-pool-size",
+      "type": "java.lang.Integer",
+      "description": "Core pool size for asynchronous processing"
+    },
+    {
+      "name": "rag.processamento.async.max-pool-size",
+      "type": "java.lang.Integer",
+      "description": "Maximum pool size for asynchronous processing"
+    },
+    {
+      "name": "rag.processamento.async.queue-capacity",
+      "type": "java.lang.Integer",
+      "description": "Queue capacity for asynchronous processing"
+    },
+    {
+      "name": "rag.processamento.async.schedule.fixed-delay",
+      "type": "java.lang.Long",
+      "description": "Fixed delay for scheduled asynchronous tasks"
+    },
+    {
+      "name": "rag.embedding.batch-size",
+      "type": "java.lang.Integer",
+      "description": "Batch size for embedding generation"
+    },
+    {
+      "name": "rag.embedding.timeout-seconds",
+      "type": "java.lang.Integer",
+      "description": "Timeout in seconds for embedding generation"
+    },
+    {
+      "name": "rag.pesquisa.default.peso-semantico",
+      "type": "java.lang.Double",
+      "description": "Default semantic weight for search"
+    },
+    {
+      "name": "rag.pesquisa.default.peso-textual",
+      "type": "java.lang.Double",
+      "description": "Default textual weight for search"
+    },
+    {
+      "name": "rag.pesquisa.default.limite",
+      "type": "java.lang.Integer",
+      "description": "Default limit for search results"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import bor.tools.simplellm.LLMConfig;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.LLMServiceFactory;
 import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplellm.Model;
@@ -136,21 +136,21 @@ public class LLMConfiguration {
     /**
      * Map of active LLM services by provider key.
      */
-    private final Map<String, LLMService> activeLLMServices = new HashMap<>();
+    private final Map<String, LLMProvider> activeLLMServices = new HashMap<>();
 
     // ============ Bean Creation Methods ============
 
     /**
-     * Creates the primary LLMService bean.
+     * Creates the primary LLMProvider bean.
      * This is the main LLM provider marked as @Primary for default injection.
      *
-     * @return Configured primary LLMService instance
+     * @return Configured primary LLMProvider instance
      * @throws IllegalStateException if provider configuration is invalid
      */
     @Bean(name = "primaryLLMService")
     @Primary
-    public LLMService primaryLLMService() {
-        log.info("Initializing Primary LLMService");
+    LLMProvider primaryLLMService() {
+        log.info("Initializing Primary LLMProvider");
         log.info("  Provider: {}", primaryProviderName);
         log.info("  Use Defaults: {}", primaryUseDefaults);
         log.info("  Models: {}", primaryLlmModels);
@@ -158,7 +158,7 @@ public class LLMConfiguration {
         log.info("  Embedding Dimension: {}", primaryEmbeddingDimension);
 
         try {
-            LLMService service = createLLMService(
+            LLMProvider service = createLLMService(
                 "primary",
                 primaryProviderName,
                 primaryUseDefaults,
@@ -169,26 +169,26 @@ public class LLMConfiguration {
                 primaryApiKey
             );
 
-            log.info("Primary LLMService initialized successfully");
+            log.info("Primary LLMProvider initialized successfully");
             return service;
 
         } catch (Exception e) {
-            log.error("Failed to initialize Primary LLMService: {}", e.getMessage(), e);
-            throw new IllegalStateException("Could not initialize Primary LLMService", e);
+            log.error("Failed to initialize Primary LLMProvider: {}", e.getMessage(), e);
+            throw new IllegalStateException("Could not initialize Primary LLMProvider", e);
         }
     }
 
     /**
-     * Creates the secondary LLMService bean if enabled.
+     * Creates the secondary LLMProvider bean if enabled.
      * This serves as backup/complement to the primary provider.
      *
-     * @return Configured secondary LLMService instance
+     * @return Configured secondary LLMProvider instance
      * @throws IllegalStateException if provider configuration is invalid
      */
     @Bean(name = "secondaryLLMService")
     @ConditionalOnProperty(name = "llmservice.provider2.enabled", havingValue = "true")
-    public LLMService secondaryLLMService() {
-        log.info("Initializing Secondary LLMService");
+    public LLMProvider secondaryLLMService() {
+        log.info("Initializing Secondary LLMProvider");
         log.info("  Provider: {}", secondaryProviderName);
         log.info("  Models: {}", secondaryLlmModels);
         log.info("  Embedding Model: {}", secondaryEmbeddingModel);
@@ -201,7 +201,7 @@ public class LLMConfiguration {
         }
 
         try {
-            LLMService service = createLLMService(
+            LLMProvider service = createLLMService(
                 "secondary",
                 secondaryProviderName,
                 false, // Secondary never uses defaults
@@ -212,12 +212,12 @@ public class LLMConfiguration {
                 secondaryApiKey
             );
 
-            log.info("Secondary LLMService initialized successfully");
+            log.info("Secondary LLMProvider initialized successfully");
             return service;
 
         } catch (Exception e) {
-            log.error("Failed to initialize Secondary LLMService: {}", e.getMessage(), e);
-            throw new IllegalStateException("Could not initialize Secondary LLMService", e);
+            log.error("Failed to initialize Secondary LLMProvider: {}", e.getMessage(), e);
+            throw new IllegalStateException("Could not initialize Secondary LLMProvider", e);
         }
     }
 
@@ -226,13 +226,13 @@ public class LLMConfiguration {
      * This is the RECOMMENDED bean to inject in services that need LLM functionality.
      *
      * @param primaryLLMService Primary LLM service (required)
-     * @param allLLMServices All available LLM services (Spring injects all LLMService beans)
+     * @param allLLMServices All available LLM services (Spring injects all LLMProvider beans)
      * @return Configured LLMServiceManager instance
      */
     @Bean
     public LLMServiceManager llmServiceManager(
-            LLMService primaryLLMService,
-            List<LLMService> allLLMServices) {
+            LLMProvider primaryLLMService,
+            List<LLMProvider> allLLMServices) {
 
         log.info("Initializing LLMServiceManager");
         log.info("  Strategy: {}", strategyName);
@@ -243,11 +243,11 @@ public class LLMConfiguration {
         LLMServiceStrategy strategy = parseStrategy(strategyName);
 
         // Build list of valid services (primary + any secondaries)
-        List<LLMService> validServices = new ArrayList<>();
+        List<LLMProvider> validServices = new ArrayList<>();
         validServices.add(primaryLLMService);
 
         // Add secondary if it exists and is different from primary
-        for (LLMService service : allLLMServices) {
+        for (LLMProvider service : allLLMServices) {
             if (service != primaryLLMService && !validServices.contains(service)) {
                 validServices.add(service);
             }
@@ -305,7 +305,7 @@ public class LLMConfiguration {
     // ============ Helper Methods ============
 
     /**
-     * Creates an LLMService instance with given configuration.
+     * Creates an LLMProvider instance with given configuration.
      *
      * @param serviceKey Unique key for this service (e.g., "primary", "secondary")
      * @param providerName Provider name (e.g., "LM_STUDIO", "OPENAI")
@@ -315,9 +315,9 @@ public class LLMConfiguration {
      * @param embeddingContextLength Context length for embeddings
      * @param apiUrl API base URL (optional)
      * @param apiKey API key (optional)
-     * @return Configured LLMService instance
+     * @return Configured LLMProvider instance
      */
-    private LLMService createLLMService(String serviceKey, String providerName, boolean useDefaults, String llmModels,
+    private LLMProvider createLLMService(String serviceKey, String providerName, boolean useDefaults, String llmModels,
 	    String embeddingModel, Integer embeddingContextLength, String apiUrl, String apiKey) {
 
 	// Parse provider name using utility class
@@ -352,13 +352,13 @@ public class LLMConfiguration {
 	}
 
 	// Create service
-	LLMService service = LLMServiceFactory.createLLMService(provider, config);
+	LLMProvider service = LLMServiceFactory.createLLMService(provider, config);
 
 	// Store in active services map
 	String mapKey = provider.name() + "-" + (apiUrl != null ? apiUrl : "default");
 	activeLLMServices.put(mapKey, service);
 
-	log.debug("Created LLMService: key={}, provider={}, baseUrl={}", 
+	log.debug("Created LLMProvider: key={}, provider={}, baseUrl={}", 
 	          serviceKey, provider, config.getBaseUrl());
 
 	return service;
@@ -409,9 +409,9 @@ public class LLMConfiguration {
      * Returns unmodifiable map of active LLM service providers.
      * Useful for controllers that need to list available providers.
      *
-     * @return Map of provider key to LLMService
+     * @return Map of provider key to LLMProvider
      */
-    public Map<String, LLMService> getActiveProviderMap() {
+    public Map<String, LLMProvider> getActiveProviderMap() {
         return Collections.unmodifiableMap(this.activeLLMServices);
     }
 

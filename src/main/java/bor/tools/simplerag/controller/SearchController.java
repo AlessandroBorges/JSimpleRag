@@ -18,11 +18,11 @@ import bor.tools.simplerag.dto.SearchResultDTO;
 import bor.tools.simplerag.dto.SemanticSearchRequest;
 import bor.tools.simplerag.dto.TextualSearchRequest;
 import bor.tools.simplerag.entity.Chapter;
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.repository.ChapterRepository;
-import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
+import bor.tools.simplerag.repository.DocChunkJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.embedding.EmbeddingService;
@@ -107,8 +107,8 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>General content: 60% semantic, 40% textual (balanced approach)</li>
  * </ul>
  *
- * @see DocEmbeddingJdbcRepository#pesquisaHibrida
- * @see DocEmbeddingJdbcRepository#query_phraseto_websearch
+ * @see DocChunkJdbcRepository#pesquisaHibrida
+ * @see DocChunkJdbcRepository#query_phraseto_websearch
  * @since 0.0.1
  */
 @RestController
@@ -118,7 +118,7 @@ import lombok.extern.slf4j.Slf4j;
 @Tag(name = "RAG Search", description = "Hybrid search endpoints (semantic + textual)")
 public class SearchController {
 
-    private final DocEmbeddingJdbcRepository embeddingRepository;
+    private final DocChunkJdbcRepository embeddingRepository;
     private final EmbeddingService embeddingService;
     private final DocumentoRepository documentoRepository;
     private final ChapterRepository chapterRepository;
@@ -176,7 +176,7 @@ public class SearchController {
             float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);
 
             // Execute hybrid search
-            List<DocumentEmbedding> embeddings = embeddingRepository.pesquisaHibrida(
+            List<DocChunk> embeddings = embeddingRepository.pesquisaHibrida(
                     queryEmbedding,
                     request.getQuery(),
                     request.getLibraryIds(),
@@ -323,7 +323,7 @@ public class SearchController {
             float[] queryEmbedding = embeddingService.generateQueryEmbedding(request.getQuery(), context);
 
             // Execute semantic search
-            List<DocumentEmbedding> embeddings = embeddingRepository.pesquisaSemantica(
+            List<DocChunk> embeddings = embeddingRepository.pesquisaSemantica(
                     queryEmbedding,
                     request.getLibraryIds(),
                     request.getLimit()
@@ -395,7 +395,7 @@ public class SearchController {
             validateTextQuery(request.getQuery());
 
             // Execute textual search
-            List<DocumentEmbedding> embeddings = embeddingRepository.pesquisaTextual(
+            List<DocChunk> embeddings = embeddingRepository.pesquisaTextual(
                     request.getQuery(),
                     request.getLibraryIds(),
                     request.getLimit()
@@ -429,15 +429,15 @@ public class SearchController {
     /**
      * Enriches search results with document and chapter information
      */
-    private List<SearchResultDTO> enrichResults(List<DocumentEmbedding> embeddings) {
+    private List<SearchResultDTO> enrichResults(List<DocChunk> embeddings) {
         // Collect all unique documento IDs and chapter IDs
         List<Integer> documentoIds = embeddings.stream()
-                .map(DocumentEmbedding::getDocumentoId)
+                .map(DocChunk::getDocumentoId)
                 .distinct()
                 .collect(Collectors.toList());
 
         List<Integer> chapterIds = embeddings.stream()
-                .map(DocumentEmbedding::getChapterId)
+                .map(DocChunk::getChapterId)
                 .filter(id -> id != null)
                 .distinct()
                 .collect(Collectors.toList());

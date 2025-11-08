@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
@@ -276,8 +276,8 @@ public class EmbeddingServiceImpl implements EmbeddingService {
 
             log.debug("Using embedding model: {}", resolvedModel);
 
-            // Get appropriate LLMService from pool
-            LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(resolvedModel);
+            // Get appropriate LLMProvider from pool
+            LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(resolvedModel);
 
             if (llmService == null) {
                 throw new IllegalStateException(
@@ -286,7 +286,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
                 );
             }
 
-            log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
+            log.debug("Using LLMProvider from provider: {}", llmService.getServiceProvider());
 
             // Prepare parameters
             MapParam params = new MapParam();

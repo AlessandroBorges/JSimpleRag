@@ -21,7 +21,7 @@ import bor.tools.utils.RagUtils;
  * <p><b>DEPRECATED:</b> This class has been deprecated in favor of {@link SplitterGenerico}
  * which provides the same functionality with improvements:</p>
  * <ul>
- *   <li>Real token counting via {@link bor.tools.simplellm.LLMService} instead of heuristic estimation</li>
+ *   <li>Real token counting via {@link bor.tools.simplellm.LLMProvider} instead of heuristic estimation</li>
  *   <li>Integration with {@link SplitterFactory} pattern for better dependency management</li>
  *   <li>Elimination of circular dependency with SplitterGenerico</li>
  *   <li>Consistent behavior across all splitter implementations</li>

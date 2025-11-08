@@ -3,7 +3,7 @@ package bor.tools.simplerag.service.processing.context;
 import java.util.Collections;
 import java.util.List;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.ModelEmbedding;
 import bor.tools.simplellm.Embeddings_Op;
@@ -55,7 +55,7 @@ public class EmbeddingContext {
     /**
      * The LLM service instance used for embeddings.
      */
-    private LLMService llmService;
+    private LLMProvider llmService;
 
     /**
      * The embedding model metadata.
@@ -106,7 +106,7 @@ public class EmbeddingContext {
         }
 
         // Get service that supports this model
-        LLMService service = manager.getLLMServiceByRegisteredModel(requestedModel);
+        LLMProvider service = manager.getLLMServiceByRegisteredModel(requestedModel);
 
         if (service == null) {
             throw new IllegalStateException(

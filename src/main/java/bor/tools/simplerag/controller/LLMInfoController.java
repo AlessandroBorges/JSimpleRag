@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import bor.tools.simplellm.LLMConfig;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplerag.config.LLMConfiguration;
 import bor.tools.simplellm.Model;
@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @Tag(name = "LLM Info", description = "LLM Service information and status endpoints")
 public class LLMInfoController {
 
-   // private final LLMService llmService;
+   // private final LLMProvider llmService;
 
     private final LLMConfiguration llmConfiguration;
 
@@ -70,8 +70,8 @@ public class LLMInfoController {
         List<ProviderStatus> providers = new ArrayList<>();
 
         // Check all known providers
-        Map<String,LLMService> services = llmConfiguration.getActiveProviderMap();
-        for ( LLMService llm : services.values()) {
+        Map<String,LLMProvider> services = llmConfiguration.getActiveProviderMap();
+        for ( LLMProvider llm : services.values()) {
             boolean isOnline = false;
             try {        	
                 isOnline = llm.isOnline();
@@ -108,9 +108,9 @@ public class LLMInfoController {
 	Map<String, LLMConfig> configurations = new HashMap<>();
 
 	try {
-	    Map<String, LLMService> services = llmConfiguration.getActiveProviderMap();
+	    Map<String, LLMProvider> services = llmConfiguration.getActiveProviderMap();
 	    
-	    for (LLMService llmService : services.values()) {
+	    for (LLMProvider llmService : services.values()) {
 		// Get current service provider
 		SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
 
@@ -154,8 +154,8 @@ public class LLMInfoController {
 	List<ModelInfo> modelInfoList = new ArrayList<>();
 
 	try {
-	    Map<String, LLMService> services = llmConfiguration.getActiveProviderMap();
-	    for (LLMService llmService : services.values()) {
+	    Map<String, LLMProvider> services = llmConfiguration.getActiveProviderMap();
+	    for (LLMProvider llmService : services.values()) {
 		SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
 		List<Model> installedModels = llmService.getInstalledModels().getModels();
 
@@ -201,9 +201,9 @@ public class LLMInfoController {
         List<ModelInfo> modelInfoList = new ArrayList<>();
 
         try {            
-            Map<String,LLMService> services = llmConfiguration.getActiveProviderMap();
+            Map<String,LLMProvider> services = llmConfiguration.getActiveProviderMap();
             
-            for ( LLMService llmService : services.values()) {            
+            for ( LLMProvider llmService : services.values()) {            
 		SERVICE_PROVIDER currentProvider = llmService.getServiceProvider();
 		List<Model> registeredModels = llmService.getRegisteredModels().getModels();
 

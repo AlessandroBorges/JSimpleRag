@@ -39,7 +39,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @JsonPropertyOrder({ "id", "libraryId", "documentoId", "chapterId", "orderChapter", "tipoEmbedding", "metadados" })
-public class DocumentEmbedding extends Updatable {
+public class DocChunk extends Updatable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -119,7 +119,7 @@ public class DocumentEmbedding extends Updatable {
 
     /**
      * Vector embedding stored as float array.
-     * Note: For vector operations, use DocEmbeddingJdbcRepository
+     * Note: For vector operations, use DocChunkJdbcRepository
      * This field is mapped but vector operations require native SQL.
      * 
      * DDL:

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.ModelEmbedding;
 import bor.tools.simplellm.Model_Type;
@@ -42,7 +42,7 @@ public class EmbeddingContext {
     /**
      * LLM Service used for embedding operations.
      */
-    private LLMService llmServiceEmbedding;
+    private LLMProvider llmServiceEmbedding;
     
     
     
@@ -138,7 +138,7 @@ public class EmbeddingContext {
             }
         }
         
-        // Resolve LLMService for embedding model
+        // Resolve LLMProvider for embedding model
         if(llmServiceManager != null) {
             this.llmServiceEmbedding = llmServiceManager.getLLMServiceByRegisteredModel(this.embeddingModelName);        
         }

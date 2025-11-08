@@ -40,7 +40,7 @@ import lombok.NoArgsConstructor;
                      "vigente",
                      "createdAt", "updatedAt", "deletedAt",
                      "metadados",                                          
-                     "conteudoMarkdown" })	
+                     "text" })	
 public class DocumentoDTO {
 
     private Integer id;
@@ -49,7 +49,7 @@ public class DocumentoDTO {
 
     private String titulo;
 
-    private String conteudoMarkdown;
+    private String text;
 
     @Builder.Default
     private Boolean flagVigente = true;
@@ -95,7 +95,7 @@ public class DocumentoDTO {
                 .build();
 
         // Set content (this also calculates checksum via setter)
-        dto.setConteudoMarkdown(src.getConteudoMarkdown());
+        dto.setText(src.getText());
 
         return dto;
     }
@@ -112,10 +112,10 @@ public class DocumentoDTO {
         entity.setId(this.id);
         entity.setBibliotecaId(this.bibliotecaId);
         entity.setTitulo(this.titulo);
-        entity.setConteudoMarkdown(this.conteudoMarkdown);
+        entity.setText(this.text);
         entity.setFlagVigente(this.flagVigente);
         entity.setDataPublicacao(this.dataPublicacao);
-        entity.setTokensTotal(this.tokensTotal != null ? this.tokensTotal : countTokens(this.conteudoMarkdown));
+        entity.setTokensTotal(this.tokensTotal != null ? this.tokensTotal : countTokens(this.text));
         entity.setMetadados(metadados);
         entity.setCreatedAt(this.createdAt);
         entity.setUpdatedAt(this.updatedAt);
@@ -135,14 +135,14 @@ public class DocumentoDTO {
      * Get content length in characters
      */
     public int getContentLength() {
-        return conteudoMarkdown != null ? conteudoMarkdown.length() : 0;
+        return text != null ? text.length() : 0;
     }
 
     /**
      * Check if has content
      */
     public boolean hasContent() {
-        return conteudoMarkdown != null && !conteudoMarkdown.trim().isEmpty();
+        return text != null && !text.trim().isEmpty();
     }
 
     /**
@@ -189,16 +189,20 @@ public class DocumentoDTO {
     /**
      * Set content markdown and update checksum and token count
      */
-    public void setConteudoMarkdown(String conteudoMarkdown) {
-        this.conteudoMarkdown = conteudoMarkdown;
+    public void setText(String text) {
+        this.text = text;
 
-        if (conteudoMarkdown == null || conteudoMarkdown.isEmpty()) {
+        if (text == null || text.isEmpty()) {
             this.checksum = null;
             this.tokensTotal = 0;
         } else {
             this.checksum = calculateCRC64Checksum();
-            this.tokensTotal = countTokens(conteudoMarkdown);
+            this.tokensTotal = countTokens(text);
         }
+    }
+    
+    public String getText() {
+	return this.text;
     }
 
     /**
@@ -268,11 +272,11 @@ public class DocumentoDTO {
      * @return CRC64 checksum in hexadecimal format, or null if content is null
      */
     private String calculateCRC64Checksum() {
-        if (conteudoMarkdown == null) {
+        if (text == null) {
             return null;
         }
 
-        String textoNormalizado = normalizeText(conteudoMarkdown);
+        String textoNormalizado = normalizeText(text);
         byte[] bytes = textoNormalizado.getBytes(StandardCharsets.UTF_8);
         return RagUtils.getCRC64Checksum(bytes);
     }

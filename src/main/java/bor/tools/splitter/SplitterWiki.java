@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import lombok.Data;
@@ -53,7 +53,7 @@ public class SplitterWiki extends AbstractSplitter {
         super();
     }
 
-    public SplitterWiki(LLMService llmService) {
+    public SplitterWiki(LLMProvider llmService) {
         super(llmService);
     }
 

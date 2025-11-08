@@ -23,16 +23,14 @@ import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.Documento;
+import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaDoc;
-import bor.tools.simplerag.entity.Metadata;
 import bor.tools.simplerag.repository.ChapterRepository;
-import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
+import bor.tools.simplerag.repository.DocChunkJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
-import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
-import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.splitter.DocumentRouter;
@@ -56,7 +54,7 @@ import lombok.RequiredArgsConstructor;
  *   <li>(g) Update embeddings in database</li>
  * </ol>
  *
- * IMPORTANT: Uses DocEmbeddingJdbcRepository (not JPA) for embedding
+ * IMPORTANT: Uses DocChunkJdbcRepository (not JPA) for embedding
  * persistence to support PGVector operations and custom SQL.
  *
  * @see Fluxo_carga_documents.md
@@ -74,7 +72,7 @@ public class DocumentoService {
     private final ChapterRepository chapterRepository;
 
     // ✅ USE THE EXISTING JDBC REPOSITORY (NOT JPA)
-    private final DocEmbeddingJdbcRepository embeddingRepository;
+    private final DocChunkJdbcRepository embeddingRepository;
 
     // Service dependencies
     private final LibraryService libraryService;
@@ -399,12 +397,10 @@ public class DocumentoService {
                         .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
 
                 // Load library
-                Optional<bor.tools.simplerag.entity.Library> libraryOpt =
-                        libraryService.findById(documento.getBibliotecaId());
+                Optional<Library> libraryOpt = libraryService.findById(documento.getBibliotecaId());
                 if (libraryOpt.isEmpty()) {
                     throw new IllegalArgumentException("Library not found: " + documento.getBibliotecaId());
                 }
-
                 LibraryDTO biblioteca = LibraryDTO.from(libraryOpt.get());
 
                 // Delegate to new processing service
@@ -599,7 +595,7 @@ public class DocumentoService {
      * Persist processing results (chapters + embeddings)
      * Implements Fluxo_carga_documents.md steps (e) and (g)
      *
-     * ✅ UPDATED VERSION: Uses EmbeddingOrchestrator and DocEmbeddingJdbcRepository
+     * ✅ UPDATED VERSION: Uses EmbeddingOrchestrator and DocChunkJdbcRepository
      */
     @Transactional
     protected void persistProcessingResult(EmbeddingOrchestrator.ProcessingResult result, Documento documento) 
@@ -623,13 +619,13 @@ public class DocumentoService {
         }
 
         // 3. Save embeddings - ✅ USE JDBC REPOSITORY ONE BY ONE
-        List<DocumentEmbedding> embeddings = result.getAllEmbeddings().stream()
+        List<DocChunk> embeddings = result.getAllEmbeddings().stream()
                 .map(dto -> toEntity(dto, documento, chapterIdMap))
                 .collect(Collectors.toList());
 
         // ✅ CORRECT WAY: Save using JDBC repository
         List<Integer> savedIds = new ArrayList<>();
-        for (DocumentEmbedding emb : embeddings) {
+        for (DocChunk emb : embeddings) {
             try {
                 Integer id = embeddingRepository.save(emb);  // Returns generated ID
                 savedIds.add(id);
@@ -651,11 +647,11 @@ public class DocumentoService {
     /**
      * Convert DocumentEmbeddingDTO to Entity for embedding
      */
-    private DocumentEmbedding toEntity(DocumentEmbeddingDTO dto, 
+    private DocChunk toEntity(DocumentEmbeddingDTO dto, 
 	    				Documento documento,
 	    				Map<String, Integer> chapterIdMap) 
     {
-        DocumentEmbedding emb = new DocumentEmbedding();
+        DocChunk emb = new DocChunk();
 
         // Set library and document IDs
         emb.setLibraryId(documento.getBibliotecaId());

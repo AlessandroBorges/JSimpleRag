@@ -19,7 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.ModelEmbedding;
@@ -28,14 +28,14 @@ import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.repository.ChapterRepository;
-import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
+import bor.tools.simplerag.repository.DocChunkJdbcRepository;
 import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
@@ -88,7 +88,7 @@ class DocumentProcessingIntegrationTest {
     private ChapterRepository chapterRepository;
 
     @Mock
-    private DocEmbeddingJdbcRepository embeddingRepository;
+    private DocChunkJdbcRepository embeddingRepository;
 
     @Mock
     private LLMServiceManager llmServiceManager;
@@ -103,7 +103,7 @@ class DocumentProcessingIntegrationTest {
     private SummaryEmbeddingStrategy summaryEmbeddingStrategy;
 
     @Mock
-    private LLMService llmService;
+    private LLMProvider llmService;
 
     @Mock
     private ModelEmbedding modelEmbedding;
@@ -169,7 +169,7 @@ class DocumentProcessingIntegrationTest {
         // Setup ModelEmbedding
         when(modelEmbedding.getContextLength()).thenReturn(8192);
 
-        // Setup LLMService for embeddings
+        // Setup LLMProvider for embeddings
         when(llmService.embeddings(any(Embeddings_Op.class), any(String[].class), any(MapParam.class)))
                 .thenAnswer(invocation -> {
                     String[] texts = invocation.getArgument(1);
@@ -182,19 +182,19 @@ class DocumentProcessingIntegrationTest {
                     return Arrays.asList(vectors);
                 });
 
-        // Setup LLMService for token counting
+        // Setup LLMProvider for token counting
         when(llmService.tokenCount(anyString(), anyString())).thenAnswer(invocation -> {
             String text = invocation.getArgument(0);
             // Simple estimation: words / 0.75
             return (int) Math.ceil(text.split("\\s+").length / 0.75);
         });
 
-        // Setup LLMService for completions (summaries)
+        // Setup LLMProvider for completions (summaries)
         // Note: CompletionResponse is complex, so we'll mock the generateCompletion in LLMContext instead
         when(llmService.completion(anyString(), anyString(), any(MapParam.class)))
                 .thenReturn(null);  // Will be handled by LLMContext mock
 
-        // Setup LLMServiceManager to return LLMService
+        // Setup LLMServiceManager to return LLMProvider
         when(llmServiceManager.getBestCompletionModelName()).thenReturn(null);
         when(llmServiceManager.getServiceByModel(anyString())).thenReturn(llmService);
         when(llmServiceManager.getLLMServiceByRegisteredModel(anyString())).thenReturn(llmService);

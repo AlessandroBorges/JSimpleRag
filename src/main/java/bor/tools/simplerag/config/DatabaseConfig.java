@@ -25,17 +25,17 @@ public class DatabaseConfig {
     @Bean
     @Primary
     @ConfigurationProperties(prefix = "spring.datasource")
-    public DataSource dataSource() {
+    DataSource dataSource() {
         return DataSourceBuilder.create().build();
     }
 
     /**
      * JdbcTemplate bean for JDBC operations.
-     * Used primarily by DocEmbeddingJdbcRepository for vector operations.
+     * Used primarily by DocChunkJdbcRepository for vector operations.
      */
     @Bean
     @Primary
-    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+    JdbcTemplate jdbcTemplate(DataSource dataSource) {
         return new JdbcTemplate(dataSource);
     }
 }

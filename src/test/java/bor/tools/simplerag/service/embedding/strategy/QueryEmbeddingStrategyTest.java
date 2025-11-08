@@ -1,7 +1,7 @@
 package bor.tools.simplerag.service.embedding.strategy;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplellm.exceptions.LLMException;
@@ -37,7 +37,7 @@ class QueryEmbeddingStrategyTest {
     private LLMServiceManager llmServiceManager;
 
     @Mock
-    private LLMService mockLLMService;
+    private LLMProvider mockLLMService;
 
     @InjectMocks
     private QueryEmbeddingStrategy strategy;

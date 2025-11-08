@@ -9,7 +9,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import bor.tools.simplellm.CompletionResponse;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 
@@ -24,7 +24,7 @@ public class DocumentSummarizerImpl implements DocumentSummarizer {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentSummarizerImpl.class);
 
-    private final LLMService llmService;
+    private final LLMProvider llmService;
 
     /**
      * Tamanho máximo padrão para resumos (em tokens)
@@ -34,7 +34,7 @@ public class DocumentSummarizerImpl implements DocumentSummarizer {
     /**
      * Construtor com injeção de dependência
      */
-    public DocumentSummarizerImpl(LLMService llmService) {
+    public DocumentSummarizerImpl(LLMProvider llmService) {
         this.llmService = llmService;
     }
 

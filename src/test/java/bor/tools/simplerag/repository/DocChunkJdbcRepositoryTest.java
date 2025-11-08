@@ -18,13 +18,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import bor.tools.simplerag.entity.Chapter;
-import bor.tools.simplerag.entity.DocumentEmbedding;
+import bor.tools.simplerag.entity.DocChunk;
 import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 
 /**
- * Basic integration test for DocEmbeddingJdbcRepository
+ * Basic integration test for DocChunkJdbcRepository
  *
  * Tests database connectivity and basic CRUD operations.
  * Requires PostgreSQL with PGVector extension running.
@@ -32,10 +32,10 @@ import bor.tools.simplerag.entity.enums.TipoEmbedding;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class DocEmbeddingJdbcRepositoryTest {
+class DocChunkJdbcRepositoryTest {
 
     @Autowired
-    private DocEmbeddingJdbcRepository embeddingRepository;
+    private DocChunkJdbcRepository embeddingRepository;
 
     @Autowired
     private LibraryRepository libraryRepository;
@@ -94,7 +94,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testDatabaseConnection() {
         // When - Test basic connection by querying for all embeddings
-        List<DocumentEmbedding> embeddings = embeddingRepository.findAll();
+        List<DocChunk> embeddings = embeddingRepository.findAll();
 
         // Then - Should not throw exception
         assertNotNull(embeddings, "Database connection should work");
@@ -114,7 +114,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testSave_DocumentLevelEmbedding() throws SQLException {
         // Given - Document-level embedding
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .tipoEmbedding(TipoEmbedding.DOCUMENTO)
@@ -134,7 +134,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testSave_ChapterLevelEmbedding() throws SQLException {
         // Given - Chapter-level embedding
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .chapterId(testChapter.getId())
@@ -154,7 +154,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testSave_ChunkLevelEmbedding() throws SQLException {
         // Given - Chunk-level embedding
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .chapterId(testChapter.getId())
@@ -175,10 +175,10 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testFindById() throws SQLException {
         // Given - Saved embedding
-        DocumentEmbedding embedding = createAndSaveTestEmbedding();
+        DocChunk embedding = createAndSaveTestEmbedding();
 
         // When
-        Optional<DocumentEmbedding> found = embeddingRepository.findById(embedding.getId());
+        Optional<DocChunk> found = embeddingRepository.findById(embedding.getId());
 
         // Then
         assertTrue(found.isPresent(), "Should find saved embedding");
@@ -194,7 +194,7 @@ class DocEmbeddingJdbcRepositoryTest {
         createAndSaveTestEmbedding();
 
         // When
-        List<DocumentEmbedding> embeddings = embeddingRepository.findByDocumentoId(testDocument.getId());
+        List<DocChunk> embeddings = embeddingRepository.findByDocumentoId(testDocument.getId());
 
         // Then
         assertNotNull(embeddings);
@@ -210,7 +210,7 @@ class DocEmbeddingJdbcRepositoryTest {
         createAndSaveTestEmbedding();
 
         // When
-        List<DocumentEmbedding> embeddings = embeddingRepository.findByBibliotecaId(testLibrary.getId());
+        List<DocChunk> embeddings = embeddingRepository.findByBibliotecaId(testLibrary.getId());
 
         // Then
         assertNotNull(embeddings);
@@ -223,7 +223,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testFindByCapituloId() throws SQLException {
         // Given - Chapter-level embedding
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .chapterId(testChapter.getId())
@@ -234,7 +234,7 @@ class DocEmbeddingJdbcRepositoryTest {
         embeddingRepository.save(embedding);
 
         // When
-        List<DocumentEmbedding> embeddings = embeddingRepository.findByCapituloId(testChapter.getId());
+        List<DocChunk> embeddings = embeddingRepository.findByCapituloId(testChapter.getId());
 
         // Then
         assertNotNull(embeddings);
@@ -247,7 +247,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testFindByTipoEmbedding() throws SQLException {
         // Given - Embeddings of different types
-        DocumentEmbedding docEmbedding = DocumentEmbedding.builder()
+        DocChunk docEmbedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .tipoEmbedding(TipoEmbedding.DOCUMENTO)
@@ -256,7 +256,7 @@ class DocEmbeddingJdbcRepositoryTest {
                 .build();
         embeddingRepository.save(docEmbedding);
 
-        DocumentEmbedding chapterEmbedding = DocumentEmbedding.builder()
+        DocChunk chapterEmbedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .chapterId(testChapter.getId())
@@ -267,8 +267,8 @@ class DocEmbeddingJdbcRepositoryTest {
         embeddingRepository.save(chapterEmbedding);
 
         // When
-        List<DocumentEmbedding> docEmbeddings = embeddingRepository.findByTipoEmbedding(TipoEmbedding.DOCUMENTO);
-        List<DocumentEmbedding> chapterEmbeddings = embeddingRepository.findByTipoEmbedding(TipoEmbedding.CAPITULO);
+        List<DocChunk> docEmbeddings = embeddingRepository.findByTipoEmbedding(TipoEmbedding.DOCUMENTO);
+        List<DocChunk> chapterEmbeddings = embeddingRepository.findByTipoEmbedding(TipoEmbedding.CAPITULO);
 
         // Then
         assertTrue(docEmbeddings.size() > 0, "Should find document embeddings");
@@ -284,7 +284,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testUpdate() throws SQLException {
         // Given - Saved embedding
-        DocumentEmbedding embedding = createAndSaveTestEmbedding();
+        DocChunk embedding = createAndSaveTestEmbedding();
         String newText = "Updated text content";
         embedding.setTexto(newText);
 
@@ -295,7 +295,7 @@ class DocEmbeddingJdbcRepositoryTest {
         assertEquals(1, updated, "Should update one record");
 
         // Verify update
-        Optional<DocumentEmbedding> found = embeddingRepository.findById(embedding.getId());
+        Optional<DocChunk> found = embeddingRepository.findById(embedding.getId());
         assertTrue(found.isPresent());
         assertEquals(newText, found.get().getTexto());
     }
@@ -303,7 +303,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testDelete() throws SQLException {
         // Given - Saved embedding
-        DocumentEmbedding embedding = createAndSaveTestEmbedding();
+        DocChunk embedding = createAndSaveTestEmbedding();
         Integer embeddingId = embedding.getId();
 
         // When
@@ -313,7 +313,7 @@ class DocEmbeddingJdbcRepositoryTest {
         assertEquals(1, deleted, "Should delete one record");
 
         // Verify deletion
-        Optional<DocumentEmbedding> found = embeddingRepository.findById(embeddingId);
+        Optional<DocChunk> found = embeddingRepository.findById(embeddingId);
         assertFalse(found.isPresent(), "Deleted embedding should not be found");
     }
 
@@ -325,7 +325,7 @@ class DocEmbeddingJdbcRepositoryTest {
         createAndSaveTestEmbedding();
 
         // When
-        List<DocumentEmbedding> all = embeddingRepository.findAll();
+        List<DocChunk> all = embeddingRepository.findAll();
 
         // Then
         assertNotNull(all);
@@ -337,11 +337,11 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testPesquisaSemantica() throws SQLException {
         // Given - Saved embedding with vector
-        DocumentEmbedding embedding = createAndSaveTestEmbedding();
+        DocChunk embedding = createAndSaveTestEmbedding();
         float[] queryVector = createTestVector(768);
 
         // When
-        List<DocumentEmbedding> results = embeddingRepository.pesquisaSemantica(
+        List<DocChunk> results = embeddingRepository.pesquisaSemantica(
                 queryVector,
                 new Integer[]{testLibrary.getId()},
                 10
@@ -355,7 +355,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testPesquisaTextual() throws SQLException {
         // Given - Saved embedding with text
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .tipoEmbedding(TipoEmbedding.DOCUMENTO)
@@ -365,7 +365,7 @@ class DocEmbeddingJdbcRepositoryTest {
         embeddingRepository.save(embedding);
 
         // When
-        List<DocumentEmbedding> results = embeddingRepository.pesquisaTextual(
+        List<DocChunk> results = embeddingRepository.pesquisaTextual(
                 "Java Spring",
                 new Integer[]{testLibrary.getId()},
                 10
@@ -379,7 +379,7 @@ class DocEmbeddingJdbcRepositoryTest {
     @Test
     void testPesquisaHibrida() throws SQLException {
         // Given - Saved embedding
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .tipoEmbedding(TipoEmbedding.DOCUMENTO)
@@ -391,7 +391,7 @@ class DocEmbeddingJdbcRepositoryTest {
         float[] queryVector = createTestVector(768);
 
         // When
-        List<DocumentEmbedding> results = embeddingRepository.pesquisaHibrida(
+        List<DocChunk> results = embeddingRepository.pesquisaHibrida(
                 queryVector,
                 "hybrid search",
                 new Integer[]{testLibrary.getId()},
@@ -406,8 +406,8 @@ class DocEmbeddingJdbcRepositoryTest {
 
     // ============ Helper Methods ============
 
-    private DocumentEmbedding createAndSaveTestEmbedding() throws SQLException {
-        DocumentEmbedding embedding = DocumentEmbedding.builder()
+    private DocChunk createAndSaveTestEmbedding() throws SQLException {
+        DocChunk embedding = DocChunk.builder()
                 .libraryId(testLibrary.getId())
                 .documentoId(testDocument.getId())
                 .tipoEmbedding(TipoEmbedding.DOCUMENTO)

@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
 import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
@@ -102,7 +102,7 @@ public class SplitterGenerico extends AbstractSplitter {
      * 
      * @param biblioteca biblioteca de documentos, para sua
      */
-    public SplitterGenerico(LLMService llmService) {
+    public SplitterGenerico(LLMProvider llmService) {
 	super(llmService);
     }
 
@@ -297,7 +297,7 @@ public class SplitterGenerico extends AbstractSplitter {
      * {@code splitBySize(ChapterDTO, int)} and incorporates the full chunking logic
      * from ContentSplitter with improvements:</p>
      * <ul>
-     *   <li>Real token counting via {@link LLMService} (not heuristic)</li>
+     *   <li>Real token counting via {@link LLMProvider} (not heuristic)</li>
      *   <li>Split by detected titles first</li>
      *   <li>Fallback to size-based splitting with paragraph handling</li>
      *   <li>Sophisticated merge/split logic for optimal chunk sizes</li>
@@ -572,7 +572,9 @@ public class SplitterGenerico extends AbstractSplitter {
 	    {
 		ChapterDTO chapter = docDTO.createAndAddNewChapter("Capitulo " + chapterNumber,
 							  currentChapter.toString().trim());
-		
+		if(chapter != null) {
+		    chapterNumber++;
+		}
 		currentChapter = new StringBuilder();
 		currentTokenCount = 0;
 	    }
@@ -584,7 +586,12 @@ public class SplitterGenerico extends AbstractSplitter {
 	// Add final chapter if there's content remaining
 	if (currentChapter.length() > 0) {	   	   
 	    var chapter = docDTO.createAndAddNewChapter("Capitulo " + chapterNumber,
-							  currentChapter.toString().trim());	    
+		 				  currentChapter.toString().trim());	    
+	    if(chapter != null) {
+		chapterNumber++;
+	    }else {
+		logger.warn("Failed to create final chapter for document ID {}", docDTO.getId());
+	    }	    
 	}
 
 	logger.debug("Split text into {} initial chapters", docDTO.getCapitulos().size());

@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 
@@ -26,19 +26,19 @@ public class DocumentRouter {
     private static final Logger logger = LoggerFactory.getLogger(DocumentRouter.class);
 
     private final Map<String, Class<? extends AbstractSplitter>> splitterRegistry;
-    private final LLMService llmService;
+    private final LLMProvider llmService;
 
     /**
-     * Construtor com injeção de dependência do LLMService
+     * Construtor com injeção de dependência do LLMProvider
      */
-    public DocumentRouter(LLMService llmService) {
+    public DocumentRouter(LLMProvider llmService) {
         this.llmService = llmService;
         this.splitterRegistry = new HashMap<>();
         initializeSplitterRegistry();
     }
 
     /**
-     * Construtor padrão sem LLMService (fallback para detecção heurística)
+     * Construtor padrão sem LLMProvider (fallback para detecção heurística)
      */
     public DocumentRouter() {
         this.llmService = null;
@@ -224,20 +224,20 @@ public class DocumentRouter {
      */
     private AbstractSplitter createSplitterInstance(Class<? extends AbstractSplitter> splitterClass) throws Exception {
         try {
-            // Tentar construtor com LLMService primeiro
+            // Tentar construtor com LLMProvider primeiro
             if (llmService != null) {
                 try {
-                    return splitterClass.getConstructor(LLMService.class).newInstance(llmService);
+                    return splitterClass.getConstructor(LLMProvider.class).newInstance(llmService);
                 } catch (NoSuchMethodException e) {
-                    // Se não há construtor com LLMService, usar construtor padrão
-                    logger.debug("No LLMService constructor found for {}, using default", splitterClass.getSimpleName());
+                    // Se não há construtor com LLMProvider, usar construtor padrão
+                    logger.debug("No LLMProvider constructor found for {}, using default", splitterClass.getSimpleName());
                 }
             }
 
             // Usar construtor padrão
             AbstractSplitter splitter = splitterClass.getDeclaredConstructor().newInstance();
 
-            // Configurar LLMService se disponível
+            // Configurar LLMProvider se disponível
             if (llmService != null && splitter.getLlmServices() == null) {
                 splitter.setLlmServices(llmService);
             }
@@ -295,7 +295,7 @@ public class DocumentRouter {
     }
 
     public TipoConteudo detectContentType(String conteudoMarkdown) {
-	LLMService llm = this.llmService;
+	LLMProvider llm = this.llmService;
 	if (llm != null) {
 	    try {
 		String resposta = llm.classifyContent(conteudoMarkdown,

@@ -90,7 +90,7 @@ class DocumentControllerTest {
                 .id(testDocumentId)
                 .bibliotecaId(testLibraryId)
                 .titulo(testTitle)
-                .conteudoMarkdown(testContent)
+                .text(testContent)
                 .flagVigente(true)
                 .dataPublicacao(LocalDate.now())
                 .tokensTotal(100)

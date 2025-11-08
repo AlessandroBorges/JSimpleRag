@@ -1,6 +1,6 @@
 package bor.tools.simplerag.service.processing.context;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.Model_Type;
@@ -51,7 +51,7 @@ public class LLMContext {
     /**
      * The LLM service instance used for completions.
      */
-    private LLMService llmService;
+    private LLMProvider llmService;
 
     /**
      * The model metadata from the service.

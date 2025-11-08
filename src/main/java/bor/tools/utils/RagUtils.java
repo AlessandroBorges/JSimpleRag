@@ -59,6 +59,8 @@ import java.util.zip.Checksum;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Classe utilitária com métodos de uso geral.
  *
@@ -66,6 +68,7 @@ import java.security.NoSuchAlgorithmException;
  *       separada RAGParser.
  *
  */
+@Slf4j
 public class RagUtils {
 
     /**
@@ -80,7 +83,7 @@ public class RagUtils {
 
     public static boolean removerTachado = true;
     
-    protected static LLMService llmService = null;
+    protected static LLMProvider llmService = null;
     
     
     /**
@@ -117,13 +120,13 @@ public class RagUtils {
      */
     public static final String USER_AGENT_VALUE = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0";
 
-    public static LLMService getLLMService(String provider) {
+    public static LLMProvider getLLMService(String provider) {
 	// Return cached service if no specific provider requested
 	if (llmService != null && provider == null) {
 	    return llmService;
 	}
 
-	LLMService service;
+	LLMProvider service;
 
 	if (provider == null) {
 	    // Try providers in order of preference when no specific provider is requested
@@ -146,10 +149,10 @@ public class RagUtils {
      * @param providers
      * @return
      */
-    public static LLMService tryProviders(String... providers) {
+    public static LLMProvider tryProviders(String... providers) {
 	for (String provider : providers) {
 	    try {
-		LLMService service = createProviderService(provider);
+		LLMProvider service = createProviderService(provider);
 		if (service != null && service.isOnline()) {
 		    return service;
 		}
@@ -160,7 +163,7 @@ public class RagUtils {
 	return null;
     }
 
-    public static LLMService createProviderService(String provider) {
+    public static LLMProvider createProviderService(String provider) {
 	return switch (provider) {
 	case "openai" -> LLMServiceFactory.createOpenAI(null);
 	case "lmstudio" -> LLMServiceFactory.createLMStudio();
@@ -1337,7 +1340,7 @@ public class RagUtils {
 	if (texto == null || texto.isEmpty()) {
 	    return 0;
 	}	
-	LLMService service = getLLMService(null);
+	LLMProvider service = getLLMService(null);
 	return service.tokenCount(texto,"gpt-5");
     }
     
@@ -1909,5 +1912,60 @@ public class RagUtils {
 
 	return false;
     }
+    
+    /**
+     * Get the first non-null value from the provided values.
+     * @param <T> type of values to check
+     * @param values - values to check
+     * @return the first non-null value, or null if all are null
+     */
+    @SafeVarargs
+    public static <T> T coalesce(T... values) {
+	for (T value : values) {
+	    if (value != null) {
+		return value;
+	    }
+	}
+	return null;
+    }
+    
+    /**
+     * Check if all values are not null
+     * @param values - values to check
+     * @return true if all values are not null, false otherwise
+     */
+    public static boolean notNull(Object... values) {
+	for (Object value : values) {
+	    if (value == null) {	
+		return false;
+	    }
+	}	
+	return true;
+    }
+    
+    
+    /**
+     * Normalizes embedding vector to specified dimension
+     * @param embedding
+     * @param targetVecSize
+     * @return
+     */
+    public static float[] normalizeEmbedding(float[] embedding, Integer targetVecSize) {
+	Integer length = targetVecSize;
+	
+	// Adjust length if necessary
+	if (notNull(length, embedding) && embedding.length != length) {
+	    log.debug("Normalizing embedding from length {} to {}", embedding.length, length);
+	    // normalize source first - just in case
+	    embedding = bor.tools.simplerag.util.VectorUtil.normalize(embedding);
+	    // then resize
+	    float[] normalized = new float[length];
+	    System.arraycopy(embedding, 0, normalized, 0, Math.min(embedding.length, length));
+	    embedding = normalized;
+	}
+	// Normalize vector. always!
+	return bor.tools.simplerag.util.VectorUtil.normalize(embedding);
+    }
+    
 
 }

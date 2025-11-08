@@ -2,9 +2,13 @@ package bor.tools.simplerag;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import bor.tools.simplerag.config.LlmServiceProperties;
+import bor.tools.simplerag.config.RagProperties;
 
 /**
  * Main Spring Boot application class for JSimpleRag.
@@ -14,7 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * through a combination of semantic (embedding-based) and textual (full-text) search.
  *
  * Features:
- * - Hierarchical document structure: Library → Documento → Capítulo → DocumentEmbedding
+ * - Hierarchical document structure: Library → Documento → Capítulo → DocChunk
  * - Hybrid search combining semantic similarity and full-text search
  * - Asynchronous document processing and embedding generation
  * - PostgreSQL with PGVector for efficient vector operations
@@ -23,6 +27,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
+@EnableConfigurationProperties({LlmServiceProperties.class, RagProperties.class})
 @ComponentScan(basePackages = {
     "bor.tools.simplerag",  // Main application package
     "bor.tools.utils",       // Utility classes (DocumentConverter, RAGConverter, etc.)

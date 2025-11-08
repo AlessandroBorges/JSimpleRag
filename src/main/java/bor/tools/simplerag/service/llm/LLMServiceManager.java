@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapModels;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model;
@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LLMServiceManager {
 
-    private final List<LLMService> services;
+    private final List<LLMProvider> services;
     private final LLMServiceStrategy strategy;
     private final int maxRetries;
     private final int timeoutSeconds;
@@ -39,9 +39,9 @@ public class LLMServiceManager {
     private final AtomicInteger failoverEvents = new AtomicInteger(0);
     
     /**
-     * Map of model names to their corresponding LLMService.
+     * Map of model names to their corresponding LLMProvider.
      */
-    protected java.util.Map<String, LLMService> modelsToService;
+    protected java.util.Map<String, LLMProvider> modelsToService;
 
     /**
      * Creates a new LLMServiceManager.
@@ -51,7 +51,7 @@ public class LLMServiceManager {
      * @param maxRetries Maximum retry attempts on failure
      * @param timeoutSeconds Timeout for each request
      */
-    public LLMServiceManager(List<LLMService> services,
+    public LLMServiceManager(List<LLMProvider> services,
                             LLMServiceStrategy strategy,
                             int maxRetries,
                             int timeoutSeconds) {
@@ -85,7 +85,7 @@ public class LLMServiceManager {
      * @return Default completion model name, or null if unavailable
      */
     public String getDefaultCompletionModelName() {
-	LLMService service = getPrimaryService();
+	LLMProvider service = getPrimaryService();
 	try {
 
 	    int i = 1;
@@ -95,7 +95,7 @@ public class LLMServiceManager {
 		i++;
 		service = services.get(i);
 		if (service != null)
-		    log.info("Trying secondary LLM service at index {} as primary, as LLMService", i,
+		    log.info("Trying secondary LLM service at index {} as primary, as LLMProvider", i,
 			    service.getServiceProvider());
 	    }
 	    if (service == null) {
@@ -125,9 +125,9 @@ public class LLMServiceManager {
     }
     
     /**
-     * Record to hold model name and its corresponding LLMService.
+     * Record to hold model name and its corresponding LLMProvider.
      */
-    public record Model_Provider(String modelName, LLMService service) {}
+    public record Model_Provider(String modelName, LLMProvider service) {}
     
     /**
      * Retrieves the BEST completion model name for specific model types.<br>
@@ -135,11 +135,11 @@ public class LLMServiceManager {
      * @param modelType one or more of Model_Type enum values to filter models
      * @return Default completion model name matching the specified types, or null if unavailable
      * 
-     * @see LLMService#getInstalledModels()
+     * @see LLMProvider#getInstalledModels()
      * @see Model_Type
      */
     public Model_Provider getBestCompletionModelName(Model_Type... modelType) {
-	LLMService service = getPrimaryService();
+	LLMProvider service = getPrimaryService();
 	
 	try {
 
@@ -150,7 +150,7 @@ public class LLMServiceManager {
 		i++;
 		service = services.get(i);
 		if (service != null)
-		    log.info("Trying secondary LLM service at index {} as primary, as LLMService", i,
+		    log.info("Trying secondary LLM service at index {} as primary, as LLMProvider", i,
 			    service.getServiceProvider());
 	    }
 	    if (service == null) {
@@ -292,7 +292,7 @@ public class LLMServiceManager {
      * Execute with failover to secondary on failure.
      */
     private <T> T executeWithFailover(ServiceCallable<T> callable) throws LLMServiceException {
-        LLMService primary = getPrimaryService();
+        LLMProvider primary = getPrimaryService();
         primaryRequests.incrementAndGet();
 
         try {
@@ -303,7 +303,7 @@ public class LLMServiceManager {
             if (services.size() > 1) {
                 failoverEvents.incrementAndGet();
                 secondaryRequests.incrementAndGet();
-                LLMService secondary = services.get(1);
+                LLMProvider secondary = services.get(1);
 
                 try {
                     T result = executeOnService(secondary, callable);
@@ -324,7 +324,7 @@ public class LLMServiceManager {
      */
     private <T> T executeRoundRobin(ServiceCallable<T> callable) throws LLMServiceException {
         int index = roundRobinCounter.getAndIncrement() % services.size();
-        LLMService service = services.get(index);
+        LLMProvider service = services.get(index);
 
         if (index == 0) {
             primaryRequests.incrementAndGet();
@@ -404,7 +404,7 @@ public class LLMServiceManager {
         }
 
         // Try to find provider that supports this model
-        LLMService targetService = findServiceByModel(modelName);
+        LLMProvider targetService = findServiceByModel(modelName);
 
         if (targetService == getPrimaryService()) {
             log.debug("Model-based routing: Model '{}' found in primary provider", modelName);
@@ -420,7 +420,7 @@ public class LLMServiceManager {
     /**
      * Execute operation on specific service with retry logic.
      */
-    private <T> T executeOnService(LLMService service, ServiceCallable<T> callable)
+    private <T> T executeOnService(LLMProvider service, ServiceCallable<T> callable)
             throws LLMServiceException {
         int attempts = 0;
         Exception lastException = null;
@@ -454,8 +454,8 @@ public class LLMServiceManager {
     // ============ Internal Methods ============
 
     private float[] generateEmbeddingInternal(Embeddings_Op op, String text, String model) throws LLMException {
-        LLMService service = getPrimaryService();
-        // Assuming LLMService has a method that accepts operation type
+        LLMProvider service = getPrimaryService();
+        // Assuming LLMProvider has a method that accepts operation type
         // If not available, just use basic generateEmbedding    
         MapParam param = new MapParam();
         param.model(model);
@@ -463,14 +463,14 @@ public class LLMServiceManager {
     }
 
     private String generateCompletionInternal(String system,String prompt, String model) throws LLMException {
-        LLMService service = getPrimaryService();
+        LLMProvider service = getPrimaryService();
         MapParam params = new MapParam();
         params.model(model);
         var response = service.completion(system, prompt, params);
         return response.getText();
     }
 
-    private LLMService getPrimaryService() {
+    private LLMProvider getPrimaryService() {
         return services.get(0);
     }
 
@@ -479,9 +479,9 @@ public class LLMServiceManager {
      * Performs case-insensitive partial matching.
      *
      * @param modelName Model name to search for
-     * @return LLMService that supports the model, or primary service if not found
+     * @return LLMProvider that supports the model, or primary service if not found
      */
-    private LLMService findServiceByModel(String modelName) {
+    private LLMProvider findServiceByModel(String modelName) {
         if (modelName == null || modelName.trim().isEmpty()) {
             return getPrimaryService();
         }
@@ -489,7 +489,7 @@ public class LLMServiceManager {
         String normalizedModelName = modelName.toLowerCase().trim();
 
         // Search through all services
-        for (LLMService service : services) {
+        for (LLMProvider service : services) {
             if (serviceSupportsModel(service, normalizedModelName)) {
                 return service;
             }
@@ -504,11 +504,11 @@ public class LLMServiceManager {
      * Checks if a service supports a given model.
      * Uses partial matching to handle model name variations.
      *
-     * @param service LLMService to check
+     * @param service LLMProvider to check
      * @param normalizedModelName Normalized model name (lowercase, trimmed)
      * @return true if service supports the model
      */
-    private boolean serviceSupportsModel(LLMService service, String normalizedModelName) {
+    private boolean serviceSupportsModel(LLMProvider service, String normalizedModelName) {
         try {
             // Get available models from service
             MapModels models = service.getInstalledModels();
@@ -632,7 +632,7 @@ public class LLMServiceManager {
 
         // Simple health check - try to get embedding of a test string
         try {
-            LLMService service = services.get(index);
+            LLMProvider service = services.get(index);
             return service.isOnline();
         } catch (Exception e) {
             return false;
@@ -640,12 +640,12 @@ public class LLMServiceManager {
     }
 
     /**
-     * Returns a map of all registered models to their corresponding LLMService.
+     * Returns a map of all registered models to their corresponding LLMProvider.
      * This is useful to see which service provides which models.
      * 
-     * @return Map where keys are model names and values are the LLMService instances that provide them
+     * @return Map where keys are model names and values are the LLMProvider instances that provide them
      */
-    public java.util.Map<String, LLMService> getRegisteredModelsMap() {
+    public java.util.Map<String, LLMProvider> getRegisteredModelsMap() {
 	
 	if (modelsToService == null) {
 	    modelsToService = new java.util.HashMap<>();
@@ -655,7 +655,7 @@ public class LLMServiceManager {
 	    return modelsToService;
 	}
         
-        for (LLMService service : services) {
+        for (LLMProvider service : services) {
             try {
                 MapModels registeredModels = service.getRegisteredModels();
                 if (registeredModels != null && !registeredModels.isEmpty()) {
@@ -692,7 +692,7 @@ public class LLMServiceManager {
 
         for (int i = 0; i < services.size(); i++) {
             try {
-                LLMService service = services.get(i);
+                LLMProvider service = services.get(i);
                 java.util.List<String> models = service.getRegisteredModelNames();
                 if (models != null && !models.isEmpty()) {
                     modelsByProvider.put(i, new java.util.ArrayList<>(models));
@@ -714,7 +714,7 @@ public class LLMServiceManager {
     public java.util.List<String> getAllModels() {
         java.util.Set<String> allModels = new java.util.HashSet<>();
 
-        for (LLMService service : services) {
+        for (LLMProvider service : services) {
             try {
                 java.util.List<String> models = service.getRegisteredModelNames();
                 if (models != null) {
@@ -754,17 +754,17 @@ public class LLMServiceManager {
      * This is useful for direct access when using MODEL_BASED strategy.
      *
      * @param modelName Model name to search for
-     * @return LLMService that supports the model, or null if not found
+     * @return LLMProvider that supports the model, or null if not found
      */
-    public LLMService getServiceByModel(String modelName) {
+    public LLMProvider getServiceByModel(String modelName) {
         int index = findProviderIndexByModel(modelName);
         return index >= 0 ? services.get(index) : null;
     }
 
     /**
-     * Retrieves an LLMService from the pool that has a registered model with the given name.
+     * Retrieves an LLMProvider from the pool that has a registered model with the given name.
      * 
-     * This method searches through all available LLMService instances in the pool
+     * This method searches through all available LLMProvider instances in the pool
      * and returns the first service that has the specified model registered.
      * The search uses the getRegisteredModels() method to check for model availability.
      * 
@@ -774,12 +774,12 @@ public class LLMServiceManager {
      * - Model aliases are also searched
      * 
      * @param modelName The name of the registered model to search for
-     * @return LLMService instance that has the model registered, or null if not found
+     * @return LLMProvider instance that has the model registered, or null if not found
      * @throws IllegalArgumentException if modelName is null or empty
      * 
-     * @see LLMService#getRegisteredModels()
+     * @see LLMProvider#getRegisteredModels()
      */
-    public LLMService getLLMServiceByRegisteredModel(String modelName) {
+    public LLMProvider getLLMServiceByRegisteredModel(String modelName) {
         if (modelName == null || modelName.trim().isEmpty()) {
             throw new IllegalArgumentException("Model name cannot be null or empty");
         }
@@ -787,25 +787,25 @@ public class LLMServiceManager {
         String normalizedModelName = modelName.toLowerCase().trim();
         
         if(this.modelsToService != null) {
-            LLMService service = this.modelsToService.get(modelName);
+            LLMProvider service = this.modelsToService.get(modelName);
 	    if(service != null) {
-		log.debug("Found LLMService for registered model '{}' in provider: {}", 
+		log.debug("Found LLMProvider for registered model '{}' in provider: {}", 
 			 modelName, service.getServiceProvider());
 		return service;
 	    }
         }
 
         // Search through all services in the pool
-        for (LLMService service : services) {
+        for (LLMProvider service : services) {
             if (serviceHasRegisteredModel(service, normalizedModelName)) {
-                log.debug("Found LLMService for registered model '{}' in provider: {}", 
+                log.debug("Found LLMProvider for registered model '{}' in provider: {}", 
                          modelName, service.getServiceProvider());
                 
                 return service;
             }
         }
 
-        log.warn("No LLMService found with registered model: {}", modelName);
+        log.warn("No LLMProvider found with registered model: {}", modelName);
         return null;
     }
 
@@ -813,11 +813,11 @@ public class LLMServiceManager {
      * Checks if a service has a specific model registered.
      * Uses getRegisteredModels() to check for model availability.
      *
-     * @param service LLMService to check
+     * @param service LLMProvider to check
      * @param normalizedModelName Normalized model name (lowercase, trimmed)
      * @return true if service has the model registered
      */
-    private boolean serviceHasRegisteredModel(LLMService service, String normalizedModelName) {
+    private boolean serviceHasRegisteredModel(LLMProvider service, String normalizedModelName) {
         try {
             // Get registered models from service
             MapModels registeredModels = service.getRegisteredModels();
@@ -953,12 +953,12 @@ public class LLMServiceManager {
      * @param features one or more of Model_Type enum values to filter models
      * @return List of Models matching the specified types
      * 
-     * @see LLMService#getInstalledModels()
+     * @see LLMProvider#getInstalledModels()
      * @see Model_Type
      */
     public List<Model> findModelsByModelType(Model_Type... features) {
 	List<Model> matchedModels = new java.util.ArrayList<>();	
-	for (LLMService service : services) {
+	for (LLMProvider service : services) {
 	    try {
 		MapModels models = service.getInstalledModels();
 		if (models != null && !models.isEmpty()) {

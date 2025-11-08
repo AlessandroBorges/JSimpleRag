@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.CompletionResponse;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
@@ -75,7 +75,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
     /**
      * Serviço de LLM para operações de IA.
      */
-    private LLMService llmServices;
+    private LLMProvider llmServices;
     
     /**
      * Número máximo de tokens permitidos por split.
@@ -94,7 +94,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * 
      * @param llmService - serviço de LLM
      */
-    public AbstractSplitter(LLMService llmService) {
+    public AbstractSplitter(LLMProvider llmService) {
 	this.llmServices = llmService;
     }
 
@@ -131,7 +131,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
 	    return 0;
 	}
 
-	// Primeiro, tentar usar o LLMService se disponível
+	// Primeiro, tentar usar o LLMProvider se disponível
 	if (llmServices != null) {
 	    try {
 		return llmServices.tokenCount(text, null);
@@ -322,7 +322,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @param texto - texto de entrada
      * @return
      */
-    public String clarifiqueTexto(LLMService provedorIA, String texto) {
+    public String clarifiqueTexto(LLMProvider provedorIA, String texto) {
 	try {
 	    return clarifiqueTexto(provedorIA, texto, null);
 	} catch (LLMException e) {
@@ -338,7 +338,7 @@ public abstract class AbstractSplitter implements DocumentSplitter, DocumentPrep
      * @return texto ajustado, clarificado
      * @throws LLMException
      */
-    public String clarifiqueTexto(LLMService provedorIA, String texto, String prompt) throws LLMException {
+    public String clarifiqueTexto(LLMProvider provedorIA, String texto, String prompt) throws LLMException {
 	if (prompt == null || prompt.isBlank()) {
 	    prompt = "Rescreva o texto a ser apresentado na lingua Português do Brasil, "
 		    + "de forma clara, informativa e concisa, "

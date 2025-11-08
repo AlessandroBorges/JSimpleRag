@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.UploadTextRequest;
 import bor.tools.simplerag.dto.UploadUrlRequest;
@@ -29,11 +33,8 @@ import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.ProcessingStatusTracker;
 import bor.tools.simplerag.service.ProcessingStatusTracker.ProcessingStatus;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
-import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.simplerag.service.processing.EnrichmentOptions;
 import bor.tools.simplerag.service.processing.EnrichmentResult;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

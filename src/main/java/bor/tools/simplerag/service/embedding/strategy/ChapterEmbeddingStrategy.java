@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplellm.Embeddings_Op;
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model_Type;
 import bor.tools.simplellm.exceptions.LLMException;
@@ -278,8 +278,8 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         String modelName = request.getEmbeddingModelName(defaultEmbeddingModel);
         log.debug("Using embedding model: {}", modelName);
 
-        // Get appropriate LLMService from pool
-        LLMService llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);               
+        // Get appropriate LLMProvider from pool
+        LLMProvider llmService = llmServiceManager.getLLMServiceByRegisteredModel(modelName);               
         if (llmService == null) {
             throw new IllegalStateException(
                 "No LLM service found for embedding model: " + modelName +
@@ -296,7 +296,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	} else {
 	    modelName = model.getName(); // Use exact registered name
 	}
-        log.debug("Using LLMService from provider: {}", llmService.getServiceProvider());
+        log.debug("Using LLMProvider from provider: {}", llmService.getServiceProvider());
 
         // Prepare parameters
         MapParam params = new MapParam();

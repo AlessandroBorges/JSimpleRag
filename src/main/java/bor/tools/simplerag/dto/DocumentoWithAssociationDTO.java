@@ -112,7 +112,7 @@ public class DocumentoWithAssociationDTO {
         
         dto.getMetadados().addMetadata(src.getMetadados());
         // Set content and also tokensTotal and checksum
-        dto.setConteudoMarkdown(src.getConteudoMarkdown());
+        dto.setText(src.getText());
         
         return dto;
     }
@@ -130,7 +130,7 @@ public class DocumentoWithAssociationDTO {
         entity.setId(this.id);
         entity.setBibliotecaId(this.bibliotecaId);
         entity.setTitulo(this.titulo);
-        entity.setConteudoMarkdown(this.conteudoMarkdown);
+        entity.setText(this.conteudoMarkdown);
         entity.setFlagVigente(this.flagVigente);
         entity.setDataPublicacao(this.dataPublicacao);
         entity.setTokensTotal(getTokensTotal());        
@@ -379,7 +379,7 @@ public class DocumentoWithAssociationDTO {
     /**
      * Set content markdown and update checksum
      */
-    public void setConteudoMarkdown(String conteudoMarkdown) {
+    public void setText(String conteudoMarkdown) {
 	this.conteudoMarkdown = conteudoMarkdown;
 	if (conteudoMarkdown == null || conteudoMarkdown.isEmpty()) {
 	    this.checksum = null;
@@ -418,7 +418,7 @@ public class DocumentoWithAssociationDTO {
     
     @JsonIgnore
     public void setTexto(String textoOriginal) {
-	setConteudoMarkdown(textoOriginal);
+	setText(textoOriginal);
     }
     
 

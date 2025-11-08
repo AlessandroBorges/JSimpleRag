@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
-import bor.tools.simplellm.LLMService;
+import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapModels;
 import bor.tools.simplellm.Model;
 import bor.tools.simplellm.SERVICE_PROVIDER;
@@ -47,7 +47,7 @@ class LLMConfigurationTest {
     private LLMConfiguration llmConfiguration;
 
     @Autowired(required = false)
-    private LLMService primaryLLMService;
+    private LLMProvider primaryLLMService;
 
     @Autowired(required = false)
     private LLMServiceManager llmServiceManager;
@@ -61,7 +61,7 @@ class LLMConfigurationTest {
 
     @Test
     void testPrimaryLLMServiceBeanCreated() {
-        assertNotNull(primaryLLMService, "Primary LLMService bean should be created");
+        assertNotNull(primaryLLMService, "Primary LLMProvider bean should be created");
     }
 
     @Test
@@ -77,7 +77,7 @@ class LLMConfigurationTest {
 
     @Test
     void testLLMServiceManagerHasPrimaryProvider() {
-        List<LLMService> services = llmConfiguration.getActiveProviderMap().values().stream().toList();
+        List<LLMProvider> services = llmConfiguration.getActiveProviderMap().values().stream().toList();
         assertNotNull(services, "Services list should not be null");
         assertFalse(services.isEmpty(), "Services list should not be empty");
         assertTrue(services.size() >= 1, "Should have at least primary service");
@@ -87,7 +87,7 @@ class LLMConfigurationTest {
 
     @Test
     void testGetActiveProviderMap() {
-        Map<String, LLMService> activeProviders = llmConfiguration.getActiveProviderMap();
+        Map<String, LLMProvider> activeProviders = llmConfiguration.getActiveProviderMap();
 
         assertNotNull(activeProviders, "Active provider map should not be null");
         assertFalse(activeProviders.isEmpty(), "Active provider map should not be empty");
@@ -96,7 +96,7 @@ class LLMConfigurationTest {
 
     @Test
     void testActiveProviderMapContainsPrimaryService() {
-        Map<String, LLMService> activeProviders = llmConfiguration.getActiveProviderMap();
+        Map<String, LLMProvider> activeProviders = llmConfiguration.getActiveProviderMap();
 
         boolean hasLMStudio = activeProviders.keySet().stream()
                 .anyMatch(key -> key.contains("LM_STUDIO"));
@@ -106,7 +106,7 @@ class LLMConfigurationTest {
 
     @Test
     void testActiveProviderMapIsUnmodifiable() {
-        Map<String, LLMService> activeProviders = llmConfiguration.getActiveProviderMap();
+        Map<String, LLMProvider> activeProviders = llmConfiguration.getActiveProviderMap();
 
         assertThrows(UnsupportedOperationException.class,
                 () -> activeProviders.put("test", null),

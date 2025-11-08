@@ -39,7 +39,7 @@ import bor.tools.simplerag.entity.Documento;
 import bor.tools.simplerag.entity.Library;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.repository.ChapterRepository;
-import bor.tools.simplerag.repository.DocEmbeddingJdbcRepository;
+import bor.tools.simplerag.repository.DocChunkJdbcRepository;
 import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
@@ -80,7 +80,7 @@ class DocumentoServiceTest {
     private ChapterRepository chapterRepository;
 
     @Mock
-    private DocEmbeddingJdbcRepository embeddingRepository;
+    private DocChunkJdbcRepository embeddingRepository;
 
     @Mock
     private LibraryService libraryService;
