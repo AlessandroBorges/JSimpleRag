@@ -14,7 +14,7 @@ import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
@@ -57,7 +57,7 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
         + "São fornecidos metadados pra melhor contextualização. ";
 
     @Override
-    public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
+    public List<DocChunkDTO> generate(EmbeddingRequest request) {
         log.debug("Generating summary embedding for chapter");
 
         if (request.getChapter() == null) {
@@ -98,7 +98,7 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
             }
 
             // Step 2: Create embedding for the summary
-            DocumentEmbeddingDTO embedding = createSummaryEmbedding(
+            DocChunkDTO embedding = createSummaryEmbedding(
                 summary,
                 chapter,
                 library,
@@ -175,7 +175,7 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Creates an embedding for the summary text.
      */
-    private DocumentEmbeddingDTO createSummaryEmbedding(
+    private DocChunkDTO createSummaryEmbedding(
             String summary,
             ChapterDTO chapter,
             LibraryDTO library,
@@ -222,7 +222,7 @@ public class SummaryEmbeddingStrategy implements EmbeddingGenerationStrategy {
 	}
 
         // Create DTO
-        DocumentEmbeddingDTO docEmbedding = new DocumentEmbeddingDTO();
+        DocChunkDTO docEmbedding = new DocChunkDTO();
         docEmbedding.setTrechoTexto(summary);
         docEmbedding.setEmbeddingVector(embedding);
         docEmbedding.setTipoEmbedding(TipoEmbedding.RESUMO);

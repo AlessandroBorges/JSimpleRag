@@ -23,6 +23,8 @@ import bor.tools.simplerag.entity.enums.TipoBiblioteca;
 import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
+import bor.tools.simplerag.service.llm.LLMServiceManager;
+import bor.tools.simplerag.service.processing.context.LLMContext;
 
 /**
  * Integration tests for EmbeddingOrchestrator.
@@ -48,7 +50,7 @@ class EmbeddingOrchestratorIntegrationTest {
 
     @Autowired
     private EmbeddingOrchestrator embeddingOrchestrator;
-
+    private LLMServiceManager llmServiceManager;
     private LibraryDTO testLibrary;
     private DocumentoWithAssociationDTO testDocument;
 
@@ -92,12 +94,13 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.basicOnly();
 
         // Act
         EmbeddingOrchestrator.ProcessingResult result =
-            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, options);
+            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context,llmContext, options);
 
         // Assert
         assertNotNull(result, "Result should not be null");
@@ -123,12 +126,12 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.withQA(2);
 
         // Act
         EmbeddingOrchestrator.ProcessingResult result =
-            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, options);
+            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, llmContext, options);
 
         // Assert
         assertNotNull(result, "Result should not be null");
@@ -151,12 +154,12 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.withSummary(300);
 
         // Act
         EmbeddingOrchestrator.ProcessingResult result =
-            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, options);
+            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, llmContext, options);
 
         // Assert
         assertNotNull(result, "Result should not be null");
@@ -178,12 +181,12 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.fullProcessing();
 
         // Act
         EmbeddingOrchestrator.ProcessingResult result =
-            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, options);
+            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, llmContext, options);
 
         // Assert
         assertNotNull(result, "Result should not be null");
@@ -206,11 +209,12 @@ class EmbeddingOrchestratorIntegrationTest {
                 .library(testLibrary)
                 .build();
 
+        LLMContext llmContext = LLMContext.create(testLibrary,llmServiceManager );
         ProcessingOptions options = ProcessingOptions.basicOnly();
 
         // Act
         CompletableFuture<EmbeddingOrchestrator.ProcessingResult> future =
-            embeddingOrchestrator.processDocumentFull(testDocument, context, options);
+            embeddingOrchestrator.processDocumentFull(testDocument, context, llmContext, options);
 
         // Wait for completion (with timeout)
         EmbeddingOrchestrator.ProcessingResult result = future.get(60, TimeUnit.SECONDS);
@@ -231,12 +235,12 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.basicOnly();
 
         // Act
         EmbeddingOrchestrator.ProcessingResult result =
-            embeddingOrchestrator.processDocumentSync(testDocument, context, options);
+            embeddingOrchestrator.processDocumentSync(testDocument, context, llmContext, options);
 
         // Assert
         assertNotNull(result, "Sync result should not be null");
@@ -254,12 +258,12 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.basicOnly();
 
         // Act
         EmbeddingOrchestrator.ProcessingResult result =
-            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, options);
+            embeddingOrchestrator.processDocumentWithoutRetry(testDocument, context, llmContext, options);
 
         EmbeddingOrchestrator.ProcessingStats stats = result.getStats();
 
@@ -292,12 +296,12 @@ class EmbeddingOrchestratorIntegrationTest {
         EmbeddingContext context = EmbeddingContext.builder()
                 .library(testLibrary)
                 .build();
-
+        LLMContext llmContext = LLMContext.create(testLibrary, llmServiceManager);
         ProcessingOptions options = ProcessingOptions.basicOnly();
 
         // Act & Assert
         assertThrows(Exception.class, () -> {
-            embeddingOrchestrator.processDocumentWithoutRetry(invalidDoc, context, options);
+            embeddingOrchestrator.processDocumentWithoutRetry(invalidDoc, context, llmContext, options);
         }, "Should throw exception for invalid document");
     }
 

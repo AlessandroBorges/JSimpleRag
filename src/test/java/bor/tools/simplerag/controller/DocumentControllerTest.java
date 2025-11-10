@@ -41,6 +41,7 @@ import bor.tools.simplerag.service.ProcessingStatusTracker.Status;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.simplerag.service.processing.EnrichmentOptions;
 import bor.tools.simplerag.service.processing.EnrichmentResult;
+import bor.tools.simplerag.service.processing.GenerationFlag;
 
 /**
  * Comprehensive integration tests for DocumentController.
@@ -338,7 +339,7 @@ class DocumentControllerTest {
             processingStatus.setChaptersCount(4);
             processingStatus.setEmbeddingsCount(11);
 
-            when(documentoService.processDocumentAsyncV2(testDocumentId))
+            when(documentoService.processDocumentAsyncV2(testDocumentId, GenerationFlag.FULL_TEXT_METADATA))
                     .thenReturn(CompletableFuture.completedFuture(processingStatus));
 
             // Act & Assert
@@ -353,7 +354,8 @@ class DocumentControllerTest {
                     .andExpect(jsonPath("$.statusUrl").value("/api/v1/documents/" + testDocumentId + "/status"));
 
             verify(statusTracker, times(1)).startProcessing(eq(testDocumentId), anyString());
-            verify(documentoService, times(1)).processDocumentAsyncV2(testDocumentId);
+            verify(documentoService, times(1))
+            .processDocumentAsyncV2(testDocumentId, GenerationFlag.FULL_TEXT_METADATA);
         }
 
         @Test
@@ -365,7 +367,7 @@ class DocumentControllerTest {
             DocumentoService.ProcessingStatus processingStatus = new DocumentoService.ProcessingStatus();
             processingStatus.setStatus("COMPLETED");
 
-            when(documentoService.processDocumentAsyncV2(testDocumentId))
+            when(documentoService.processDocumentAsyncV2(testDocumentId,GenerationFlag.FULL_TEXT_METADATA))
                     .thenReturn(CompletableFuture.completedFuture(processingStatus));
 
             // Act & Assert
@@ -392,7 +394,7 @@ class DocumentControllerTest {
                     .andDo(print())
                     .andExpect(status().is4xxClientError());
 
-            verify(documentoService, never()).processDocumentAsyncV2(anyInt());
+            verify(documentoService, never()).processDocumentAsyncV2(anyInt(),GenerationFlag.FULL_TEXT_METADATA);
         }
     }
 

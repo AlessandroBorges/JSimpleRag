@@ -20,7 +20,7 @@ import bor.tools.simplerag.entity.MetaDoc;
  * 
  *  @see bor.tools.simplerag.dto.ChapterDTO
  *  @see bor.tools.simplerag.dto.LibraryDTO
- *  @see bor.tools.simplerag.dto.DocumentEmbeddingDTO
+ *  @see bor.tools.simplerag.dto.DocChunkDTO
  *  
  */
 @Data
@@ -33,7 +33,7 @@ public class ChapterWithAssociationsDTO {
     
     private LibraryDTO library;
     
-    private List<DocumentEmbeddingDTO> embeddings;
+    private List<DocChunkDTO> embeddings;
     
     /**
      * Static factory method to create ChapterWithAssociationsDTO from its components.
@@ -42,7 +42,7 @@ public class ChapterWithAssociationsDTO {
      * @param embeddings
      * @return
      */
-    public static ChapterWithAssociationsDTO from(ChapterDTO chapter, LibraryDTO library, List<DocumentEmbeddingDTO> embeddings) {
+    public static ChapterWithAssociationsDTO from(ChapterDTO chapter, LibraryDTO library, List<DocChunkDTO> embeddings) {
 	return ChapterWithAssociationsDTO.builder()
 		.chapter(chapter)
 		.library(library)
@@ -60,7 +60,7 @@ public class ChapterWithAssociationsDTO {
 	    this.chapter.getMetadados().setCapitulo(title); ;
 	}
 	if(this.embeddings != null && !this.embeddings.isEmpty()) {
-	    for (DocumentEmbeddingDTO embedding : this.embeddings) {
+	    for (DocChunkDTO embedding : this.embeddings) {
 	       embedding.getMetadados().setCapitulo(title);	
 	    }
 	}
@@ -75,7 +75,7 @@ public class ChapterWithAssociationsDTO {
 	    this.chapter.setId(chapterId);	
 	}
 	if(this.embeddings != null && !this.embeddings.isEmpty()) {
-	    for (DocumentEmbeddingDTO embedding : this.embeddings) {
+	    for (DocChunkDTO embedding : this.embeddings) {
 	       embedding.setCapituloId(chapterId);	
 	    }
 	}
@@ -90,7 +90,7 @@ public class ChapterWithAssociationsDTO {
 	    this.library.setId(libraryId);	
 	}
 	if(this.embeddings != null && !this.embeddings.isEmpty()) {
-	    for (DocumentEmbeddingDTO embedding : this.embeddings) {
+	    for (DocChunkDTO embedding : this.embeddings) {
 	       embedding.setBibliotecaId(libraryId);	
 	    }
 	}
@@ -105,7 +105,7 @@ public class ChapterWithAssociationsDTO {
 	    this.chapter.setDocumentoId(documentId);
 	}
 	if (this.embeddings != null && !this.embeddings.isEmpty()) {
-	    for (DocumentEmbeddingDTO embedding : this.embeddings) {
+	    for (DocChunkDTO embedding : this.embeddings) {
 		embedding.setDocumentoId(documentId);
 	    }
 	}
@@ -145,10 +145,10 @@ public class ChapterWithAssociationsDTO {
      * @param content Text content for the embedding
      * @param ordemCap Order of the chapter embedding
      * 
-     * @return DocumentEmbeddingDTO
+     * @return DocChunkDTO
      */	
-    public DocumentEmbeddingDTO createChapterLevelEmbedding(String content, Integer ordemCap) {
-	DocumentEmbeddingDTO embedding = this.chapter.createChapterLevelEmbedding(content, ordemCap);
+    public DocChunkDTO createChapterLevelEmbedding(String content, Integer ordemCap) {
+	DocChunkDTO embedding = this.chapter.createChunkLevelEmbedding(content, ordemCap);
 	embedding.setOrdemCap(embeddings.size() + 1); // set ordemCap based on current size
 	this.embeddings.add(embedding);
 	return embedding;

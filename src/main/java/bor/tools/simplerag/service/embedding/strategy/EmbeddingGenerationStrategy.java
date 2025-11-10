@@ -2,7 +2,7 @@ package bor.tools.simplerag.service.embedding.strategy;
 
 import java.util.List;
 
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 
 /**
@@ -28,7 +28,7 @@ public interface EmbeddingGenerationStrategy {
      * @return List of generated embeddings
      * @throws IllegalArgumentException if request is invalid for this strategy
      */
-    List<DocumentEmbeddingDTO> generate(EmbeddingRequest request);
+    List<DocChunkDTO> generate(EmbeddingRequest request);
 
     /**
      * Check if this strategy can handle the given request.

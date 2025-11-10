@@ -85,9 +85,9 @@ public class EmbeddingContext {
     
     /**
      * Maximum tokens for Embedding operations.
-     * Can less, as 2048 or 512, depending on the model used.
+     * Can be 512, 1024 or 2048, depending on the model used.
      * 
-     * Default is 2048	 tokens.
+     * Default is 4096 tokens.
      */	
     @Builder.Default
     private Integer contenxtLength = 4096;

@@ -12,7 +12,7 @@ import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +40,7 @@ public class QueryEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private String defaultEmbeddingModel;
 
     @Override
-    public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
+    public List<DocChunkDTO> generate(EmbeddingRequest request) {
         log.debug("Generating query embedding for text: {} chars",
                 request.getText() != null ? request.getText().length() : 0);
 

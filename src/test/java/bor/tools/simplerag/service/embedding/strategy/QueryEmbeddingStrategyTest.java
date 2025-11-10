@@ -5,7 +5,7 @@ import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.SERVICE_PROVIDER;
 import bor.tools.simplellm.exceptions.LLMException;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
@@ -174,7 +174,7 @@ class QueryEmbeddingStrategyTest {
                 .thenReturn(mockEmbedding);
 
         // Act
-        List<DocumentEmbeddingDTO> result = strategy.generate(request);
+        List<DocChunkDTO> result = strategy.generate(request);
 
         // Assert
         assertNotNull(result, "Result should not be null");

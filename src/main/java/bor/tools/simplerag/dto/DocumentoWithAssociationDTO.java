@@ -250,7 +250,7 @@ public class DocumentoWithAssociationDTO {
     /**
      * Get all embeddings from all chapters
      */
-    public List<DocumentEmbeddingDTO> getAllEmbeddings() {
+    public List<DocChunkDTO> getAllEmbeddings() {
         if (capitulos == null) {
             return new ArrayList<>();
         }
@@ -269,27 +269,27 @@ public class DocumentoWithAssociationDTO {
     /**
      * Get document-level embeddings only
      */
-    public List<DocumentEmbeddingDTO> getDocumentEmbeddings() {
+    public List<DocChunkDTO> getDocumentEmbeddings() {
         return getAllEmbeddings().stream()
-                .filter(DocumentEmbeddingDTO::isDocumentLevel)
+                .filter(DocChunkDTO::isDocumentLevel)
                 .toList();
     }
 
     /**
      * Get chapter-level embeddings only
      */
-    public List<DocumentEmbeddingDTO> getChapterEmbeddings() {
+    public List<DocChunkDTO> getChapterEmbeddings() {
         return getAllEmbeddings().stream()
-                .filter(DocumentEmbeddingDTO::isChapterLevel)
+                .filter(DocChunkDTO::isChapterLevel)
                 .toList();
     }
 
     /**
      * Get chunk-level embeddings only
      */
-    public List<DocumentEmbeddingDTO> getChunkEmbeddings() {
+    public List<DocChunkDTO> getChunkEmbeddings() {
         return getAllEmbeddings().stream()
-                .filter(DocumentEmbeddingDTO::isChunkLevel)
+                .filter(DocChunkDTO::isChunkLevel)
                 .toList();
     }
 

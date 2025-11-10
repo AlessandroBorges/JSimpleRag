@@ -82,13 +82,13 @@ public class LLMConfiguration {
     @Value("${llmservice.provider.llm.models:qwen/qwen3-1.7b}")
     private String primaryLlmModels;
 
-    @Value("${llmservice.provider.embedding.model:text-embedding-nomic-embed-text-v1.5@q8_0}")
+    @Value("${llmservice.provider.embedding.model:snowflake}")
     private String primaryEmbeddingModel;
 
     @Value("${llmservice.provider.embedding.dimension:768}")
     private Integer primaryEmbeddingDimension;
 
-    @Value("${llmservice.provider.embedding.embeddingContextLength:2048}")
+    @Value("${llmservice.provider.embedding.embeddingContextLength:4096}")
     private Integer primaryEmbeddingContextLength;
 
     @Value("${llmservice.provider.api.url:#{null}}")

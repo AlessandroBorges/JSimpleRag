@@ -220,8 +220,8 @@ public class DocumentoDTO {
         }
 
         try {
-            return RagUtils.countTokens(text);
-        } catch (LLMException e) {
+            return RagUtils.countTokensFast(text);
+        } catch (Exception e) {
             e.printStackTrace();
             // Fallback estimate: 3.8 chars per token
             return Math.round((text.length() * 1.0f) / 3.8f);

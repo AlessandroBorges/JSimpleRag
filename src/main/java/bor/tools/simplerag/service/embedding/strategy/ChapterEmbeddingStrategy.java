@@ -15,7 +15,7 @@ import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.Model_Type;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
@@ -43,6 +43,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Component
 @RequiredArgsConstructor
+@Deprecated(since = "0.0.3", forRemoval = true) 
 public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(ChapterEmbeddingStrategy.class);
@@ -81,7 +82,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private Set<String> ignoredKeys = Set.of(negativeKeys);
 
     @Override
-    public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
+    public List<DocChunkDTO> generate(EmbeddingRequest request) {
         log.debug("Generating chapter embeddings with flag: {}", request.getGenerationFlag());
 
         if (request.getChapter() == null) {
@@ -140,7 +141,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Creates embedding with full text + metadata
      */
-    private DocumentEmbeddingDTO createFullTextEmbedding(ChapterDTO chapter, LibraryDTO library,
+    private DocChunkDTO createFullTextEmbedding(ChapterDTO chapter, LibraryDTO library,
                                                          EmbeddingRequest request) throws LLMException {
         String fullText = buildTextWithMetadata(chapter);
         return createEmbeddingFromText(
@@ -157,7 +158,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Creates embedding with metadata only
      */
-    private DocumentEmbeddingDTO createMetadataOnlyEmbedding(ChapterDTO chapter, LibraryDTO library,
+    private DocChunkDTO createMetadataOnlyEmbedding(ChapterDTO chapter, LibraryDTO library,
                                                              EmbeddingRequest request) throws LLMException {
         String metadataText = buildMetadataText(chapter);
         return createEmbeddingFromText(
@@ -174,7 +175,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Creates embedding with text only
      */
-    private DocumentEmbeddingDTO createTextOnlyEmbedding(ChapterDTO chapter, LibraryDTO library,
+    private DocChunkDTO createTextOnlyEmbedding(ChapterDTO chapter, LibraryDTO library,
                                                          EmbeddingRequest request) throws LLMException {
         return createEmbeddingFromText(
                 chapter.getConteudo(),
@@ -192,21 +193,21 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
      *
      * <p><b>UPDATED v0.0.3:</b> Uses SplitterGenerico.splitChapterIntoChunks() instead of ContentSplitter.</p>
      */
-    private List<DocumentEmbeddingDTO> createSplitTextEmbeddings(ChapterDTO chapter, LibraryDTO library,
+    private List<DocChunkDTO> createSplitTextEmbeddings(ChapterDTO chapter, LibraryDTO library,
                                                                  EmbeddingRequest request) {
-        List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
+        List<DocChunkDTO> embeddings = new ArrayList<>();
 
         try {
             // Use SplitterGenerico via Factory to split into optimized chunks
             SplitterGenerico splitter = splitterFactory.createGenericSplitter(library);
-            List<DocumentEmbeddingDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapter);
+            List<DocChunkDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapter);
                                     
             // Generate embeddings for each chunk
             for (int i = 0; i < chunkDTOs.size(); i++) {
-                DocumentEmbeddingDTO chunkDTO = chunkDTOs.get(i);
+                DocChunkDTO chunkDTO = chunkDTOs.get(i);
                 String chunkTextWithMetadata = buildTextWithMetadata(chapter);				
                 
-                DocumentEmbeddingDTO embedding = createEmbeddingFromText(
+                DocChunkDTO embedding = createEmbeddingFromText(
                         chunkTextWithMetadata,
                         chapter.getTitulo() + " - Chunk " + (i + 1),
                         library,
@@ -234,7 +235,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Automatically chooses embedding type based on content size
      */
-    private List<DocumentEmbeddingDTO> createAutoEmbeddings(ChapterDTO chapter, 
+    private List<DocChunkDTO> createAutoEmbeddings(ChapterDTO chapter, 
 	    						    LibraryDTO library,
                                                             EmbeddingRequest request) 
     {
@@ -263,9 +264,9 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
     }
 
     /**
-     * Creates a DocumentEmbeddingDTO from text using LLMServiceManager
+     * Creates a DocChunkDTO from text using LLMServiceManager
      */
-    private DocumentEmbeddingDTO createEmbeddingFromText(
+    private DocChunkDTO createEmbeddingFromText(
             String text,
             String title,
             LibraryDTO library,
@@ -319,7 +320,7 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         embedding = normalizeEmbedding(embedding, request.getContext());
         
         // Create DTO
-        DocumentEmbeddingDTO docEmbedding = new DocumentEmbeddingDTO();
+        DocChunkDTO docEmbedding = new DocChunkDTO();
         docEmbedding.setTrechoTexto(text);
         docEmbedding.setEmbeddingVector(embedding);
         docEmbedding.setTipoEmbedding(tipoEmbedding);

@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.utils.RagUtils;
@@ -39,7 +39,7 @@ import bor.tools.utils.RagUtils;
  * &#64;Autowired
  * private ContentSplitter contentSplitter;
  *
- * List&lt;DocumentEmbeddingDTO&gt; chunks =
+ * List&lt;DocChunkDTO&gt; chunks =
  *     contentSplitter.splitContent(chapter);
  *       </pre>
  *     </td>
@@ -50,7 +50,7 @@ import bor.tools.utils.RagUtils;
  *
  * SplitterGenerico splitter =
  *     splitterFactory.createGenericSplitter(library);
- * List&lt;DocumentEmbeddingDTO&gt; chunks =
+ * List&lt;DocChunkDTO&gt; chunks =
  *     splitter.splitChapterIntoChunks(chapter);
  *       </pre>
  *     </td>
@@ -126,12 +126,12 @@ public class ContentSplitter {
      * Split chapter into smaller embedding chunks.
      *
      * @param chapter The chapter to split
-     * @return List of DocumentEmbeddingDTO chunks
+     * @return List of DocChunkDTO chunks
      * @deprecated Use {@link SplitterGenerico#splitChapterIntoChunks(ChapterDTO)} instead
      */
     @Deprecated(since = "0.0.3", forRemoval = true)
-    public List<DocumentEmbeddingDTO> splitContent(ChapterDTO chapter) {
-	List<DocumentEmbeddingDTO> chunks = splitChapterContent(chapter);
+    public List<DocChunkDTO> splitContent(ChapterDTO chapter) {
+	List<DocChunkDTO> chunks = splitChapterContent(chapter);
 	return chunks;
     }
 
@@ -139,17 +139,17 @@ public class ContentSplitter {
     /**
      * Split chapter content into smaller chunks based on titles or size
      * @param chapter The chapter to split
-     * @return List of DocumentEmbeddingDTO chunks
+     * @return List of DocChunkDTO chunks
      */
-    private List<DocumentEmbeddingDTO> splitChapterContent(ChapterDTO chapter) {
+    private List<DocChunkDTO> splitChapterContent(ChapterDTO chapter) {
 	String conteudo = chapter.getConteudo();
 	
-	List<DocumentEmbeddingDTO> chunks = new ArrayList<>();
+	List<DocChunkDTO> chunks = new ArrayList<>();
 	int tokenCount = conteudo.length() / 4; // Rough estimate: 1 token ~ 4 characters
 	
 	// small chapter, no need to split
 	if(tokenCount <= IDEAL_TOKENS) {
-	    DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+	    DocChunkDTO newChunk = DocChunkDTO.builder()
 		    .documentoId(chapter.getDocumentoId())
 		    .bibliotecaId(chapter.getBibliotecaId())
 		    .capituloId(chapter.getId())
@@ -170,7 +170,7 @@ public class ContentSplitter {
 		Integer end = title.getLinesLength();
 		String textBlock = String.join("\n", java.util.Arrays.copyOfRange(lines, start, end));
 
-		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+		DocChunkDTO newChunk = DocChunkDTO.builder()
 			.documentoId(chapter.getDocumentoId())
 			.bibliotecaId(chapter.getBibliotecaId())
 			.capituloId(chapter.getId())
@@ -238,7 +238,7 @@ public class ContentSplitter {
 		currentChunk.setLength(0); // Reset for next chunk
 		currentChunk.append(nextBlock).append(" "); // Start new chunk with current sentence
 
-		DocumentEmbeddingDTO newChunk = DocumentEmbeddingDTO.builder()
+		DocChunkDTO newChunk = DocChunkDTO.builder()
 			.documentoId(chapter.getDocumentoId())
 			.bibliotecaId(chapter.getBibliotecaId())
 			.capituloId(chapter.getId())

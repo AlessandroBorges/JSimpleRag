@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DocumentEmbeddingDTO {
+public class DocChunkDTO {
 
     private Integer id;
 
@@ -64,11 +64,11 @@ public class DocumentEmbeddingDTO {
      * @param src - source entity
      * @return DTO instance
      */
-    public static DocumentEmbeddingDTO from(bor.tools.simplerag.entity.DocChunk src) {
+    public static DocChunkDTO from(bor.tools.simplerag.entity.DocChunk src) {
         if (src == null) {
             return null;
         }
-        return DocumentEmbeddingDTO.builder()
+        return DocChunkDTO.builder()
                 .id(src.getId())
                 .bibliotecaId(src.getLibraryId())
                 .documentoId(src.getDocumentoId())

@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
@@ -33,6 +33,7 @@ import bor.tools.simplerag.repository.DocumentoRepository;
 import bor.tools.simplerag.service.embedding.EmbeddingOrchestrator;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
+import bor.tools.simplerag.service.processing.GenerationFlag;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
 import bor.tools.utils.RagUtils;
@@ -77,9 +78,9 @@ public class DocumentoService {
     // Service dependencies
     private final LibraryService libraryService;
     private final DocumentConverter documentConverter;
-    private final DocumentRouter documentRouter;
-    private final EmbeddingOrchestrator embeddingOrchestrator;
-    private final LLMServiceManager llmServiceManager;
+//  private final DocumentRouter documentRouter;
+//  private final EmbeddingOrchestrator embeddingOrchestrator;
+//    private final LLMServiceManager llmServiceManager;
 
     // ✅ NEW: Sequential processing service (v0.0.3+)
     private final DocumentProcessingService documentProcessingService;
@@ -387,7 +388,8 @@ public class DocumentoService {
      * @since 0.0.3
      */
     @Async
-    public CompletableFuture<ProcessingStatus> processDocumentAsyncV2(Integer documentId) {
+    public CompletableFuture<ProcessingStatus> processDocumentAsyncV2(Integer documentId, 
+	    							      GenerationFlag generationFlag) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 log.info("Starting NEW async processing (v2) for document ID: {}", documentId);
@@ -405,7 +407,7 @@ public class DocumentoService {
 
                 // Delegate to new processing service
                 DocumentProcessingService.ProcessingResult result =
-                        documentProcessingService.processDocument(documento, biblioteca).get();
+                        documentProcessingService.processDocument(documento, biblioteca, generationFlag).get();
 
                 // Create status response
                 ProcessingStatus status = new ProcessingStatus();
@@ -598,6 +600,7 @@ public class DocumentoService {
      * ✅ UPDATED VERSION: Uses EmbeddingOrchestrator and DocChunkJdbcRepository
      */
     @Transactional
+    @Deprecated(since = "0.0.3", forRemoval = true)
     protected void persistProcessingResult(EmbeddingOrchestrator.ProcessingResult result, Documento documento) 
     {
         log.debug("Persisting processing result for document: {}", documento.getId());
@@ -645,9 +648,9 @@ public class DocumentoService {
     }
 
     /**
-     * Convert DocumentEmbeddingDTO to Entity for embedding
+     * Convert DocChunkDTO to Entity for embedding
      */
-    private DocChunk toEntity(DocumentEmbeddingDTO dto, 
+    private DocChunk toEntity(DocChunkDTO dto, 
 	    				Documento documento,
 	    				Map<String, Integer> chapterIdMap) 
     {
@@ -825,6 +828,7 @@ public class DocumentoService {
     /**
      * Calculate total tokens from processing result
      */
+    @Deprecated(since = "0.0.3", forRemoval = true) 
     private int calculateTotalTokens(EmbeddingOrchestrator.ProcessingResult result) {
         if (result.getCapitulos() == null) {
             return 0;

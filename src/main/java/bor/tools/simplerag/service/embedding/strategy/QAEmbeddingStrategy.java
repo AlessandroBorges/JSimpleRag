@@ -17,7 +17,7 @@ import bor.tools.simplellm.Reasoning_Effort;
 import bor.tools.simplellm.Utils;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
@@ -62,7 +62,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
     private static final int TOKENS_PER_QA = 340;
 
     @Override
-    public List<DocumentEmbeddingDTO> generate(EmbeddingRequest request) {
+    public List<DocChunkDTO> generate(EmbeddingRequest request) {
         log.debug("Generating Q&A embeddings for chapter");
 
         if (request.getChapter() == null) {
@@ -99,11 +99,11 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
             }
 
             // Step 2: Create embeddings for each Q&A pair
-            List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
+            List<DocChunkDTO> embeddings = new ArrayList<>();
             for (int i = 0; i < qaPairs.size(); i++) {
                 QuestionAnswer qa = qaPairs.get(i);
 
-                DocumentEmbeddingDTO embedding = createQAEmbedding(
+                DocChunkDTO embedding = createQAEmbedding(
                     qa,
                     i,
                     qaPairs.size(),
@@ -245,7 +245,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
     /**
      * Creates an embedding for a single Q&A pair.
      */
-    private DocumentEmbeddingDTO createQAEmbedding(
+    private DocChunkDTO createQAEmbedding(
             QuestionAnswer qa,
             int index,
             int totalPairs,
@@ -301,7 +301,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
             embedding = Utils.normalizeAndResize(embedding, totalPairs);
 	}
         // Create DTO
-        DocumentEmbeddingDTO docEmbedding = new DocumentEmbeddingDTO();
+        DocChunkDTO docEmbedding = new DocChunkDTO();
         docEmbedding.setTrechoTexto(combinedText);
         docEmbedding.setEmbeddingVector(embedding);
         docEmbedding.setTipoEmbedding(TipoEmbedding.PERGUNTAS_RESPOSTAS);

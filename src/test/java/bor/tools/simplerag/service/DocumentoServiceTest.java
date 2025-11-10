@@ -46,6 +46,7 @@ import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
 import bor.tools.simplerag.service.processing.EnrichmentOptions;
 import bor.tools.simplerag.service.processing.EnrichmentResult;
+import bor.tools.simplerag.service.processing.GenerationFlag;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.utils.DocumentConverter;
 
@@ -297,12 +298,12 @@ class DocumentoServiceTest {
                             .success(true)
                             .build();
 
-            when(documentProcessingService.processDocument(any(Documento.class), any(LibraryDTO.class)))
+            when(documentProcessingService.processDocument(any(Documento.class), any(LibraryDTO.class),any(GenerationFlag.class) ) )
                     .thenReturn(CompletableFuture.completedFuture(processingResult));
 
             // Act
             CompletableFuture<DocumentoService.ProcessingStatus> future =
-                    documentoService.processDocumentAsyncV2(testDocumentId);
+                    documentoService.processDocumentAsyncV2(testDocumentId,GenerationFlag.FULL_TEXT_METADATA);
             DocumentoService.ProcessingStatus result = future.get();
 
             // Assert
@@ -315,7 +316,7 @@ class DocumentoServiceTest {
             verify(documentoRepository, times(1)).findById(testDocumentId);
             verify(libraryService, times(1)).findById(testLibraryId);
             verify(documentProcessingService, times(1))
-                    .processDocument(any(Documento.class), any(LibraryDTO.class));
+                    .processDocument(any(Documento.class), any(LibraryDTO.class), any(GenerationFlag.class));
         }
 
         @Test
@@ -326,7 +327,7 @@ class DocumentoServiceTest {
 
             // Act
             CompletableFuture<DocumentoService.ProcessingStatus> future =
-                    documentoService.processDocumentAsyncV2(testDocumentId);
+                    documentoService.processDocumentAsyncV2(testDocumentId,GenerationFlag.FULL_TEXT_METADATA);
             DocumentoService.ProcessingStatus result = future.get();
 
             // Assert
@@ -336,7 +337,7 @@ class DocumentoServiceTest {
             assertTrue(result.getErrorMessage().contains("Document not found"));
 
             verify(documentProcessingService, never())
-                    .processDocument(any(Documento.class), any(LibraryDTO.class));
+                    .processDocument(any(Documento.class), any(LibraryDTO.class), any(GenerationFlag.class));
         }
 
         @Test
@@ -348,7 +349,7 @@ class DocumentoServiceTest {
 
             // Act
             CompletableFuture<DocumentoService.ProcessingStatus> future =
-                    documentoService.processDocumentAsyncV2(testDocumentId);
+                    documentoService.processDocumentAsyncV2(testDocumentId,GenerationFlag.FULL_TEXT_METADATA);
             DocumentoService.ProcessingStatus result = future.get();
 
             // Assert
@@ -358,7 +359,7 @@ class DocumentoServiceTest {
             assertTrue(result.getErrorMessage().contains("Library not found"));
 
             verify(documentProcessingService, never())
-                    .processDocument(any(Documento.class), any(LibraryDTO.class));
+                    .processDocument(any(Documento.class), any(LibraryDTO.class),any(GenerationFlag.class));
         }
 
         @Test
@@ -376,12 +377,14 @@ class DocumentoServiceTest {
                             .duration("2.1s")
                             .build();
 
-            when(documentProcessingService.processDocument(any(Documento.class), any(LibraryDTO.class)))
+            when(documentProcessingService.processDocument(any(Documento.class),
+        	    							any(LibraryDTO.class),
+        	    							any(GenerationFlag.class)))	
                     .thenReturn(CompletableFuture.completedFuture(processingResult));
 
             // Act
             CompletableFuture<DocumentoService.ProcessingStatus> future =
-                    documentoService.processDocumentAsyncV2(testDocumentId);
+                    documentoService.processDocumentAsyncV2(testDocumentId,GenerationFlag.FULL_TEXT_METADATA);
             DocumentoService.ProcessingStatus result = future.get();
 
             // Assert
@@ -390,7 +393,7 @@ class DocumentoServiceTest {
             assertEquals("LLM service unavailable", result.getErrorMessage());
 
             verify(documentProcessingService, times(1))
-                    .processDocument(any(Documento.class), any(LibraryDTO.class));
+                    .processDocument(any(Documento.class), any(LibraryDTO.class), any(GenerationFlag.class));
         }
     }
 

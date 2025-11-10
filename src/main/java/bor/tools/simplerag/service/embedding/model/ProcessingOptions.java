@@ -14,6 +14,7 @@ import lombok.Data;
  */
 @Data
 @Builder
+@Deprecated(since = "0.0.3", forRemoval = true) 
 public class ProcessingOptions {
 
     /**

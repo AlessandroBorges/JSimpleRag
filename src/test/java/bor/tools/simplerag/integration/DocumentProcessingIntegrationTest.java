@@ -39,6 +39,7 @@ import bor.tools.simplerag.repository.DocChunkJdbcRepository;
 import bor.tools.simplerag.service.LibraryService;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.DocumentProcessingService;
+import bor.tools.simplerag.service.processing.GenerationFlag;
 import bor.tools.simplerag.service.processing.context.LLMContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.strategy.QAEmbeddingStrategy;
@@ -238,7 +239,8 @@ class DocumentProcessingIntegrationTest {
                     .build();
 
             // Mock content type detection
-            when(documentRouter.detectContentType(anyString())).thenReturn(TipoConteudo.OUTROS);
+            Model model = mock(Model.class);
+            when(documentRouter.detectContentType(model, anyString())).thenReturn(TipoConteudo.OUTROS);
 
             // Mock splitter factory
             when(splitterFactory.createSplitter(any(TipoConteudo.class), any(LibraryDTO.class)))
@@ -271,7 +273,7 @@ class DocumentProcessingIntegrationTest {
 
             // Act
             DocumentProcessingService.ProcessingResult result =
-                    documentProcessingService.processDocument(smallDoc, testLibraryDTO).get();
+                    documentProcessingService.processDocument(smallDoc, testLibraryDTO,GenerationFlag.FULL_TEXT_METADATA).get();
 
             // Assert
             assertNotNull(result);
@@ -286,7 +288,8 @@ class DocumentProcessingIntegrationTest {
             verify(llmServiceManager, times(1)).getLLMServiceByRegisteredModel(anyString());
 
             // Verify split and persist
-            verify(documentRouter, times(1)).detectContentType(anyString());
+           // Model model = mock(Model.class);
+            verify(documentRouter, times(1)).detectContentType(model,anyString());
             verify(splitterFactory, times(1)).createSplitter(any(TipoConteudo.class), any(LibraryDTO.class));
             verify(chapterRepository, times(1)).saveAll(anyList());
             verify(embeddingRepository, times(1)).saveAll(anyList());
@@ -299,7 +302,8 @@ class DocumentProcessingIntegrationTest {
         @DisplayName("Should successfully process large document (4 chapters, with summaries)")
         void processDocument_LargeDocument_Success() throws Exception {
             // Arrange - Large document (15,000 tokens)
-            when(documentRouter.detectContentType(anyString())).thenReturn(TipoConteudo.OUTROS);
+            Model model = mock(Model.class);
+            when(documentRouter.detectContentType(model, anyString())).thenReturn(TipoConteudo.OUTROS);
             when(splitterFactory.createSplitter(any(TipoConteudo.class), any(LibraryDTO.class)))
                     .thenReturn(splitter);
 
@@ -348,7 +352,7 @@ class DocumentProcessingIntegrationTest {
 
             // Act
             DocumentProcessingService.ProcessingResult result =
-                    documentProcessingService.processDocument(testDocumento, testLibraryDTO).get();
+                    documentProcessingService.processDocument(testDocumento, testLibraryDTO,GenerationFlag.FULL_TEXT_METADATA).get();
 
             // Assert
             assertNotNull(result);
@@ -363,7 +367,7 @@ class DocumentProcessingIntegrationTest {
             assertNotNull(result.getDuration());
 
             // Verify full workflow
-            verify(documentRouter, times(1)).detectContentType(anyString());
+            verify(documentRouter, times(1)).detectContentType(model, anyString());
             verify(chapterRepository, times(1)).saveAll(argThat(chapters ->
                 ((List<Chapter>) chapters).size() == 4));
             verify(embeddingRepository, times(1)).saveAll(anyList());
@@ -384,8 +388,8 @@ class DocumentProcessingIntegrationTest {
                     .titulo("Document with Failures")
                     .conteudoMarkdown(smallContent)
                     .build();
-
-            when(documentRouter.detectContentType(anyString())).thenReturn(TipoConteudo.OUTROS);
+            Model model = mock(Model.class);
+            when(documentRouter.detectContentType(model, anyString())).thenReturn(TipoConteudo.OUTROS);
             when(splitterFactory.createSplitter(any(TipoConteudo.class), any(LibraryDTO.class)))
                     .thenReturn(splitter);
 
@@ -407,7 +411,7 @@ class DocumentProcessingIntegrationTest {
 
             // Act
             DocumentProcessingService.ProcessingResult result =
-                    documentProcessingService.processDocument(smallDoc, testLibraryDTO).get();
+                    documentProcessingService.processDocument(smallDoc, testLibraryDTO,GenerationFlag.FULL_TEXT_METADATA).get();
 
             // Assert
             assertNotNull(result);
@@ -431,8 +435,8 @@ class DocumentProcessingIntegrationTest {
                     .titulo("Oversized Document")
                     .conteudoMarkdown(veryLargeContent)
                     .build();
-
-            when(documentRouter.detectContentType(anyString())).thenReturn(TipoConteudo.OUTROS);
+            Model model = mock(Model.class);
+            when(documentRouter.detectContentType(model, anyString())).thenReturn(TipoConteudo.OUTROS);
             when(splitterFactory.createSplitter(any(TipoConteudo.class), any(LibraryDTO.class)))
                     .thenReturn(splitter);
 
@@ -457,7 +461,7 @@ class DocumentProcessingIntegrationTest {
 
             // Act
             DocumentProcessingService.ProcessingResult result =
-                    documentProcessingService.processDocument(largeDoc, testLibraryDTO).get();
+                    documentProcessingService.processDocument(largeDoc, testLibraryDTO,GenerationFlag.FULL_TEXT_METADATA).get();
 
             // Assert
             assertNotNull(result);
@@ -484,14 +488,14 @@ class DocumentProcessingIntegrationTest {
     }
 
     /**
-     * Creates mock DocumentEmbeddingDTO chunks.
+     * Creates mock DocChunkDTO chunks.
      */
-    private List<bor.tools.simplerag.dto.DocumentEmbeddingDTO> createMockChunks(int count) {
-        List<bor.tools.simplerag.dto.DocumentEmbeddingDTO> chunks = new ArrayList<>();
+    private List<bor.tools.simplerag.dto.DocChunkDTO> createMockChunks(int count) {
+        List<bor.tools.simplerag.dto.DocChunkDTO> chunks = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            bor.tools.simplerag.dto.DocumentEmbeddingDTO chunk =
-                    bor.tools.simplerag.dto.DocumentEmbeddingDTO.builder()
+            bor.tools.simplerag.dto.DocChunkDTO chunk =
+                    bor.tools.simplerag.dto.DocChunkDTO.builder()
                             .tipoEmbedding(TipoEmbedding.TRECHO)
                             .trechoTexto("Chunk " + (i + 1) + " content")
                             .build();

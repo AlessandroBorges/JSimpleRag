@@ -12,7 +12,7 @@ import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplellm.MapParam;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 import bor.tools.simplerag.service.embedding.strategy.ChapterEmbeddingStrategy;
@@ -73,7 +73,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
      * @return List of generated embeddings (may contain multiple chunks)
      */
     @Override
-    public List<DocumentEmbeddingDTO> generateChapterEmbeddings(ChapterDTO chapter, 
+    public List<DocChunkDTO> generateChapterEmbeddings(ChapterDTO chapter, 
 	    							EmbeddingContext context) {
         return generateChapterEmbeddings(chapter, context, ChapterEmbeddingStrategy.FLAG_AUTO);
     }
@@ -87,7 +87,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
      * @return List of generated embeddings
      */
     @Override
-    public List<DocumentEmbeddingDTO> generateChapterEmbeddings(
+    public List<DocChunkDTO> generateChapterEmbeddings(
             ChapterDTO chapter,
             EmbeddingContext context,
             int generationFlag) {
@@ -167,7 +167,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
      * @return List of Q&A embeddings
      */
     @Override
-    public List<DocumentEmbeddingDTO> generateQAEmbeddings(
+    public List<DocChunkDTO> generateQAEmbeddings(
             ChapterDTO chapter,
             EmbeddingContext context,
             Integer numberOfPairs) {
@@ -202,7 +202,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
      * @return List of summary embeddings
      */
     @Override
-    public List<DocumentEmbeddingDTO> generateSummaryEmbeddings(
+    public List<DocChunkDTO> generateSummaryEmbeddings(
             ChapterDTO chapter,
             EmbeddingContext context,
             Integer maxSummaryLength,
@@ -319,7 +319,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
      * @return List of generated embeddings
      */
     @Override
-    public List<DocumentEmbeddingDTO> generateEmbeddings(EmbeddingRequest request) {
+    public List<DocChunkDTO> generateEmbeddings(EmbeddingRequest request) {
         log.debug("Generating embeddings using custom request");
 
         if (request == null) {

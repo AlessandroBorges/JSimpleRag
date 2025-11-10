@@ -3,9 +3,8 @@ package bor.tools.simplerag.service.processing;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.scheduling.annotation.Async;
@@ -13,8 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import bor.tools.simplellm.Embeddings_Op;
+import bor.tools.simplellm.MapParam;
+import bor.tools.simplellm.Model;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
+import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.DocChunk;
@@ -23,14 +25,12 @@ import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.repository.ChapterRepository;
 import bor.tools.simplerag.repository.DocChunkJdbcRepository;
-import bor.tools.simplerag.service.LibraryService;
-import bor.tools.simplerag.service.llm.LLMServiceManager;
-import bor.tools.simplerag.service.processing.context.LLMContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 import bor.tools.simplerag.service.embedding.strategy.QAEmbeddingStrategy;
 import bor.tools.simplerag.service.embedding.strategy.SummaryEmbeddingStrategy;
-import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
+import bor.tools.simplerag.service.llm.LLMServiceManager;
+import bor.tools.simplerag.service.processing.context.LLMContext;
 import bor.tools.splitter.AbstractSplitter;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.splitter.SplitterFactory;
@@ -71,7 +71,28 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class DocumentProcessingService {
+    
+    
+    
+    // Size constants
+    private static final int DEFAULT_CHUNK_SIZE = 512; // tokens
+    private static final int MIN_CHUNK_SIZE = 256; // tokens
 
+    private static int DEFAULT_EMBED_DIMENSION = 768; // tokens
+    /**
+     * Not useful on metadata
+     */
+    private String[] negativeKeys = {"crc", "checksum","tamanho", "size","dimensions","dimension",
+									"page_count","pagecount","num_pages","number_of_pages","file_type","filetype",
+									 "last_modified","modified_date","created_at","updated_at","data_criacao",
+									"data_modificacao","id","identificador","documento_id","documentoid",
+									"biblioteca_id","bibliotecaid", "file_path","filepath","path",
+									"file_size","filesize","encoding","detected_format","format",
+									//"url","source_url"
+								};    
+    /** facility */								
+    private Set<String> ignoredKeys = Set.of(negativeKeys);
+    
     // ========== Dependencies ==========
 
     private final DocumentRouter documentRouter;
@@ -103,7 +124,7 @@ public class DocumentProcessingService {
     /**
      * Maximum tokens for generated summaries.
      */
-    private static final int SUMMARY_MAX_TOKENS = 1024;
+    private static final int SUMMARY_MAX_TOKENS = 1500;
 
     /**
      * Ideal chunk size for chapter splitting (aligns with ContentSplitter.IDEAL_TOKENS).
@@ -115,7 +136,7 @@ public class DocumentProcessingService {
      * If text exceeds context length by more than this percentage, generate summary.
      * Otherwise, truncate.
      */
-    private static final double OVERSIZE_THRESHOLD_PERCENT = 2.0;
+    private static final double OVERSIZE_THRESHOLD_PERCENT = 5.0;
 
     // ========== Main Processing Method ==========
 
@@ -130,9 +151,9 @@ public class DocumentProcessingService {
      * @return CompletableFuture with processing results
      */
     @Async
-    public CompletableFuture<ProcessingResult> processDocument(
-            Documento documento,
-            LibraryDTO library) {
+    public CompletableFuture<ProcessingResult> processDocument( Documento documento,
+	    							LibraryDTO library,
+	    							GenerationFlag generationFlag) {
 
         log.info("Starting document processing: docId={}, library={}",
                 documento.getId(), library.getNome());
@@ -152,7 +173,10 @@ public class DocumentProcessingService {
 
             // ETAPA 2.2: Split and persist (uses llmContext for token counting)
             log.debug("Splitting document into chapters and chunks...");
-            SplitResult splitResult = splitAndPersist(documento, library, llmContext);
+            SplitResult splitResult = splitAndPersist(documento, 
+        	    					library, 
+        	    					llmContext, 
+        	    					generationFlag);
 
             log.info("Split completed: {} chapters, {} embeddings created",
                     splitResult.getChaptersCount(),
@@ -163,7 +187,8 @@ public class DocumentProcessingService {
             int processed = calculateAndUpdateEmbeddings(
                                         splitResult.getEmbeddings(),
                                         embeddingContext,
-                                        llmContext);
+                                        llmContext,
+                                        generationFlag);
 
             log.info("Embeddings processed: {}/{} successful",
                     processed, splitResult.getEmbeddingsCount());
@@ -216,13 +241,16 @@ public class DocumentProcessingService {
      * @throws Exception if split or persistence fails
      */
     @Transactional
-    protected SplitResult splitAndPersist(
-            Documento documento,
-            LibraryDTO library,
-            LLMContext llmContext) throws Exception {
+    protected SplitResult splitAndPersist( Documento documento,
+	    				   LibraryDTO library,
+	    				   LLMContext llmContext,
+	    				   GenerationFlag generationFlag) throws Exception 
+    {
 
         // Detect content type
-        TipoConteudo tipoConteudo = documentRouter.detectContentType(documento.getText());
+	String header = documento.getText().substring(0, Math.min(500, documento.getText().length()));
+	
+        TipoConteudo tipoConteudo = documentRouter.detectContentType(llmContext.getModel(), header);
         log.debug("Detected content type: {}", tipoConteudo);
 
         // Create appropriate splitter
@@ -249,12 +277,13 @@ public class DocumentProcessingService {
             }
 
             // Create embeddings for this chapter (will be persisted after chapter)
-            List<DocChunk> chapterEmbeddings = createChapterEmbeddings(
-                                                                        chapter,
+            List<DocChunk> chapterEmbeddings = createChapterEmbeddings( chapter,
                                                                         chapterDTO,
                                                                         documento,
                                                                         library,
-                                                                        llmContext);
+                                                                        llmContext,
+                                                                        generationFlag);
+            
                        
             // Track how many embeddings this chapter generated
             embeddingsPerChapter.add(chapterEmbeddings.size());
@@ -306,20 +335,26 @@ public class DocumentProcessingService {
      *   <li>If chapter > 2000 tokens: Split into chunks + optional RESUMO</li>
      *   <li>If chapter > 2500 tokens: Create RESUMO first, then chunks</li>
      * </ul>
-     *
+     * 
+     * @TODO implement use of GenerationFlag
+     * 
      * @param chapter the chapter entity
      * @param chapterDTO the chapter DTO with content
      * @param documento the parent document
      * @param library the library configuration
      * @param llmContext LLM context for token counting and summarization
+     * @param generationFlag generation flag for embedding strategy
+     * 
      * @return list of embeddings (with NULL vectors)
      */
-    private List<DocChunk> createChapterEmbeddings(
-            Chapter chapter,
-            ChapterDTO chapterDTO,
-            Documento documento,
-            LibraryDTO library,
-            LLMContext llmContext) throws Exception {
+    private List<DocChunk> createChapterEmbeddings( Chapter chapter,
+                                                    ChapterDTO chapterDTO,
+                                                    Documento documento,
+                                                    LibraryDTO library,
+                                                    LLMContext llmContext,
+                                                    GenerationFlag generationFlag
+                                                    ) throws Exception 
+    {
 
         List<DocChunk> embeddings = new ArrayList<>();
 
@@ -330,11 +365,10 @@ public class DocumentProcessingService {
         // CASE 1: Small chapter (≤ 512 tokens) - Create single TRECHO
         if (chapterTokens <= IDEAL_CHUNK_SIZE_TOKENS) {
             log.debug("Chapter is small (≤{} tokens), creating single TRECHO", IDEAL_CHUNK_SIZE_TOKENS);
-            DocChunk trecho = criarTrechoUnico(
-                    chapterDTO,
-                    documento,
-                    1 // orderChapter
-            );
+            DocChunk trecho = criarTrechoUnico( chapterDTO,
+                                                documento,
+                                                1 // orderChapter
+                                        	);
             embeddings.add(trecho);
             return embeddings;
         }
@@ -344,7 +378,8 @@ public class DocumentProcessingService {
 
         // Step 1: Generate RESUMO if chapter > 2500 tokens
         if (chapterTokens > SUMMARY_THRESHOLD_TOKENS) {
-            log.debug("Chapter exceeds summary threshold ({}), generating RESUMO", SUMMARY_THRESHOLD_TOKENS);
+            log.debug("Chapter exceeds summary threshold ({}), generating RESUMO", 
+        	    	SUMMARY_THRESHOLD_TOKENS);
             try {
                 DocChunk resumo = criarResumo(
                         chapterDTO,
@@ -364,13 +399,13 @@ public class DocumentProcessingService {
         SplitterGenerico splitter = splitterFactory.createGenericSplitter(library);
 
         // Split chapter into DocumentEmbeddingDTOs
-        List<DocumentEmbeddingDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapterDTO);
+        List<DocChunkDTO> chunkDTOs = splitter.splitChapterIntoChunks(chapterDTO);
 
         log.debug("Chapter split into {} chunks", chunkDTOs.size());
 
         // Step 3: Convert DTOs to entities
         int orderChapter = 1;
-        for (DocumentEmbeddingDTO chunkDTO : chunkDTOs) {
+        for (DocChunkDTO chunkDTO : chunkDTOs) {
             DocChunk trecho = DocChunk.builder()
                     .libraryId(documento.getBibliotecaId())
                     .documentoId(documento.getId())
@@ -388,7 +423,8 @@ public class DocumentProcessingService {
             meta.addMetadata("total_chunks", chunkDTOs.size());
             meta.addMetadata("tokens", RagUtils.countTokensFast(chunkDTO.getTrechoTexto()));
             meta.addMetadata("parent_chapter_title", chapterDTO.getTitulo());
-
+            meta.addMetadata("is_single_chunk", false);            
+            
             embeddings.add(trecho);
             orderChapter++;
         }
@@ -420,7 +456,7 @@ public class DocumentProcessingService {
         // Build summary prompt
         String systemPrompt = "Você é um assistente especializado em resumir conteúdo técnico. "
                 + "Crie um resumo conciso e informativo do texto fornecido, "
-                + "capturando os pontos principais e conceitos chave.";
+                + "capturando os pontos principais e conceitos chave.\n";
 
         String userPrompt = String.format(
                 "Resuma o seguinte capítulo em até %d tokens:\n\n"
@@ -431,8 +467,22 @@ public class DocumentProcessingService {
                 chapterDTO.getConteudo()
         );
 
-        // Generate summary
-        String summary = llmContext.generateCompletion(systemPrompt, userPrompt);
+        MapParam extraParams = new MapParam();
+        extraParams.maxTokens(SUMMARY_MAX_TOKENS);
+        extraParams.temperature(0.58f); // More focused summary
+        extraParams.repeat_penalty(1.1f);
+        extraParams.top_p(0.95f);
+        extraParams.top_k(40);
+        extraParams.min_p(0.05f);
+        extraParams.model(llmContext.getModelName());
+        
+        
+	// Generate summary
+        String summary = llmContext.generateCompletion(systemPrompt, userPrompt, extraParams );
+        
+        if(chapterDTO.getTitulo()!=null && !chapterDTO.getTitulo().isEmpty()) {
+            summary = "Resumo do Capitulo  " + chapterDTO.getTitulo() + "\n" +  summary.trim();
+        }
 
         log.debug("Generated summary with {} characters", summary.length());
 
@@ -449,6 +499,7 @@ public class DocumentProcessingService {
                 .build();
 
         // Add metadata
+        resumo.getMetadados().put("tokens", llmContext.tokenCount(summary, TOKEN_MODEL));
         resumo.getMetadados().put("is_summary", true);
         resumo.getMetadados().put("original_chapter_title", chapterDTO.getTitulo());
         resumo.getMetadados().put("summary_generated_at", java.time.Instant.now().toString());
@@ -486,7 +537,8 @@ public class DocumentProcessingService {
         trecho.getMetadados().addMetadata(chapterDTO.getMetadados());
         trecho.getMetadados().put("is_single_chunk", true);
         trecho.getMetadados().put("chapter_title", chapterDTO.getTitulo());
-
+        trecho.getMetadados().put("tokens", RagUtils.countTokensFast(chapterDTO.getConteudo()));
+        
         return trecho;
     }
 
@@ -502,27 +554,30 @@ public class DocumentProcessingService {
      *   <li>Handles oversized texts: summarize if >2% over, truncate if ≤2%</li>
      * </ul>
      *
+     * @TODO implement use of GenerationFlag
+     * 
      * @param embeddings list of embeddings with NULL vectors
      * @param embeddingContext embedding context for generation
      * @param llmContext LLM context for summarizing oversized texts
+     * @param generationFlag generation flag for embedding strategy
+     * 
      * @return number of successfully processed embeddings
      */
     private int calculateAndUpdateEmbeddings(
-            List<DocChunk> embeddings,
-            EmbeddingContext embeddingContext,
-            LLMContext llmContext) {
-
+                                            List<DocChunk> embeddings,
+                                            EmbeddingContext embeddingContext,
+                                            LLMContext llmContext,
+                                            GenerationFlag generationFlag) 
+    {
         int processed = 0;
         int contextLength = embeddingContext.getContextLength();
 
-        log.debug("Processing {} embeddings with contextLength={}",
-                embeddings.size(), contextLength);
+        log.debug("Processing {} embeddings with contextLength={}", embeddings.size(), contextLength);
 
         // Group into batches
         List<List<DocChunk>> batches = createBatches(embeddings, BATCH_SIZE);
 
-        log.debug("Created {} batches (max {} texts per batch)",
-                batches.size(), BATCH_SIZE);
+        log.debug("Created {} batches (max {} texts per batch)", batches.size(), BATCH_SIZE);
 
         for (int batchNum = 0; batchNum < batches.size(); batchNum++) {
             List<DocChunk> batch = batches.get(batchNum);
@@ -532,18 +587,19 @@ public class DocumentProcessingService {
                         batchNum + 1, batches.size(), batch.size());
 
                 // Prepare texts, handling oversized ones
-                String[] texts = new String[batch.size()];
+                String[] texts = new String[batch.size()];                
+                
                 for (int i = 0; i < batch.size(); i++) {
                     texts[i] = handleOversizedText(
-                            batch.get(i),
-                            contextLength,
-                            llmContext);
+                                                    batch.get(i),
+                                                    contextLength,
+                                                    llmContext,
+                                                    generationFlag);
                 }
 
                 // Generate embeddings
-                List<float[]> vectors = embeddingContext.generateEmbeddingsBatch(
-                                                        texts,
-                                                        Embeddings_Op.DOCUMENT);
+                List<float[]> vectors = 
+                	embeddingContext.generateEmbeddingsBatch( texts, Embeddings_Op.DOCUMENT);
 
                 // Update each embedding (fault-tolerant)
                 for (int i = 0; i < batch.size(); i++) {
@@ -580,49 +636,64 @@ public class DocumentProcessingService {
      *
      * <p><b>REVISED v1.1:</b> If text exceeds contextLength:</p>
      * <ul>
-     *   <li>If excedente > 2%: Generate summary via LLM</li>
-     *   <li>If excedente ≤ 2%: Truncate text</li>
+     *   <li>If excedente > 5%: Generate summary via LLM</li>
+     *   <li>If excedente ≤ 5%: Truncate text</li>
      * </ul>
      *
-     * @param embedding the embedding with text
+     * @param docChunk the embedding with text
      * @param contextLength maximum tokens allowed
      * @param llmContext LLM context for summarization
+     * @param generationFlag generation flag for text generation
+     * 
      * @return processed text (original, summarized, or truncated)
+     * 
+     * @see GenerationFlag
+     * @see #generateText(DocChunk, GenerationFlag)
+     * @see #buildTextWithMetadata(DocChunk)
      */
-    private String handleOversizedText(
-            DocChunk embedding,
-            int contextLength,
-            LLMContext llmContext) {
-
-        String text = embedding.getTexto();
+    private String handleOversizedText( DocChunk docChunk,
+            				int contextLength,
+            				LLMContext llmContext,
+            				GenerationFlag generationFlag) 
+    {
+        // Generate initial text based on generation flag
+        String text = generateText(docChunk, generationFlag);        
 
         try {
             int tokens = llmContext.tokenCount(text, TOKEN_MODEL);
 
             if (tokens > contextLength) {
                 int excedente = tokens - contextLength;
-                double percentual = (excedente * 100.0) / tokens;
+                float percentual = (excedente * 100.0f) / tokens;
 
                 log.debug("Text exceeds context length: {} > {} ({:.1f}% over)",
                         tokens, contextLength, percentual);
 
                 if (percentual > OVERSIZE_THRESHOLD_PERCENT) {
                     // Generate summary via LLM
-                    log.debug("Generating summary for oversized text ({}% over limit)",
-                            String.format("%.1f", percentual));
+                    log.debug("Generating summary for oversized text ({}% over limit)", 
+                	    	String.format("%.1f", percentual));
+                    
+                    // Generate metadata before summarization
+                    text = buildTextWithMetadata(docChunk);
+                    
+                    MapParam extraParams = new MapParam();
+                    extraParams.maxTokens(SUMMARY_MAX_TOKENS);
+                    extraParams.temperature(0.3f);
+                    extraParams.repeat_penalty(1.2f);
+                    extraParams.model(llmContext.getModelName());                    
+                    
+                    
+		    String summary = llmContext.generateCompletion(
+                            "Resuma o seguinte texto de forma concisa, "
+                            +"mantendo as informações principais:\n",
+                            text,
+                            extraParams);
 
-                    String summary = llmContext.generateCompletion(
-                            "Resuma o seguinte texto de forma concisa, mantendo as informações principais:",
-                            text);
-
-                    // Store original truncation flag in metadata
-                    if (embedding.getMetadados() == null) {
-                        embedding.setMetadados(new bor.tools.simplerag.entity.MetaDoc());
-                    }
-                    embedding.getMetadados().put("texto_original_truncado", true);
-                    embedding.getMetadados().put("resumo_gerado", true);
-                    embedding.getMetadados().put("tokens_originais", tokens);
-
+                    // Store original truncation flag in metadata                  
+                    docChunk.getMetadados().put("texto_original_truncado", true);
+                    docChunk.getMetadados().put("resumo_gerado", true);
+                    docChunk.getMetadados().put("tokens_originais", tokens);
                     return summary;
 
                 } else {
@@ -632,13 +703,8 @@ public class DocumentProcessingService {
 
                     int maxChars = contextLength * 4; // Approx 4 chars/token
                     String truncated = text.substring(0, Math.min(maxChars, text.length()));
-
-                    if (embedding.getMetadados() == null) {
-                        embedding.setMetadados(new bor.tools.simplerag.entity.MetaDoc());
-                    }
-                    embedding.getMetadados().put("texto_truncado", true);
-                    embedding.getMetadados().put("tokens_originais", tokens);
-
+                    docChunk.getMetadados().put("texto_truncado", true);
+                    docChunk.getMetadados().put("tokens_originais", tokens);
                     return truncated;
                 }
             }
@@ -647,12 +713,39 @@ public class DocumentProcessingService {
 
         } catch (Exception e) {
             log.warn("Token counting failed for embedding #{}, using text as-is: {}",
-                    embedding.getId(), e.getMessage());
+                    docChunk.getId(), e.getMessage());
             return text;
         }
     }
 
     // ========== Helper Methods ==========
+
+    /**
+     * Generates text based on the specified generation flag. <br>
+     * 
+     * Currently supports:
+     * <li>ONLY_TEXT: returns only the text content</li>
+     * <li>FULL_TEXT_METADATA: returns text with metadata appended</li>	
+     * <li>ONLY_METADATA: returns only metadata as text</li>
+     * <li> all others defaults to ONLY_TEXT 	
+     * 
+     * @param docChunk the document chunk
+     * @param generationFlag the generation flag
+     * @return generated text
+     */
+    private String generateText(DocChunk docChunk, GenerationFlag generationFlag) {
+
+	switch(generationFlag) {
+	case ONLY_TEXT:
+		return docChunk.getTexto();
+	case FULL_TEXT_METADATA:
+		return buildTextWithMetadata(docChunk);
+	case ONLY_METADATA:
+		return buildMetadataText(docChunk);	
+	default:
+	    	return docChunk.getTexto();
+	}
+    }
 
     /**
      * Creates batches of embeddings for batch processing.
@@ -719,10 +812,10 @@ public class DocumentProcessingService {
      * @since 0.0.3
      */
     @Async
-    public CompletableFuture<EnrichmentResult> enrichDocument(
-            Documento documento,
-            LibraryDTO library,
-            EnrichmentOptions options) {
+    public CompletableFuture<EnrichmentResult> enrichDocument( Documento documento,
+                                                               LibraryDTO library,
+                                                               EnrichmentOptions options) 
+    {
 
         log.info("Starting document enrichment: docId={}, library={}, qa={}, summary={}",
                 documento.getId(), library.getNome(), options.isGenerateQA(), options.isGenerateSummary());
@@ -743,11 +836,14 @@ public class DocumentProcessingService {
             }
 
             // Load chapters for this document
-            List<Chapter> chapters = chapterRepository.findByDocumentoIdOrderByOrdemDoc(documento.getId());
+            List<Chapter> chapters = 
+        	    chapterRepository.findByDocumentoIdOrderByOrdemDoc(documento.getId());
 
             if (chapters.isEmpty()) {
-                log.warn("No chapters found for document {}. Document must be processed (Phase 1) before enrichment.",
+                log.warn("No chapters found for document {}."
+                	+ " Document must be processed (Phase 1) before enrichment.",
                         documento.getId());
+                
                 return CompletableFuture.completedFuture(EnrichmentResult.builder()
                         .documentId(documento.getId())
                         .success(false)
@@ -871,10 +967,10 @@ public class DocumentProcessingService {
                         .chapterId(chapter.getId())
                         .build();
 
-                List<DocumentEmbeddingDTO> qaEmbeddings = qaEmbeddingStrategy.generate(qaRequest);
+                List<DocChunkDTO> qaEmbeddings = qaEmbeddingStrategy.generate(qaRequest);
 
                 // Persist Q&A embeddings
-                for (DocumentEmbeddingDTO embDTO : qaEmbeddings) {
+                for (DocChunkDTO embDTO : qaEmbeddings) {
                     DocChunk embedding = toEmbeddingEntity(embDTO, documento, chapter);
                     embeddingRepository.save(embedding);
                     qaCount++;
@@ -902,10 +998,10 @@ public class DocumentProcessingService {
                         .chapterId(chapter.getId())
                         .build();
 
-                List<DocumentEmbeddingDTO> summaryEmbeddings = summaryEmbeddingStrategy.generate(summaryRequest);
+                List<DocChunkDTO> summaryEmbeddings = summaryEmbeddingStrategy.generate(summaryRequest);
 
                 // Persist summary embeddings
-                for (DocumentEmbeddingDTO embDTO : summaryEmbeddings) {
+                for (DocChunkDTO embDTO : summaryEmbeddings) {
                     DocChunk embedding = toEmbeddingEntity(embDTO, documento, chapter);
                     embeddingRepository.save(embedding);
                     summaryCount++;
@@ -923,9 +1019,9 @@ public class DocumentProcessingService {
     }
 
     /**
-     * Converts DocumentEmbeddingDTO to DocChunk entity.
+     * Converts DocChunkDTO to DocChunk entity.
      */
-    private DocChunk toEmbeddingEntity(DocumentEmbeddingDTO dto, Documento documento, Chapter chapter) {
+    private DocChunk toEmbeddingEntity(DocChunkDTO dto, Documento documento, Chapter chapter) {
         return DocChunk.builder()
                 .libraryId(documento.getBibliotecaId())
                 .documentoId(documento.getId())
@@ -938,6 +1034,142 @@ public class DocumentProcessingService {
     }
 
     /**
+     * Builds string text with metadata only
+     */
+    private String buildMetadataText(ChapterDTO chapter) {
+	StringBuilder builder = new StringBuilder();
+
+	if (chapter.getMetadados() != null) {
+	    // Add most relevant metadata
+	    chapter.getMetadados().forEach((key, value) -> {
+		if (ignoredKeys.contains(key.toLowerCase()) == false && value != null
+			&& !value.toString().trim().isEmpty()) {
+		    builder.append(key).append(": ").append(value).append("\n");
+		}
+	    });
+	}
+	return builder.toString();
+    }
+    
+    /**
+     * Builds string text with metadata only.
+     */
+    private String buildMetadataText(DocChunk docChunk) {
+	StringBuilder builder = new StringBuilder();
+
+	if (docChunk.getMetadados() != null) {
+	    // Add most relevant metadata
+	    docChunk.getMetadados().forEach((key, value) -> {
+		if (ignoredKeys.contains(key.toLowerCase()) == false && value != null
+			&& !value.toString().trim().isEmpty()) {
+		    builder.append(key).append(": ").append(value).append("\n");
+		}
+	    });
+	}
+	return builder.toString();
+    }
+	
+    /**
+     * Builds text with metadata included
+     */
+    private String buildTextWithMetadata(ChapterDTO chapter) {
+        StringBuilder builder = new StringBuilder();
+
+        // Add title       
+        if (chapter.getTitulo() != null) {
+            builder.append("Título: ").append(chapter.getTitulo()).append("\n\n");
+        }
+
+        // Add relevant metadata
+        if (chapter.getMetadados() != null) {
+            String metadataText = buildMetadataText(chapter);
+            if (!metadataText.isEmpty()) {
+        	builder.append("\n**METADADOS DO DOCUMENTO**\n");
+                builder.append(metadataText).append("\n\n");
+            }
+        }
+
+        builder.append("\n---\nConteúdo:\n");
+        // Add main content
+        builder.append(chapter.getConteudo());
+
+        return builder.toString();
+    }
+    
+    /**
+     * Builds text with metadata included
+     *
+     * @param docChunk
+     * @return
+     */
+    private String buildTextWithMetadata(DocChunk docChunk) {
+        StringBuilder builder = new StringBuilder();
+
+        var metaDoc = docChunk.getMetadados();
+        String title = metaDoc.getCapitulo();
+        // Add title       
+        if (title != null) {
+            builder.append("Título: ")
+            	   .append(title)
+            	   .append("\n\n");
+        }
+
+        // Add relevant metadata
+        if (metaDoc != null) {
+            String metadataText = buildMetadataText(docChunk);
+            if (!metadataText.isEmpty()) {
+        	builder.append("\n**METADADOS DO DOCUMENTO**\n");
+                builder.append(metadataText).append("\n\n");
+            }
+        }
+
+        builder.append("\n---\nConteúdo:\n");
+        // Add main content
+        builder.append(docChunk.getTexto());
+
+        return builder.toString();
+    }
+	
+	    /**
+     * Estimates token count in text
+     * Simple estimation: 1 token ~ 4.2 characters
+     */
+    private int estimateTokenCount(String text) {
+        if (text == null) return 0;       
+        return (int) Math.ceil( ((float)text.length()) / 4.2f);
+    }
+
+	/**
+     * Normalizes embedding vector to specified dimension
+     * @param embedding
+     * @param context
+     * @return
+     */
+    private float[] normalizeEmbedding(float[] embedding, EmbeddingContext context) {
+		Integer length = (context != null && context.getEmbeddingDimension() != null) ?
+					context.getEmbeddingDimension() 
+					: DEFAULT_EMBED_DIMENSION;	
+		
+		// Adjust length if necessary
+		if (length!=null && embedding != null && embedding.length != length) {
+			log.debug("Normalizing embedding from length {} to {}", embedding.length, length);
+			// normalize source first - just in case
+			embedding = bor.tools.simplerag.util.VectorUtil.normalize(embedding);
+			// then resize
+			float[] normalized = new float[length];
+			System.arraycopy(embedding, 0,
+					normalized, 0, 
+					Math.min(embedding.length, length));
+			embedding = normalized;	
+		}
+		// Normalize vector. always
+		return bor.tools.simplerag.util.VectorUtil.normalize(embedding);
+    }
+
+    
+    
+    
+    /**
      * Helper class for chapter enrichment result.
      */
     private static class ChapterEnrichmentResult {
@@ -948,7 +1180,7 @@ public class DocumentProcessingService {
             this.qaEmbeddingsCount = qaCount;
             this.summaryEmbeddingsCount = summaryCount;
         }
-    }
+    } // class ChapterEnrichmentResult
 
     // ========== Result Classes ==========
 
@@ -968,7 +1200,7 @@ public class DocumentProcessingService {
         public int getEmbeddingsCount() {
             return embeddings != null ? embeddings.size() : 0;
         }
-    }
+    } // class SplitResult
 
     /**
      * Result of document processing.
@@ -984,5 +1216,5 @@ public class DocumentProcessingService {
         private String duration;
         private boolean success;
         private String errorMessage;
-    }
-}
+    } // class ProcessingResult
+} // class DocumentProcessingService

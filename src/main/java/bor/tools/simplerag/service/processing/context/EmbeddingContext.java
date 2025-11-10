@@ -76,12 +76,12 @@ public class EmbeddingContext {
     /**
      * Default embedding model if none specified in library.
      */
-    private static final String DEFAULT_EMBEDDING_MODEL = "nomic-embed-text";
+    private static final String DEFAULT_EMBEDDING_MODEL = "snowflake";
 
     /**
      * Default context length if model doesn't specify.
      */
-    private static final int DEFAULT_CONTEXT_LENGTH = 2048;
+    private static final int DEFAULT_CONTEXT_LENGTH = 512;
 
     /**
      * Creates a new embedding context for the given library.

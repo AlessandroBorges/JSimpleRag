@@ -15,7 +15,7 @@ import org.springframework.lang.NonNull;
 
 import bor.tools.simplellm.LLMProvider;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.splitter.normsplitter.Artigo;
 import bor.tools.splitter.normsplitter.Normativo;
@@ -152,7 +152,7 @@ public class SplitterNorma  extends AbstractSplitter{
 		}
 		// cria embeddings para as ChapterDTO s
 		for (ChapterDTO capDTO  : doc.getCapitulos()) {
-			DocumentEmbeddingDTO emb = new DocumentEmbeddingDTO();
+			DocChunkDTO emb = new DocChunkDTO();
 			capDTO.addEmbedding(emb);
 
 			String texto = capDTO .getConteudo();
@@ -217,7 +217,7 @@ public class SplitterNorma  extends AbstractSplitter{
 	 */
 	protected void criaEmbeddingsBasicos(Artigo artigo, ChapterDTO  capDTO , String titulo) {
 		String texto = artigo.getConteudo();
-		DocumentEmbeddingDTO emb = new DocumentEmbeddingDTO();
+		DocChunkDTO emb = new DocChunkDTO();
 		//emb.set (titulo);
 		emb.setTrechoTexto(titulo + "\n" + texto);
 		capDTO.addEmbedding(emb);
@@ -225,7 +225,7 @@ public class SplitterNorma  extends AbstractSplitter{
 		List<String> extras = artigo.getListaSubtexto();
 		if (extras != null) {
 			for (String extra : extras) {
-				DocumentEmbeddingDTO embExtra = new DocumentEmbeddingDTO();
+				DocChunkDTO embExtra = new DocChunkDTO();
 				embExtra.setTrechoTexto(titulo + "\n" + extra);
 				capDTO .addEmbedding(embExtra);
 			}

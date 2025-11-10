@@ -6,6 +6,7 @@ import bor.tools.simplellm.Model;
 import bor.tools.simplellm.Model_Type;
 import bor.tools.simplerag.dto.LibraryDTO;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
+import bor.tools.simplerag.service.llm.LLMServiceManager.Model_Provider;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -80,11 +81,32 @@ public class LLMContext {
      * @throws IllegalStateException if no completion model is available
      */
     public static LLMContext create(LibraryDTO library, LLMServiceManager manager) {
+	
         log.debug("Creating LLM context for library: {}", library.getNome());
+        
+        LLMServiceManager.Model_Provider modelProvider = null;
+        
+        String libModelName = library.getCompletionQAModel();
+        if (libModelName != null && !libModelName.isEmpty()) {
+	    log.debug("Library specifies completion model: {}", libModelName);
+	    // Check if specified model is available
+	    var provider = manager.getLLMServiceByRegisteredModel(libModelName);
+	    modelProvider = new Model_Provider(libModelName, provider);		
 
-        // Get best completion model from cache
-        LLMServiceManager.Model_Provider modelProvider =
-            manager.getBestCompletionModelName(Model_Type.LANGUAGE);
+	    if (modelProvider != null) {
+		log.debug("Using library-specified completion model: {} from service: {}",
+			 modelProvider.modelName(),
+			 modelProvider.service().getClass().getSimpleName());
+	    }
+        }
+        
+        // fallback to best available model
+        if(modelProvider == null) {
+            // Get best completion model from cache
+            Model_Type[] model_IN = {Model_Type.LANGUAGE, Model_Type.FAST};
+            Model_Type[] model_OUT = {Model_Type.VISION, Model_Type.IMAGE};
+            modelProvider = manager.getBestCompletionModelName(model_IN, model_OUT);
+        }
 
         if (modelProvider == null) {
             throw new IllegalStateException("No completion model available");
@@ -126,11 +148,16 @@ public class LLMContext {
      * @return the generated completion text
      * @throws Exception if completion generation fails
      */
-    public String generateCompletion(String systemPrompt, String userPrompt)
+    public String generateCompletion(String systemPrompt, String userPrompt, MapParam extraParams)
             throws Exception {
         log.debug("Generating completion with model: {}", modelName);
-
-        var response = llmService.completion(systemPrompt, userPrompt, params);
+        
+        // add missing params from context
+        for(var entry : this.params.entrySet()) {
+	    extraParams.putIfAbsent(entry.getKey(), entry.getValue());
+	}
+        
+        var response = llmService.completion(systemPrompt, userPrompt, extraParams);
 
         String text = response.getText();
         log.debug("Generated completion: {} characters", text.length());

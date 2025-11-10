@@ -1,10 +1,5 @@
 package bor.tools.simplerag.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,12 +7,14 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.entity.Chapter;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.Metadata;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.utils.RagUtils;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 
 /**
  * DTO for Chapter entity.
@@ -74,18 +71,21 @@ public class ChapterDTO {
      * Includes both chapter-level and chunk-level embeddings.
      */
     @Builder.Default
-    private List<DocumentEmbeddingDTO> embeddings = new ArrayList<>();
+    private List<DocChunkDTO> embeddings = new ArrayList<>();
 
     /**
      * Default constructor
      */
-    public ChapterDTO() {	
+    public ChapterDTO() {
+	embeddings = new ArrayList<>();
+	metadados = new MetaDoc();
     }
     
     /**
      * Constructor with title and content
      */
     public ChapterDTO(String titulo, String conteudo) {
+	this();
 	this.titulo = titulo;
 	this.conteudo = conteudo;
     }
@@ -94,6 +94,7 @@ public class ChapterDTO {
      * Constructor with title and content
      */
     public ChapterDTO(Integer orderDoc, String titulo, String conteudo) {
+	this();
 	this.ordemDoc = orderDoc;
 	this.titulo = titulo;
 	this.conteudo = conteudo;
@@ -178,63 +179,68 @@ public class ChapterDTO {
     public boolean hasContent() {
         return conteudo != null && !conteudo.trim().isEmpty();
     }
+    
+    public List<DocChunkDTO> getEmbeddings() {
+	if (embeddings == null) {
+	    embeddings = new ArrayList<>();
+	}
+	return embeddings;
+    }
 
     /**
      * Check if has embeddings
      */
     public boolean hasEmbeddings() {
-        return embeddings != null && !embeddings.isEmpty();
+        return embeddings != null && !getEmbeddings().isEmpty();
     }
 
     /**
      * Get number of embeddings
      */
     public int getEmbeddingsCount() {
-        return embeddings != null ? embeddings.size() : 0;
+        return getEmbeddings() != null ? getEmbeddings().size() : 0;
     }
 
     /**
      * Add embedding to this chapter
      */
-    public void addEmbedding(DocumentEmbeddingDTO embedding) {
-        if (embeddings == null) {
-            embeddings = new ArrayList<>();
-        }
-        embeddings.add(embedding);
+    public void addEmbedding(DocChunkDTO embedding) {        
+	getEmbeddings().add(embedding);
     }
 
     /**
      * Get chapter-level embeddings only
      */
-    public List<DocumentEmbeddingDTO> getChapterEmbeddings() {
-        if (embeddings == null) {
+    public List<DocChunkDTO> getChapterEmbeddings() {
+        if (getEmbeddings() == null || getEmbeddings().isEmpty()) {
             return new ArrayList<>();
         }
-        return embeddings.stream()
-                .filter(DocumentEmbeddingDTO::isChapterLevel)
+        
+        return getEmbeddings().stream()
+                .filter(DocChunkDTO::isChapterLevel)
                 .toList();
     }
 
     /**
      * Get chunk-level embeddings only
      */
-    public List<DocumentEmbeddingDTO> getChunkEmbeddings() {
-        if (embeddings == null) {
+    public List<DocChunkDTO> getChunkEmbeddings() {
+        if (getEmbeddings() == null) {
             return new ArrayList<>();
         }
-        return embeddings.stream()
-                .filter(DocumentEmbeddingDTO::isChunkLevel)
+        return getEmbeddings().stream()
+                .filter(DocChunkDTO::isChunkLevel)
                 .toList();
     }
 
     /**
      * Get embeddings ordered by ordem_cap
      */
-    public List<DocumentEmbeddingDTO> getEmbeddingsOrdered() {
-        if (embeddings == null) {
+    public List<DocChunkDTO> getEmbeddingsOrdered() {
+        if (getEmbeddings() == null) {
             return new ArrayList<>();
         }
-        return embeddings.stream()
+        return getEmbeddings().stream()
                 .sorted((e1, e2) -> {
                     Integer ordem1 = e1.getOrdemCap();
                     Integer ordem2 = e2.getOrdemCap();
@@ -250,7 +256,7 @@ public class ChapterDTO {
      * Get metadata value by key
      */
     public Object getMetadataValue(String key) {
-        return metadados != null ? metadados.get(key) : null;
+        return metadados != null ? getMetadados().get(key) : null;
     }
 
     
@@ -303,21 +309,33 @@ public class ChapterDTO {
 	addMetadata("titulo", titulo);		
     }
     
-    
+    /**
+     * Add chunk embedding to this chapter
+     */
+    @JsonIgnore
+    public void addChunk(DocChunkDTO chunk) {
+	
+	if (chunk != null && getEmbeddings().contains(chunk) == false) {
+	    getEmbeddings().add(chunk);
+	}
+    }
+
     /**
      * Create chapter-level embedding DTO for this chapter
      * @param content Text content for the embedding
      * @param ordemCap Order of the chapter embedding
      * @param tipoEmbedding Type of embedding
      * 
-     * @return DocumentEmbeddingDTO
+     * @return DocChunkDTO
      * 
      * @see TipoEmbedding
-     * @see DocumentEmbeddingDTO
+     * @see DocChunkDTO
      */	
-    public DocumentEmbeddingDTO createChapterLevelEmbedding(String content, Integer ordemCap, TipoEmbedding tipoEmbedding) {
+    public DocChunkDTO createChunkLevelEmbedding(String content, Integer ordemCap, TipoEmbedding tipoEmbedding) {
 	
-	    var chunk = DocumentEmbeddingDTO.builder()
+	    ordemCap = ordemCap == null ? this.getEmbeddings().size() : ordemCap;
+	    
+	    var chunk = DocChunkDTO.builder()
 	        .capituloId(this.id)
 	        .bibliotecaId(this.bibliotecaId)
 	        .documentoId(this.documentoId)
@@ -326,6 +344,9 @@ public class ChapterDTO {
 	        .ordemCap(ordemCap)
 	        .tipoEmbedding(tipoEmbedding)	       
 	        .build();
+	    
+	    // add this chunk to chapter embeddings	    
+	    addChunk(chunk);
 	    
 	    var meta = chunk.getMetadados();
 	    meta.addMetadata(this.getMetadados());
@@ -343,13 +364,13 @@ public class ChapterDTO {
      * @param content Text content for the embedding
      * @param ordemCap Order of the chapter embedding
      * 
-     * @return DocumentEmbeddingDTO
+     * @return DocChunkDTO
      * 
-     * @see DocumentEmbeddingDTO
+     * @see DocChunkDTO
      * @see TipoEmbedding#TRECHO
      */
-    public DocumentEmbeddingDTO createChapterLevelEmbedding(String content, Integer ordemCap) {
-	return createChapterLevelEmbedding(content, ordemCap, TipoEmbedding.TRECHO);
+    public DocChunkDTO createChunkLevelEmbedding(String content, Integer ordemCap) {
+	return createChunkLevelEmbedding(content, ordemCap, TipoEmbedding.TRECHO);
     }
     
 }

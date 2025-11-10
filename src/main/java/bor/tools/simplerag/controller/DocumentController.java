@@ -23,6 +23,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import bor.tools.simplerag.dto.DocumentoDTO;
 import bor.tools.simplerag.dto.UploadTextRequest;
 import bor.tools.simplerag.dto.UploadUrlRequest;
@@ -35,6 +39,7 @@ import bor.tools.simplerag.service.ProcessingStatusTracker.ProcessingStatus;
 import bor.tools.simplerag.service.llm.LLMServiceManager;
 import bor.tools.simplerag.service.processing.EnrichmentOptions;
 import bor.tools.simplerag.service.processing.EnrichmentResult;
+import bor.tools.simplerag.service.processing.GenerationFlag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -313,11 +318,25 @@ public class DocumentController {
      *
      * Fluxo steps (d) through (g): splitting, embedding generation, persistence
      *
-     * @param documentId Document ID
-     * @param includeQA Whether to include Q&A generation
-     * @param includeSummary Whether to include summary generation
-     * @return Processing status (async)
+     * @param documentId     Document ID (required, path variable)
+     * @param includeQA      Whether to include Q&A generation during Phase 2
+     *                       (default: false, optional)
+     * @param includeSummary Whether to include summary generation during Phase 2
+     *                       (default: false, optional)
+     * @param overwrite      Whether to overwrite existing processing by deleting
+     *                       all chapters and embeddings before reprocessing
+     *                       (default: false, optional). Use with caution as it is
+     *                       destructive.
+     * @param generationFlag Generation flag for processing options, controlling how
+     *                       text and metadata embeddings are generated (default:
+     *                       ONLY_TEXT, optional). Possible values:
+     *                       FULL_TEXT_METADATA, ONLY_METADATA, ONLY_TEXT,
+     *                       SPLIT_TEXT_METADATA, AUTO.
+     * 
+     * @return Processing status (async) with response map containing message,
+     *         documentId, titulo, phase details, statusUrl, and estimatedTime
      */
+
     @PostMapping("/{documentId}/process")
     @Operation(
         summary = "Process document asynchronously (Phase 1 + optional Phase 2)",
@@ -347,6 +366,7 @@ public class DocumentController {
             - Phase 1 + Phase 2: 3-30 minutes (depends on document size and options)
 
             **Returns immediately** with 202 Accepted status (or 200 if already processed)
+            
             **Monitor progress:** Use GET /api/v1/documents/{id}/status
 
             **Optional Parameters:**
@@ -356,18 +376,31 @@ public class DocumentController {
 
             **Note:** For more control over enrichment (Q&A/Summary), use the separate
             POST /api/v1/documents/{id}/enrich endpoint instead.
-            """
+            """,
+         parameters = {
+            @Parameter(name = "documentId", description = "The unique identifier of the document to process", required = true, in = ParameterIn.PATH),
+            @Parameter(name = "includeQA", description = "Whether to generate Q&A embeddings in Phase 2 (default: false)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false")),
+            @Parameter(name = "includeSummary", description = "Whether to generate summary embeddings in Phase 2 (default: false)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false")),
+            @Parameter(name = "overwrite", description = "Whether to delete existing processing and reprocess from scratch (default: false).<br> <i><b>Destructive operation!</b></i>", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false")),
+            @Parameter(name = "generationFlag", description = "Strategy for generating embeddings (default: ONLY_TEXT). <br> Options: <li> FULL_TEXT_METADATA, <li> ONLY_METADATA, <li> ONLY_TEXT, <li>SPLIT_TEXT_METADATA, <li>AUTO", required = false, in = ParameterIn.QUERY, 
+            		schema = @Schema(type = "string", 
+            				allowableValues = {"FULL_TEXT_METADATA", "ONLY_METADATA", "ONLY_TEXT", "SPLIT_TEXT_METADATA", "AUTO"}, 
+            				defaultValue = "ONLY_TEXT"))
+        }
     )
     public ResponseEntity<Map<String, Object>> processDocument(
             @PathVariable Integer documentId,
             @RequestParam(defaultValue = "false") boolean includeQA,
             @RequestParam(defaultValue = "false") boolean includeSummary,
-            @RequestParam(defaultValue = "false") boolean overwrite) {
+            @RequestParam(defaultValue = "false") boolean overwrite,
+            @RequestParam(defaultValue = "ONLY_TEXT") GenerationFlag generationFlag
+            ) {
 
         log.info("Starting document processing: id={}, includeQA={}, includeSummary={}, overwrite={}",
                 documentId, includeQA, includeSummary, overwrite);
 
         try {
+            
             // Verify document exists and get title
             DocumentoDTO documento = documentoService.findById(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
@@ -400,7 +433,6 @@ public class DocumentController {
                         checkResult.getChaptersCount(), checkResult.getEmbeddingsCount(), documentId);
 
                 documentoService.deleteExistingProcessing(documentId);
-
                 log.info("Existing processing deleted. Will now reprocess document {} from scratch", documentId);
             }
 
@@ -409,7 +441,7 @@ public class DocumentController {
 
             // PHASE 1: Start async processing using NEW method
             CompletableFuture<DocumentoService.ProcessingStatus> future =
-                    documentoService.processDocumentAsyncV2(documentId);
+                    documentoService.processDocumentAsyncV2(documentId, generationFlag);
 
             // Add success and error handlers for Phase 1
             future.thenAccept(status -> {
@@ -524,13 +556,13 @@ public class DocumentController {
      * This is an optional post-processing step that generates additional embeddings
      * beyond the standard chapter/chunk embeddings from Phase 1 processing.
      *
-     * @param documentId Document ID (must have been processed with Phase 1)
-     * @param generateQA Whether to generate Q&A embeddings
-     * @param numberOfQAPairs Number of Q&A pairs per chapter (default: 3)
-     * @param generateSummary Whether to generate summary embeddings
-     * @param maxSummaryLength Maximum summary length in tokens (default: 500)
-     * @param continueOnError Continue if individual chapters fail (default: true)
-     * @return Enrichment result with statistics
+     * @param documentId Document ID (required, path variable). Must have been processed with Phase 1 to have chapters.
+     * @param generateQA Whether to generate Q&A embeddings (default: false, optional). Uses completion model for synthetic question-answer pairs.
+     * @param numberOfQAPairs Number of Q&A pairs per chapter (default: 3, optional). Range: 1-20. More pairs improve retrieval but increase cost and time.
+     * @param generateSummary Whether to generate summary embeddings (default: false, optional). Uses completion model for chapter summaries.
+     * @param maxSummaryLength Maximum summary length in tokens (default: 500, optional). Range: 100-2000. Longer summaries provide more detail but use more tokens.
+     * @param continueOnError Continue processing if individual chapters fail (default: true, optional). If false, stops on first error.
+     * @return ResponseEntity with async start confirmation. Response map contains message, documentId, titulo, options, statusUrl, and estimatedTime.
      */
     @PostMapping("/{documentId}/enrich")
     @Operation(
@@ -565,7 +597,15 @@ public class DocumentController {
 
             **Example:**
             POST /api/v1/documents/123/enrich?generateQA=true&numberOfQAPairs=5&generateSummary=true
-            """
+            """,
+        parameters = {
+            @Parameter(name = "documentId", description = "The unique identifier of the document to enrich", required = true, in = ParameterIn.PATH),
+            @Parameter(name = "generateQA", description = "Whether to generate Q&A embeddings (default: false)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false")),
+            @Parameter(name = "numberOfQAPairs", description = "Number of Q&A pairs per chapter (default: 3, range: 1-20)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "integer", minimum = "1", maximum = "20", defaultValue = "3")),
+            @Parameter(name = "generateSummary", description = "Whether to generate summary embeddings (default: false)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false")),
+            @Parameter(name = "maxSummaryLength", description = "Maximum summary length in tokens (default: 500, range: 100-2000)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "integer", minimum = "100", maximum = "2000", defaultValue = "500")),
+            @Parameter(name = "continueOnError", description = "Continue processing if individual chapters fail (default: true)", required = false, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "true"))
+        }
     )
     public ResponseEntity<Map<String, Object>> enrichDocument(
             @PathVariable Integer documentId,

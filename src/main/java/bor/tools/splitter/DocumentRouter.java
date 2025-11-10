@@ -5,12 +5,15 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 import bor.tools.simplellm.LLMProvider;
+import bor.tools.simplellm.Model;
 import bor.tools.simplellm.exceptions.LLMException;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Classe utilitária responsável por rotear documentos para o splitter apropriado
@@ -21,6 +24,7 @@ import bor.tools.simplerag.entity.enums.TipoConteudo;
  * utilizar, permitindo melhor integração com o ProcessamentoAssincrono do core RAG.
  */
 @Component
+@Slf4j
 public class DocumentRouter {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentRouter.class);
@@ -29,35 +33,58 @@ public class DocumentRouter {
     private final LLMProvider llmService;
 
     /**
-     * Construtor com injeção de dependência do LLMProvider
+     * Construtor com injeção de dependência do LLMProvider (OBRIGATÓRIO).
+     *
+     * A anotação @Autowired garante que o Spring sempre use este construtor
+     * ao injetar DocumentRouter em outras classes, evitando ambiguidade com o construtor padrão.
+     * O LLMProvider é injetado automaticamente pela configuração Spring.
+     *
+     * @param llmService instância do provedor LLM (injetada pelo Spring)
      */
+    @Autowired
     public DocumentRouter(LLMProvider llmService) {
         this.llmService = llmService;
         this.splitterRegistry = new HashMap<>();
         initializeSplitterRegistry();
+        log.info("DocumentRouter initialized with LLMProvider: {}",
+                 llmService != null ? llmService.getServiceProvider() : "null");
     }
 
     /**
-     * Construtor padrão sem LLMProvider (fallback para detecção heurística)
+     * Construtor padrão sem LLMProvider (fallback para uso programático).
+     *
+     * NÃO é usado pelo Spring (o @Autowired no outro construtor tem prioridade).
+     * Disponível apenas para criação manual/programática de instâncias.
+     * Quando usado, a detecção de tipo de conteúdo usará apenas heurísticas.
+     *
+     * @deprecated Use o construtor com LLMProvider para uso em aplicação Spring.
+     *             Este construtor é mantido apenas para compatibilidade backward e uso programático.
      */
+    @Deprecated(since = "1.1", forRemoval = false)
     public DocumentRouter() {
         this.llmService = null;
         this.splitterRegistry = new HashMap<>();
         initializeSplitterRegistry();
+        log.warn("DocumentRouter created WITHOUT LLMProvider - content type detection will use heuristics only");
     }
 
     /**
      * Inicializa o registro de splitters disponíveis
      */
     private void initializeSplitterRegistry() {
-        splitterRegistry.put("normativo", SplitterNorma.class);
-        splitterRegistry.put("wikipedia", SplitterWiki.class);
-        splitterRegistry.put("artigo", SplitterWiki.class);  // Wikipedia-like
+        splitterRegistry.put("normativo", SplitterNorma.class);        
         splitterRegistry.put("manual", SplitterGenerico.class);
         splitterRegistry.put("livro", SplitterGenerico.class);
         splitterRegistry.put("contrato", SplitterGenerico.class);
         splitterRegistry.put("nota_tecnica", SplitterGenerico.class);
         splitterRegistry.put("generico", SplitterGenerico.class);
+        
+        splitterRegistry.put("wikipedia", SplitterGenerico.class);
+        splitterRegistry.put("artigo", SplitterGenerico.class);  
+        
+        // SpliterWiki desativado temporariamente
+      //splitterRegistry.put("wikipedia", SplitterWiki.class);
+      //splitterRegistry.put("artigo", SplitterWiki.class);  // Wikipedia-like
 
         logger.debug("Initialized splitter registry with {} types", splitterRegistry.size());
     }
@@ -164,10 +191,11 @@ public class DocumentRouter {
         if (lowerHint.endsWith(".wiki") || lowerHint.endsWith(".wikitext")) {
             return "wikipedia";
         }
-
-        if (lowerHint.endsWith(".md") || lowerHint.endsWith(".markdown")) {
-            return "artigo";
-        }
+    
+        // markdown é muito genérico, não usar mais como dica específica
+    //    if (lowerHint.endsWith(".md") || lowerHint.endsWith(".markdown")) {
+    //        return "artigo";
+    //    }
 
         return null;
     }
@@ -294,11 +322,18 @@ public class DocumentRouter {
         return stats;
     }
 
-    public TipoConteudo detectContentType(String conteudoMarkdown) {
+    /**
+     * Detecta o tipo de conteúdo usando LLM
+     *
+     * @param model - modelo LLM a ser usado
+     * @param header - cabeçalho ou trecho do documento
+     * @return TipoConteudo detectado
+     */
+    public TipoConteudo detectContentType(Model model, String header) {
 	LLMProvider llm = this.llmService;
 	if (llm != null) {
 	    try {
-		String resposta = llm.classifyContent(conteudoMarkdown,
+		String resposta = llm.classifyContent(model, header,
 			TipoConteudo.getAllNames(),
 			TipoConteudo.getAllNamesAndDescriptions());
 		return TipoConteudo.fromName(resposta);

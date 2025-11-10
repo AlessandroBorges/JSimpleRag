@@ -130,6 +130,69 @@ public class LLMServiceManager {
     public record Model_Provider(String modelName, LLMProvider service) {}
     
     /**
+     * Retrieves the BEST completion model name for specific model types,
+     * @param modelType - desired model types
+     * @param excludeModelType - model types to exclude
+     * @return Default completion model name matching the specified types, or null if unavailable
+     */
+    public Model_Provider getBestCompletionModelName(Model_Type[] modelType, Model_Type[] excludeModelType) {
+	LLMProvider service = getPrimaryService();
+	try {
+
+	    int i = 1;
+	    while (service == null && i < services.size()) {
+		if (i == 1)
+		    log.warn("No primary LLM service available to get model");
+		i++;
+		service = services.get(i);
+		if (service != null)
+		    log.info("Trying secondary LLM service at index {} as primary, as LLMProvider", i,
+			    service.getServiceProvider());
+	    }
+	    if (service == null) {
+		log.error("No LLM service available to get default model");
+		return null;
+	    }
+
+	    MapModels models = service.getInstalledModels();
+	    if (models != null && !models.isEmpty()) {
+		// Return the first model as default
+		for (var entry : models.entrySet()) {
+		    Model model = entry.getValue();
+		    String modelName = entry.getKey();
+		    
+		    for (var mt : modelType) {
+			if (model.isType(mt) == false) {
+			    // miss fired, try next
+			    continue;
+			}
+			boolean excluded = false;
+			for (var emt : excludeModelType) {
+			    if (model.isType(emt)) {
+				excluded = true;
+				break;
+			    }
+			}
+			if (excluded) {
+			    // excluded type, try next
+			    continue;
+			}
+			return new Model_Provider(modelName, service);
+		    } // for
+		} // for
+	    } // if
+	} catch (LLMServiceException e) {
+	    log.warn("Failed to get installed models from primary service: {}", e.getMessage());
+	    e.printStackTrace();
+	} catch (LLMException e) {
+	    log.warn("LLM exception while getting installed models: {}", e.getMessage());
+	    e.printStackTrace();
+	}
+	// fallback to basic
+	return getBestCompletionModelName(modelType);
+    }
+    
+    /**
      * Retrieves the BEST completion model name for specific model types.<br>
      * 
      * @param modelType one or more of Model_Type enum values to filter models
@@ -139,6 +202,7 @@ public class LLMServiceManager {
      * @see Model_Type
      */
     public Model_Provider getBestCompletionModelName(Model_Type... modelType) {
+	
 	LLMProvider service = getPrimaryService();
 	
 	try {

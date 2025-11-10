@@ -4,7 +4,7 @@ import java.util.List;
 
 import bor.tools.simplellm.Embeddings_Op;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.EmbeddingRequest;
 
@@ -42,7 +42,7 @@ public interface EmbeddingService {
      * @param context Context including library and model configuration
      * @return List of generated embeddings (may contain multiple chunks)
      */
-    List<DocumentEmbeddingDTO> generateChapterEmbeddings(ChapterDTO chapter, EmbeddingContext context);
+    List<DocChunkDTO> generateChapterEmbeddings(ChapterDTO chapter, EmbeddingContext context);
 
     /**
      * Generate embeddings for a chapter with specific generation flag.
@@ -52,7 +52,7 @@ public interface EmbeddingService {
      * @param generationFlag Strategy flag (FLAG_AUTO, FLAG_FULL_TEXT_METADATA, etc.)
      * @return List of generated embeddings
      */
-    List<DocumentEmbeddingDTO> generateChapterEmbeddings(
+    List<DocChunkDTO> generateChapterEmbeddings(
             ChapterDTO chapter,
             EmbeddingContext context,
             int generationFlag);
@@ -100,7 +100,7 @@ public interface EmbeddingService {
      * @param numberOfPairs Number of Q&A pairs to generate (null for default=3)
      * @return List of Q&A embeddings
      */
-    List<DocumentEmbeddingDTO> generateQAEmbeddings(
+    List<DocChunkDTO> generateQAEmbeddings(
             ChapterDTO chapter,
             EmbeddingContext context,
             Integer numberOfPairs);
@@ -122,7 +122,7 @@ public interface EmbeddingService {
      * @param customInstructions Custom summarization instructions (null for default)
      * @return List of summary embeddings
      */
-    List<DocumentEmbeddingDTO> generateSummaryEmbeddings(
+    List<DocChunkDTO> generateSummaryEmbeddings(
             ChapterDTO chapter,
             EmbeddingContext context,
             Integer maxSummaryLength,
@@ -170,5 +170,5 @@ public interface EmbeddingService {
      * @param request Embedding request with all parameters
      * @return List of generated embeddings
      */
-    List<DocumentEmbeddingDTO> generateEmbeddings(EmbeddingRequest request);
+    List<DocChunkDTO> generateEmbeddings(EmbeddingRequest request);
 }

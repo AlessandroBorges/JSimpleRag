@@ -9,12 +9,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import bor.tools.simplellm.Model;
 import bor.tools.simplerag.dto.ChapterDTO;
-import bor.tools.simplerag.dto.DocumentEmbeddingDTO;
+import bor.tools.simplerag.dto.DocChunkDTO;
 import bor.tools.simplerag.dto.DocumentoWithAssociationDTO;
 import bor.tools.simplerag.entity.enums.TipoConteudo;
 import bor.tools.simplerag.service.embedding.model.EmbeddingContext;
 import bor.tools.simplerag.service.embedding.model.ProcessingOptions;
+import bor.tools.simplerag.service.processing.context.LLMContext;
 import bor.tools.splitter.DocumentRouter;
 import bor.tools.splitter.DocumentSplitter;
 import bor.tools.splitter.SplitterFactory;
@@ -41,6 +43,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
+@Deprecated(since = "0.0.3", forRemoval = true) 
 public class EmbeddingOrchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingOrchestrator.class);
@@ -68,6 +71,7 @@ public class EmbeddingOrchestrator {
     public CompletableFuture<ProcessingResult> processDocumentFull(
             DocumentoWithAssociationDTO documento,
             EmbeddingContext context,
+            LLMContext llmContext,
             ProcessingOptions options) {
 
         return CompletableFuture.supplyAsync(() -> {
@@ -79,7 +83,7 @@ public class EmbeddingOrchestrator {
                     log.info("Processing document (attempt {}/{}): {}",
                             attempt + 1, MAX_RETRIES + 1, documento.getTitulo());
 
-                    return executeProcessing(documento, context, options);
+                    return executeProcessing(documento, context, llmContext, options);
 
                 } catch (Exception e) {
                     lastException = e;
@@ -121,6 +125,7 @@ public class EmbeddingOrchestrator {
     public ProcessingResult processDocumentSync(
             DocumentoWithAssociationDTO documento,
             EmbeddingContext context,
+            LLMContext llmContext,
             ProcessingOptions options) {
 
         int attempt = 0;
@@ -131,7 +136,7 @@ public class EmbeddingOrchestrator {
                 log.info("Processing document synchronously (attempt {}/{}): {}",
                         attempt + 1, MAX_RETRIES + 1, documento.getTitulo());
 
-                return executeProcessing(documento, context, options);
+                return executeProcessing(documento, context, llmContext, options);
 
             } catch (Exception e) {
                 lastException = e;
@@ -171,10 +176,11 @@ public class EmbeddingOrchestrator {
     public ProcessingResult processDocumentWithoutRetry(
             DocumentoWithAssociationDTO documento,
             EmbeddingContext context,
+            LLMContext llmContext,
             ProcessingOptions options) {
 
         log.info("Processing document without retry: {}", documento.getTitulo());
-        return executeProcessing(documento, context, options);
+        return executeProcessing(documento, context, llmContext, options);
     }
 
     // ========== Private Helper Methods ==========
@@ -197,13 +203,15 @@ public class EmbeddingOrchestrator {
     private ProcessingResult executeProcessing(
             DocumentoWithAssociationDTO documento,
             EmbeddingContext context,
+            LLMContext llmContext,
             ProcessingOptions options) {
 
         ProcessingResult result = new ProcessingResult();
         result.setDocumento(documento);
 
+        Model model = llmContext.getModel();
         // 1. Detect content type
-        TipoConteudo tipoConteudo = documentRouter.detectContentType(documento.getConteudoMarkdown());
+        TipoConteudo tipoConteudo = documentRouter.detectContentType(model, documento.getConteudoMarkdown());
         log.debug("Detected content type: {} for document: {}", tipoConteudo, documento.getTitulo());
 
         // 2. Split document into chapters
@@ -217,7 +225,7 @@ public class EmbeddingOrchestrator {
         for (ChapterDTO chapter : chapters) {
 
             // Basic chapter embeddings (always generated)
-            List<DocumentEmbeddingDTO> embeddings =
+            List<DocChunkDTO> embeddings =
                 embeddingService.generateChapterEmbeddings(chapter, context);
             result.addEmbeddings(embeddings);
 
@@ -226,7 +234,7 @@ public class EmbeddingOrchestrator {
 
             // Q&A embeddings (if requested)
             if (options.isIncludeQA()) {
-                List<DocumentEmbeddingDTO> qaEmbeddings =
+                List<DocChunkDTO> qaEmbeddings =
                     embeddingService.generateQAEmbeddings(
                         chapter, context, options.getQaCount());
                 result.addEmbeddings(qaEmbeddings);
@@ -240,7 +248,7 @@ public class EmbeddingOrchestrator {
                 int tokens = estimateTokenCount(chapter.getConteudo());
 
                 if (tokens > MIN_TOKENS_FOR_SUMMARY) {
-                    List<DocumentEmbeddingDTO> summaryEmbeddings =
+                    List<DocChunkDTO> summaryEmbeddings =
                         embeddingService.generateSummaryEmbeddings(
                             chapter,
                             context,
@@ -298,12 +306,12 @@ public class EmbeddingOrchestrator {
     public static class ProcessingResult {
         private DocumentoWithAssociationDTO documento;
         private List<ChapterDTO> capitulos = new ArrayList<>();
-        private List<DocumentEmbeddingDTO> allEmbeddings = new ArrayList<>();
+        private List<DocChunkDTO> allEmbeddings = new ArrayList<>();
 
         /**
          * Add embeddings to the result.
          */
-        public void addEmbeddings(List<DocumentEmbeddingDTO> embeddings) {
+        public void addEmbeddings(List<DocChunkDTO> embeddings) {
             if (embeddings != null) {
                 this.allEmbeddings.addAll(embeddings);
             }
