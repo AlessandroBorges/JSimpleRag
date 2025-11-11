@@ -102,16 +102,13 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
             List<DocChunkDTO> embeddings = new ArrayList<>();
             for (int i = 0; i < qaPairs.size(); i++) {
                 QuestionAnswer qa = qaPairs.get(i);
-
-                DocChunkDTO embedding = createQAEmbedding(
-                    qa,
-                    i,
-                    qaPairs.size(),
-                    chapter,
-                    library,
-                    request
-                );
-
+                DocChunkDTO embedding = createQAEmbedding(  qa,
+                                                            i,
+                                                            qaPairs.size(),
+                                                            chapter,
+                                                            library,
+                                                            request
+                                                        );
                 embeddings.add(embedding);
             }
 
@@ -246,16 +243,16 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
      * Creates an embedding for a single Q&A pair.
      */
     private DocChunkDTO createQAEmbedding(
-            QuestionAnswer qa,
-            int index,
-            int totalPairs,
-            ChapterDTO chapter,
-            LibraryDTO library,
-            EmbeddingRequest request) throws LLMException {
-
-        // Combine question and answer into single text
-        String combinedText = "Pergunta: " + qa.getQuestion() + "\n\nResposta: " + qa.getAnswer();
-        String title = chapter.getTitulo() + " - Q&A " + (index + 1);
+                                QuestionAnswer qa,
+                                int index,
+                                int totalPairs,
+                                ChapterDTO chapter,
+                                LibraryDTO library,
+                                EmbeddingRequest request) throws LLMException 
+    {
+	// Combine question and answer into single text
+	String title = chapter.getTitulo() + "\nPerguntas e Respostas " + (index + 1);
+        String combinedText = title  + "\n\n Pergunta: " + qa.getQuestion() + "\n\nResposta: " + qa.getAnswer();        
 
         // Resolve embedding model to use
         String modelName = request.getEmbeddingModelName(defaultEmbeddingModel);
@@ -308,6 +305,7 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         docEmbedding.setBibliotecaId(library != null ? library.getId() : null);
         docEmbedding.setDocumentoId(chapter.getDocumentoId());
         docEmbedding.setCapituloId(chapter.getId());
+        docEmbedding.setOrdemCap(index+1);
 
         // Configure metadata
         docEmbedding.getMetadados().setNomeDocumento(title);

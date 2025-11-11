@@ -1340,8 +1340,13 @@ public class RagUtils {
 	if (texto == null || texto.isEmpty()) {
 	    return 0;
 	}	
+	try {
 	LLMProvider service = getLLMService(null);
 	return service.tokenCount(texto,"gpt-5");
+	} catch (Exception e) {
+	   log.error("Failed countTokens {}", e.getMessage());
+	}
+	return countTokensFast(texto);
     }
     
     /**

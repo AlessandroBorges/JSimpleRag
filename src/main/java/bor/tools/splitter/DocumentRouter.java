@@ -336,9 +336,10 @@ public class DocumentRouter {
 		String resposta = llm.classifyContent(model, header,
 			TipoConteudo.getAllNames(),
 			TipoConteudo.getAllNamesAndDescriptions());
+		
 		return TipoConteudo.fromName(resposta);
-	    } catch (LLMException e) {
-		logger.warn("Failed to classify content type using LLM: {}", e.getMessage());
+	    } catch (Exception e) {		
+		logger.warn("Failed to classify content type using LLM.\n\t Header:\n\t\t {}\n\t Error:\n\t\t {}", e.getMessage());
 	    }
 	}
 	return TipoConteudo.OUTROS;

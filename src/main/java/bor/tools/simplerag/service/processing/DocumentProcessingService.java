@@ -857,6 +857,7 @@ public class DocumentProcessingService {
             
             String llmModelName = options.getLLMmodelName()!=null? options.getLLMmodelName() :
         	                   library.getCompletionQAModel();
+            
             if(llmModelName==null || llmModelName.isEmpty()) {
         	llmModelName = llmServiceManager.getDefaultCompletionModelName();
             }
@@ -940,14 +941,13 @@ public class DocumentProcessingService {
      * @return result with count of embeddings generated
      */
     private ChapterEnrichmentResult enrichChapter(
-            Chapter chapter,
-            Documento documento,
-            LibraryDTO library,
-            EmbeddingContext embeddingContext,
-            EnrichmentOptions options) {
-
+                                        Chapter chapter,
+                                        Documento documento,
+                                        LibraryDTO library,
+                                        EmbeddingContext embeddingContext,
+                                        EnrichmentOptions options) 
+    {
         log.debug("Enriching chapter {}: {}", chapter.getId(), chapter.getTitulo());
-
         int qaCount = 0;
         int summaryCount = 0;
 
