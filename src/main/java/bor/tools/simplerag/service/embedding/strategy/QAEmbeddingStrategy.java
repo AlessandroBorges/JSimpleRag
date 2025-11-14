@@ -308,50 +308,42 @@ public class QAEmbeddingStrategy implements EmbeddingGenerationStrategy {
         docEmbedding.setOrdemCap(index+1);
 
         // Configure metadata
-        docEmbedding.getMetadados().setNomeDocumento(title);
+        var metadata = docEmbedding.getMetadados();
+        metadata.setNomeDocumento(title);
 
-        // Q&A specific metadata
-        docEmbedding.getMetadados().put("tipo_embedding", "qa_pair");
-        docEmbedding.getMetadados().put("pergunta", qa.getQuestion());
-        docEmbedding.getMetadados().put("resposta", qa.getAnswer());
-        docEmbedding.getMetadados().put("qa_pair_id", String.valueOf(index));
-        docEmbedding.getMetadados().put("total_qa_pairs", String.valueOf(totalPairs));
-
+        // Q&A specific metadata       
         // Library metadata
-        if (library != null) {
-            docEmbedding.getMetadados().put("biblioteca_id", library.getId());
-            docEmbedding.getMetadados().put("biblioteca_nome", library.getNome());
+        if (library != null && library.getNome() != null) {          
+            metadata.put("biblioteca_nome", library.getNome());
         }
 
         // Chapter metadata
-        if (chapter.getId() != null) {
-            docEmbedding.getMetadados().put("capitulo_id", chapter.getId().toString());
-        }
-        if (chapter.getDocumentoId() != null) {
-            docEmbedding.getMetadados().put("documento_id", chapter.getDocumentoId().toString());
-        }
-        docEmbedding.getMetadados().put("capitulo_titulo", chapter.getTitulo());
-        if (chapter.getOrdemDoc() != null) {
-            docEmbedding.getMetadados().put("capitulo_ordem", chapter.getOrdemDoc().toString());
-        }
-        if (chapter.getTokensTotal() != null) {
-            docEmbedding.getMetadados().put("capitulo_tokens_total", chapter.getTokensTotal().toString());
-        }
-
+        metadata.put("capitulo", chapter.getTitulo());
+        // Q&A pair metadata
+        metadata.put("pergunta", qa.getQuestion());
+        metadata.put("resposta", qa.getAnswer());
+        
         // Additional chapter metadata
         if (chapter.getMetadados() != null) {
-            chapter.getMetadados().forEach((key, value) -> {
-                if (value != null && !value.toString().trim().isEmpty()) {
-                    docEmbedding.getMetadados().put("capitulo_" + key, value.toString());
-                }
-            });
-        }
-
-        // Technical metadata
-        docEmbedding.getMetadados().put("embedding_operation", Embeddings_Op.DOCUMENT.toString());
-        docEmbedding.getMetadados().put("embedding_model", modelName);
-        docEmbedding.getMetadados().put("created_at", java.time.Instant.now().toString());
-
+            // Filtrar apenas metadados relevantes para busca textual
+            String[] relevantFields = {"autor", "ano", "fonte", "categoria", "assunto","title",
+        	    			"keywords", "palavras_chave", "entidades", "resumo"};            
+	    for (String field : relevantFields) {
+		for (var entry : chapter.getMetadados().entrySet()) {
+		    String key = entry.getKey().toLowerCase();
+		    if (key.contains(field)) {
+			Object value = entry.getValue();
+			if (value != null && !value.toString().trim().isEmpty()) {
+			    var previousValue = metadata.get(key);
+			    if (previousValue != null && !previousValue.toString().trim().isEmpty()) {
+				value = previousValue + "; " + value.toString();
+			    }
+			    metadata.addMetadata(field, value);
+			}
+		    }
+		}
+	    }//for
+        }// if chapter
         return docEmbedding;
     }
 

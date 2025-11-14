@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="015-001-update-text-search-tsv-doc-embedding" author="jsimplerag">
+        <comment>
+            Update text_search_tsv column in doc_embedding table to include 'pergunta' and 'resposta' fields
+            with appropriate weights (pergunta: A, resposta: B)
+        </comment>
+
+        <sql>
+            -- Drop the existing generated column
+            ALTER TABLE doc_embedding DROP COLUMN IF EXISTS text_search_tsv;
+        </sql>
+
+        <sql>
+            -- Recreate the column with the enhanced definition
+            ALTER TABLE doc_embedding ADD COLUMN text_search_tsv tsvector GENERATED ALWAYS AS (
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'nome', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'titulo', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'title', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'capitulo', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'pergunta', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'descricao', '')), 'B') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'resposta', '')), 'B') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'entidades', '')), 'B') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'area_conhecimento', '')), 'C') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'palavras_chave', '')), 'C') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'keywords', '')), 'C') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'categoria', '')), 'C') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'autor', '')), 'D') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'fonte', '')), 'D') ||
+                setweight(to_tsvector('portuguese', COALESCE(texto, '')), 'C')
+            ) STORED;
+        </sql>
+
+        <rollback>
+            -- Drop the new column
+            ALTER TABLE doc_embedding DROP COLUMN IF EXISTS text_search_tsv;
+
+            -- Recreate with the original definition
+            ALTER TABLE doc_embedding ADD COLUMN text_search_tsv tsvector GENERATED ALWAYS AS (
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'nome', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'capitulo', '')), 'A') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'descricao', '')), 'B') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'area_conhecimento', '')), 'C') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'palavras_chave', '')), 'C') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'autor', '')), 'D') ||
+                setweight(to_tsvector('portuguese', COALESCE(metadados->>'metadados', '')), 'D') ||
+                setweight(to_tsvector('portuguese', COALESCE(texto, '')), 'C')
+            ) STORED;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

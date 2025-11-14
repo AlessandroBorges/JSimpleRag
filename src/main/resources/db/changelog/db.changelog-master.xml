@@ -47,4 +47,7 @@
     <!-- Phase 14: Add biblioteca_id to chapter table (fix modeling gap) -->
     <include file="db/changelog/014-add-biblioteca-id-to-chapter.xml"/>
 
+    <!-- Phase 15: Update text_search_tsv column to include pergunta and resposta fields -->
+    <include file="db/changelog/015-update-text-search-tsv-doc-embedding.xml"/>
+
 </databaseChangeLog>

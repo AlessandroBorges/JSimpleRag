@@ -21,8 +21,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
 
@@ -31,6 +29,7 @@ import bor.tools.simplerag.entity.MetaBiblioteca;
 import bor.tools.simplerag.entity.MetaDoc;
 import bor.tools.simplerag.entity.enums.TipoEmbedding;
 import bor.tools.simplerag.util.VectorUtil;
+import bor.tools.utils.JsonUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.NonNull;
@@ -93,7 +92,10 @@ public class DocChunkJdbcRepository {
      */
     private Map<Integer, Integer> mapBibliotecaId2VecLen = new HashMap<>();
     
-    private ObjectMapper objectMapper = new ObjectMapper();
+    /**
+     * ObjectMapper para JSON
+     */
+    private ObjectMapper objectMapper = JsonUtil.getMapper();
 
     /**
      * RowMapper para DocChunk
@@ -582,7 +584,8 @@ public class DocChunkJdbcRepository {
             }
 
             // Metadados como JSON - em implementação real usaria Jackson
-            ps.setString(8, doc.getMetadados() != null ? "{}" : null);
+            String metadadosJson = JsonUtil.toJson(doc.getMetadados());            
+            ps.setString(8, metadadosJson == null ? "{}" : metadadosJson);
             return ps;
         }, keyHolder);
 
@@ -679,15 +682,11 @@ public class DocChunkJdbcRepository {
 
                 // Metadados as JSON
                 String metadadosJson = "{}";
-                if (doc.getMetadados() != null && !doc.getMetadados().isEmpty()) {
-                    try {                       
-                        metadadosJson = objectMapper.writeValueAsString(doc.getMetadados());
-                    } catch (Exception e) {
-                        // Fallback to empty JSON on serialization error
-                        metadadosJson = "{}";
-                        e.printStackTrace();
-                    }
-                }
+                if (doc.getMetadados() != null && !doc.getMetadados().isEmpty()) {                                  
+                        metadadosJson = JsonUtil.toJson(doc.getMetadados());
+                } else {
+		    metadadosJson = "{}";
+		}
                 ps.setString(8, metadadosJson);
 
                 return ps;

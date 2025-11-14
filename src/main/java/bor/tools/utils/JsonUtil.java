@@ -72,13 +72,13 @@ public class JsonUtil {
 	 * @return representacao string JSON
 	 */
 	public static String toJson(Object obj) {
-		try {
-			return getMapper().writeValueAsString(obj);
-		} catch (Exception e) {
-			System.err.println("Erro na conversão de JSON." + "\n tipo: " + obj.getClass() + "\nobj: " + obj);
-			//e.printStackTrace();
-		}
-		return null;
+	    try {
+		return getMapper().writeValueAsString(obj);
+	    } catch (Exception e) {
+		System.err.println("Erro na conversão de JSON." + "\n tipo: " + obj.getClass() + "\nobj: " + obj);
+		// e.printStackTrace();
+	    }
+	    return null;
 	}
 	
 	
@@ -88,15 +88,13 @@ public class JsonUtil {
 	 * @return representacao string JSON
 	 */
 	public static String toJsonPrint(Object obj) {
-		try {
-			return getMapper()
-					.writerWithDefaultPrettyPrinter()
-					.writeValueAsString(obj);
-		} catch (Exception e) {
-			System.err.println("Erro na conversão de JSON." + "\n tipo: " + obj.getClass() + "\nobj: " + obj);
-			//e.printStackTrace();
-		}
-		return null;
+	    try {
+		return getMapper().writerWithDefaultPrettyPrinter().writeValueAsString(obj);
+	    } catch (Exception e) {
+		System.err.println("Erro na conversão de JSON." + "\n tipo: " + obj.getClass() + "\nobj: " + obj);
+		// e.printStackTrace();
+	    }
+	    return null;
 	}
 
 	/**
@@ -107,19 +105,17 @@ public class JsonUtil {
 	 * @return null, se falhar ou uma instância de tipo
 	 */
 	public static <T> T converte(String json, Class<T> tipo) {
-		try {
-			T e = getMapper().readValue(json, tipo);
-			return e;
-		} catch (Exception e) {
-			System.err.println("Erro na conversão primária de JSON."
-					+ "\n tipo: " + tipo.getName()
-					+ "\n json:\n" + json==null? " null json" : json.substring(0, Math.min(200,json.length()))
-					+ "\n ## Message: " + e.getMessage()
-					);
-			//e.printStackTrace();
-		}
+	    try {
+		T e = getMapper().readValue(json, tipo);
+		return e;
+	    } catch (Exception e) {
+		System.err.println("Erro na conversão primária de JSON." + "\n tipo: " + tipo.getName() + "\n json:\n"
+			+ json == null ? " null json"
+				: json.substring(0, Math.min(200, json.length())) + "\n ## Message: " + e.getMessage());
+		// e.printStackTrace();
+	    }
 
-		return null;
+	    return null;
 	}
 
 }
