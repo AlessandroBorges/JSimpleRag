@@ -109,7 +109,7 @@ public class DocumentProcessingService {
     /**
      * Maximum number of texts per batch (REVISED: was 5, now 10).
      */
-    private static final int BATCH_SIZE = 10;
+    private static final int BATCH_SIZE = 5;
 
     /**
      * Model name for token counting (REVISED: use "fast" model).
@@ -124,7 +124,7 @@ public class DocumentProcessingService {
     /**
      * Maximum tokens for generated summaries.
      */
-    private static final int SUMMARY_MAX_TOKENS = 1500;
+    private static final int SUMMARY_MAX_TOKENS = 1024*2;
 
     /**
      * Ideal chunk size for chapter splitting (aligns with ContentSplitter.IDEAL_TOKENS).
@@ -365,7 +365,7 @@ public class DocumentProcessingService {
         // CASE 1: Small chapter (≤ 512 tokens) - Create single TRECHO
         if (chapterTokens <= IDEAL_CHUNK_SIZE_TOKENS) {
             log.debug("Chapter is small (≤{} tokens), creating single TRECHO", IDEAL_CHUNK_SIZE_TOKENS);
-            DocChunk trecho = criarTrechoUnico( chapterDTO,
+            DocChunk trecho = criarChunkUnicoChapter( chapterDTO,
                                                 documento,
                                                 1 // orderChapter
                                         	);
@@ -376,7 +376,7 @@ public class DocumentProcessingService {
         // CASE 2: Large chapter (> 2000 tokens) - Split into chunks
         log.debug("Chapter is large (>{} tokens), splitting into chunks", IDEAL_CHUNK_SIZE_TOKENS);
 
-        // Step 1: Generate RESUMO if chapter > 2500 tokens
+        // Step 1: Generate additional RESUMO if chapter > 2500 tokens
         if (chapterTokens > SUMMARY_THRESHOLD_TOKENS) {
             log.debug("Chapter exceeds summary threshold ({}), generating RESUMO", 
         	    	SUMMARY_THRESHOLD_TOKENS);
@@ -454,26 +454,30 @@ public class DocumentProcessingService {
         log.debug("Generating summary for chapter: {}", chapterDTO.getTitulo());
 
         // Build summary prompt
-        String systemPrompt = "Você é um assistente especializado em resumir conteúdo técnico. "
-                + "Crie um resumo conciso e informativo do texto fornecido, "
-                + "capturando os pontos principais e conceitos chave.\n";
+        String systemPrompt = String.format("Você é um assistente especializado em resumir conteúdo técnico. "
+                + "Crie um resumo conciso e informativo do texto fornecido, com até %d tokens, "
+                + "capturando os pontos principais, as entidades citadas e os conceitos chave.\n"
+                + "Use os metadados fornecidos para apoiar a sumarização,"
+                + " mas não é necessário inclui-los no resumo.\n",
+                SUMMARY_MAX_TOKENS
+                );
 
-        String userPrompt = String.format(
-                "Resuma o seguinte capítulo em até %d tokens:\n\n"
-                + "Título: %s\n\n"
-                + "Conteúdo:\n%s",
-                SUMMARY_MAX_TOKENS,
+        String userPrompt = String.format(                
+                "Título: %s\n\n"
+                + "Conteúdo:\n%s"
+                +"\n\n METADADOS do texto acima: %s",             
                 chapterDTO.getTitulo(),
-                chapterDTO.getConteudo()
+                chapterDTO.getConteudo(),
+                buildMetadataText(chapterDTO)
         );
 
         MapParam extraParams = new MapParam();
         extraParams.maxTokens(SUMMARY_MAX_TOKENS);
-        extraParams.temperature(0.58f); // More focused summary
+        extraParams.temperature(0.45f); // More focused summary
         extraParams.repeat_penalty(1.1f);
-        extraParams.top_p(0.95f);
-        extraParams.top_k(40);
-        extraParams.min_p(0.05f);
+       // extraParams.top_p(0.95f);
+       // extraParams.top_k(40);
+       // extraParams.min_p(0.05f);
         extraParams.model(llmContext.getModelName());
         
         
@@ -494,7 +498,7 @@ public class DocumentProcessingService {
                 .tipoEmbedding(TipoEmbedding.RESUMO)
                 .texto(summary)
                 .metadados(new bor.tools.simplerag.entity.MetaDoc(chapterDTO.getMetadados())) // Copy chapter metadata
-                .orderChapter(-1) // RESUMO comes before chunks
+                .orderChapter(0) // RESUMO comes before chunks
                 .embeddingVector(null) // NULL - calculated later
                 .build();
 
@@ -508,7 +512,7 @@ public class DocumentProcessingService {
     }
 
     /**
-     * Creates a single TRECHO embedding for a small chapter.
+     * Creates a single CAPITULO embedding for a small chapter.
      *
      * <p>Used when the chapter is small enough (≤ 2000 tokens) to be
      * represented as a single chunk without splitting.</p>
@@ -518,7 +522,7 @@ public class DocumentProcessingService {
      * @param orderChapter the order of this chunk within the chapter
      * @return TRECHO embedding with NULL vector
      */
-    private DocChunk criarTrechoUnico(
+    private DocChunk criarChunkUnicoChapter(
             ChapterDTO chapterDTO,
             Documento documento,
             int orderChapter) {
@@ -527,7 +531,7 @@ public class DocumentProcessingService {
                 .libraryId(documento.getBibliotecaId())
                 .documentoId(documento.getId())
                 .chapterId(null) // Will be set after chapter persistence
-                .tipoEmbedding(TipoEmbedding.TRECHO)
+                .tipoEmbedding(TipoEmbedding.CAPITULO)
                 .texto(chapterDTO.getConteudo())
                 .orderChapter(orderChapter)
                 .embeddingVector(null) // NULL - calculated later
@@ -602,6 +606,7 @@ public class DocumentProcessingService {
                 	embeddingContext.generateEmbeddingsBatch( texts, Embeddings_Op.DOCUMENT);
 
                 // Update each embedding (fault-tolerant)
+                
                 for (int i = 0; i < batch.size(); i++) {
                     try {
                         embeddingRepository.updateEmbeddingVector(
@@ -686,7 +691,8 @@ public class DocumentProcessingService {
                     
 		    String summary = llmContext.generateCompletion(
                             "Resuma o seguinte texto de forma concisa, "
-                            +"mantendo as informações principais:\n",
+                            +"mantendo as informações principais, "
+                            + "tais como fatos, entidades citadas, datas e ações.\n",
                             text,
                             extraParams);
 

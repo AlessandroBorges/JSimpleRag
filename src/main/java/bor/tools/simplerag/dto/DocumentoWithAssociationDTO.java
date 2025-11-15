@@ -408,8 +408,8 @@ public class DocumentoWithAssociationDTO {
 	// Simple tokenization by splitting on whitespace
 	int tokens;
 	try {
-	    tokens = RagUtils.countTokens(text);
-	} catch (LLMException e) {	    
+	    tokens = RagUtils.countTokensFast(text);
+	} catch (Exception e) {	    
 	    e.printStackTrace();
 	    tokens = Math.round((text.length() * 1.0f) / 3.8f); // fallback estimate
 	}

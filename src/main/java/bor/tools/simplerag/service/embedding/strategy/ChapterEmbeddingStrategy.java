@@ -331,12 +331,12 @@ public class ChapterEmbeddingStrategy implements EmbeddingGenerationStrategy {
         // Configure metadata
         docEmbedding.getMetadados().setNomeDocumento(title);
         if (library != null) {
-            docEmbedding.getMetadados().put("biblioteca_id", library.getId());
-            docEmbedding.getMetadados().put("biblioteca_nome", library.getNome());
+          //  docEmbedding.getMetadados().put("biblioteca_id", library.getId());
+          //  docEmbedding.getMetadados().put("biblioteca_nome", library.getNome());
         }
         docEmbedding.getMetadados().put("embedding_operation", Embeddings_Op.DOCUMENT.toString());
-        docEmbedding.getMetadados().put("embedding_model", modelName);
-        docEmbedding.getMetadados().put("created_at", java.time.Instant.now().toString());
+        //docEmbedding.getMetadados().put("embedding_model", modelName);
+        //docEmbedding.getMetadados().put("created_at", java.time.Instant.now().toString());
 
         return docEmbedding;
     }

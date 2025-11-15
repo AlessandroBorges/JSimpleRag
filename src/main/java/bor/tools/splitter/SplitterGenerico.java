@@ -66,7 +66,7 @@ public class SplitterGenerico extends AbstractSplitter {
      * Número ideal de tokens em um capitulo. 
      * Default é 8 kt.
      */
-    protected static final int CHAPTER_IDEAL_TOKENS = 1024 * 8;
+    protected static final int CHAPTER_IDEAL_TOKENS = 1024 * 4;
     
     /**
      * Número ideal de tokens em um chunk. 
@@ -403,7 +403,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	}
 
 	// Small chapter, no need to split
-	if(tokenCount <= CHUNK_IDEAL_TOKENS) {
+	if(tokenCount <= CHAPTER_MIN_TOKENS) {
 	    DocChunkDTO newChunk = chapter.createChunkLevelEmbedding(conteudo,
 		    							0, 
 		    							TipoEmbedding.CAPITULO);	  
@@ -418,7 +418,7 @@ public class SplitterGenerico extends AbstractSplitter {
 	String[] lines = conteudo.split("\n");
 	List<TitleTag> titles = detectTitles(lines);
 	
-	if (titles != null && !titles.isEmpty()) {
+	if (titles != null && !titles.isEmpty() && titles.size() > 1) {
 	    
 	    StringBuffer buffer = new StringBuffer();
 	    int MIN_CHAR_LENGTH = MIN_TOKENS * 4;
@@ -456,7 +456,9 @@ public class SplitterGenerico extends AbstractSplitter {
 	    }		
 	} else {
 	    // Fallback: split by size if no titles found
-	    int idealCharChunkSize = IDEAL_TOKENS * 4; // Approximate character count
+	    int targetCharsChapter = CHAPTER_MIN_TOKENS * 4; // Approximate character count
+	    int numChunks = (int) Math.ceil((double) (tokenCount * 4) / targetCharsChapter); // estimate number of chunks, using 4 chars/token
+	    int idealCharChunkSize = conteudo.length() / numChunks;
 
 	    // Split by paragraphs to avoid cutting in the middle
 	    String[] textBlocks = conteudo.split("\\n\\s*\\n");
@@ -464,7 +466,9 @@ public class SplitterGenerico extends AbstractSplitter {
 	    // Check for very big paragraphs
 	    int maxBlockSize = (MAX_TOKENS * 4);
 	    List<String> refinedBlocks = new ArrayList<>();
-
+            
+	    StringBuilder tempBuffer = new StringBuilder();
+            
 	    for(int i=0; i<textBlocks.length; i++) {
 		String block = textBlocks[i].trim();
 		if(block.length() >= maxBlockSize) {
@@ -487,21 +491,39 @@ public class SplitterGenerico extends AbstractSplitter {
 		    }
 		} else {
 		    // Too small block, try to merge with next
-		    if(block.length() <= (CHUNK_MIN_TOKENS * 4)) {
+		    if(block.length() <= idealCharChunkSize) {
 			if(i < textBlocks.length - 1) {
 			    String nextBlock = textBlocks[i+1].trim();
-			    String mergedBlock = block + " " + nextBlock;
-			    if(mergedBlock.length() <= (idealCharChunkSize + 200)) {
-				refinedBlocks.add(mergedBlock.trim());
+			    //String mergedBlock = block + "\n" + nextBlock;
+			    if((tempBuffer.length() + nextBlock.length()) < idealCharChunkSize) {
+				// acumula
+				tempBuffer.append(block)
+				          .append("\n ")
+				          .append(nextBlock);	
 				i++; // Skip next block
 			    } else {
-				refinedBlocks.add(block);
+				// finalize current block
+				String merged = tempBuffer.toString().trim();
+				if(!merged.isEmpty()) {
+				    refinedBlocks.add(merged);
+				    tempBuffer.setLength(0);
+				}
 			    }
 			} else {
-			    refinedBlocks.add(block);
+			    // last block
+			    if(block.isEmpty() == false)
+				refinedBlocks.add(block);
 			}
 		    } else {
-			// Normal block
+			// check if there's accumulated small blocks
+			if(tempBuffer.length() > 0) {
+			    String merged = tempBuffer.toString().trim();
+			    if(!merged.isEmpty()) {
+				refinedBlocks.add(merged);
+				tempBuffer.setLength(0);
+			    }
+			}
+			// add current big block 
 			refinedBlocks.add(block);
 		    }
 		}
