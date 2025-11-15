@@ -1,6 +1,8 @@
 package bor.tools.splitter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +31,7 @@ import lombok.EqualsAndHashCode;
  * markdown eventualmente composta por títulos, subtítulos e parágrafos.
  *
  */
-@Data
-@EqualsAndHashCode(callSuper = false)
+
 public class SplitterGenerico extends AbstractSplitter {
 
     private static final Logger logger = LoggerFactory.getLogger(SplitterNorma.class);
@@ -456,107 +457,62 @@ public class SplitterGenerico extends AbstractSplitter {
 	    }		
 	} else {
 	    // Fallback: split by size if no titles found
-	    int targetCharsChapter = CHAPTER_MIN_TOKENS * 4; // Approximate character count
-	    int numChunks = (int) Math.ceil((double) (tokenCount * 4) / targetCharsChapter); // estimate number of chunks, using 4 chars/token
-	    int idealCharChunkSize = conteudo.length() / numChunks;
-
-	    // Split by paragraphs to avoid cutting in the middle
-	    String[] textBlocks = conteudo.split("\\n\\s*\\n");
-
-	    // Check for very big paragraphs
-	    int maxBlockSize = (MAX_TOKENS * 4);
-	    List<String> refinedBlocks = new ArrayList<>();
-            
-	    StringBuilder tempBuffer = new StringBuilder();
-            
-	    for(int i=0; i<textBlocks.length; i++) {
-		String block = textBlocks[i].trim();
-		if(block.length() >= maxBlockSize) {
-		    // Further split by sentences
-		    String[] sentences = block.split("(?<=[.!?])\\s+");
-		    StringBuilder tempBlock = new StringBuilder();
-		    for(String sentence : sentences) {
-			if((tempBlock.length() + sentence.length()) <= maxBlockSize) {
-			    tempBlock.append(sentence).append(" ");
-			    continue;
-			} else {
-			    refinedBlocks.add(tempBlock.toString().trim());
-			    tempBlock.setLength(0);
-			    tempBlock.append(sentence).append(" ");
-			}
-		    }
-		    // Add remaining content
-		    if(tempBlock.length() > 0) {
-			refinedBlocks.add(tempBlock.toString().trim());
-		    }
-		} else {
-		    // Too small block, try to merge with next
-		    if(block.length() <= idealCharChunkSize) {
-			if(i < textBlocks.length - 1) {
-			    String nextBlock = textBlocks[i+1].trim();
-			    //String mergedBlock = block + "\n" + nextBlock;
-			    if((tempBuffer.length() + nextBlock.length()) < idealCharChunkSize) {
-				// acumula
-				tempBuffer.append(block)
-				          .append("\n ")
-				          .append(nextBlock);	
-				i++; // Skip next block
-			    } else {
-				// finalize current block
-				String merged = tempBuffer.toString().trim();
-				if(!merged.isEmpty()) {
-				    refinedBlocks.add(merged);
-				    tempBuffer.setLength(0);
-				}
-			    }
-			} else {
-			    // last block
-			    if(block.isEmpty() == false)
-				refinedBlocks.add(block);
-			}
-		    } else {
-			// check if there's accumulated small blocks
-			if(tempBuffer.length() > 0) {
-			    String merged = tempBuffer.toString().trim();
-			    if(!merged.isEmpty()) {
-				refinedBlocks.add(merged);
-				tempBuffer.setLength(0);
-			    }
-			}
-			// add current big block 
-			refinedBlocks.add(block);
-		    }
-		}
-	    }
-
-	    // Group refined blocks into chunks
+	    int idealCharChunkSize = CHUNK_IDEAL_TOKENS * 4;
+	    int maxCharChunkSize = CHUNK_MAX_TOKENS * 4;
+	    int minCharChunkSize = CHUNK_MIN_TOKENS * 4;
+	    
+	    List<String> sentences = splitTextIntoSentences(conteudo);
 	    StringBuilder currentChunk = new StringBuilder();
-	    int count = 1;
-	    for (String nextBlock : refinedBlocks) {
-		if((currentChunk.length() + nextBlock.length()) <= idealCharChunkSize) {
-		    currentChunk.append(nextBlock).append(" ");
+	    int chunkIndex = 1;
+
+	    for (String sentence : sentences) {
+		String trimmedSentence = sentence.trim();
+		if (trimmedSentence.isEmpty()) {
 		    continue;
+		}
+
+		if (currentChunk.length() == 0) {
+		    currentChunk.append(trimmedSentence);
+		    continue;
+		}
+
+		int projectedLength = currentChunk.length() + 1 + trimmedSentence.length();
+		boolean reachedIdealSize = projectedLength >= idealCharChunkSize
+						&& currentChunk.length() >= minCharChunkSize;
+		boolean exceedsMaxSize = projectedLength >= maxCharChunkSize;
+
+		if (reachedIdealSize || exceedsMaxSize) {
+		    chunks.add(chapter.createChunkLevelEmbedding(currentChunk.toString().trim(), chunkIndex++));
+		    currentChunk.setLength(0);
+		    currentChunk.append(trimmedSentence);
 		} else {
-		    String textBlock = currentChunk.toString().trim();
-		    if(!textBlock.isEmpty()) {
-			currentChunk.setLength(0);
-			currentChunk.append(nextBlock).append(" ");			
-			DocChunkDTO newChunk = chapter.createChunkLevelEmbedding(textBlock,
-									    count++);
-			chunks.add(newChunk);
-		    }
+		    currentChunk.append(" ").append(trimmedSentence);
 		}
 	    }
 
-	    // Add final chunk if any
-	    if(currentChunk.length() > 0) {	
-		DocChunkDTO newChunk = chapter.createChunkLevelEmbedding(currentChunk.toString().trim(),
-									    count++);
-		chunks.add(newChunk);
+	    if (currentChunk.length() > 0) {
+		chunks.add(chapter.createChunkLevelEmbedding(currentChunk.toString().trim(), chunkIndex));
 	    }
 	}
 	logger.debug("Split chapter '{}' into {} chunks", chapter.getTitulo(), chunks.size());
 	return chunks;
+    }
+
+    /**
+     * Split text into sentences using regex.
+     * 
+     * @param text - text to split
+     * @return list of sentences
+     */
+    private List<String> splitTextIntoSentences(String text) {
+        if (text == null || text.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Pattern sentencePattern = Pattern.compile("(?<=[.!?])\\s+");
+        return Arrays.stream(sentencePattern.split(text))
+                .map(String::trim)
+                .filter(sentence -> !sentence.isEmpty())
+                .collect(Collectors.toList());
     }
 
     /**
@@ -1116,7 +1072,4 @@ public class SplitterGenerico extends AbstractSplitter {
 	}
 	return false;
     }
-    
-   
-
 }
